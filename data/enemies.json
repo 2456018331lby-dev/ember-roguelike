@@ -1,0 +1,14 @@
+[
+	{"id": "slime", "name": "史莱姆", "type": "melee", "hp": 30, "damage": 5, "speed": 80, "attack_range": 40, "attack_cooldown": 1.5, "sprite": "res://assets/sprites/enemy/slime.png", "wave_min": 1},
+	{"id": "skeleton", "name": "骷髅", "type": "melee", "hp": 50, "damage": 8, "speed": 120, "attack_range": 50, "attack_cooldown": 1.2, "sprite": "res://assets/sprites/enemy/skeleton.png", "wave_min": 1},
+	{"id": "bat", "name": "蝙蝠", "type": "melee", "hp": 20, "damage": 4, "speed": 200, "attack_range": 30, "attack_cooldown": 0.8, "sprite": "res://assets/sprites/enemy/bat.png", "wave_min": 1},
+	{"id": "archer", "name": "弓箭手", "type": "ranged", "hp": 35, "damage": 10, "speed": 80, "attack_range": 250, "attack_cooldown": 2.0, "projectile_speed": 300, "sprite": "res://assets/sprites/enemy/archer.png", "wave_min": 3},
+	{"id": "fire_mage", "name": "火焰法师", "type": "ranged", "hp": 40, "damage": 15, "speed": 60, "attack_range": 280, "attack_cooldown": 2.5, "projectile_speed": 250, "sprite": "res://assets/sprites/enemy/fire_mage.png", "wave_min": 5},
+	{"id": "golem", "name": "石像鬼", "type": "melee", "hp": 150, "damage": 20, "speed": 50, "attack_range": 60, "attack_cooldown": 2.0, "sprite": "res://assets/sprites/enemy/golem.png", "wave_min": 5},
+	{"id": "assassin", "name": "刺客", "type": "melee", "hp": 45, "damage": 18, "speed": 250, "attack_range": 40, "attack_cooldown": 1.0, "sprite": "res://assets/sprites/enemy/assassin.png", "wave_min": 7},
+	{"id": "necromancer", "name": "亡灵法师", "type": "ranged", "hp": 60, "damage": 12, "speed": 70, "attack_range": 200, "attack_cooldown": 3.0, "summon": "skeleton", "sprite": "res://assets/sprites/enemy/necromancer.png", "wave_min": 10},
+	{"id": "boss_dragon", "name": "幼龙", "type": "boss", "hp": 500, "damage": 25, "speed": 100, "attack_range": 150, "phases": 3, "sprite": "res://assets/sprites/enemy/boss_dragon.png", "wave_min": 5},
+	{"id": "boss_lich", "name": "巫妖王", "type": "boss", "hp": 400, "damage": 30, "speed": 80, "attack_range": 300, "phases": 3, "sprite": "res://assets/sprites/enemy/boss_lich.png", "wave_min": 10},
+	{"id": "boss_demon", "name": "恶魔领主", "type": "boss", "hp": 800, "damage": 35, "speed": 120, "attack_range": 120, "phases": 3, "sprite": "res://assets/sprites/enemy/boss_demon.png", "wave_min": 15},
+	{"id": "boss_void", "name": "虚空之主", "type": "boss", "hp": 1200, "damage": 40, "speed": 150, "attack_range": 200, "phases": 3, "sprite": "res://assets/sprites/enemy/boss_void.png", "wave_min": 20}
+]

@@ -1,0 +1,7 @@
+[
+	{"id": "warrior", "name": "战士", "base_hp": 120, "base_speed": 180, "base_attack": 12, "attack_range": 60, "special_ability": "charge", "special_desc": "冲刺攻击，击退敌人", "card倾向": "ATTACK", "initial_cards": ["strike", "defend", "heavy_blow"], "sprite": "res://assets/sprites/player/warrior.png"},
+	{"id": "mage", "name": "法师", "base_hp": 70, "base_speed": 200, "base_attack": 18, "attack_range": 300, "special_ability": "blink", "special_desc": "短距离闪现", "card倾向": "CURSE", "initial_cards": ["fireball", "ice_bolt", "defend"], "sprite": "res://assets/sprites/player/mage.png"},
+	{"id": "beast", "name": "野兽", "base_hp": 90, "base_speed": 260, "base_attack": 10, "attack_range": 50, "special_ability": "bite", "special_desc": "撕咬，吸血 20%", "card倾向": "PASSIVE", "initial_cards": ["strike", "quick_slash", "vampiric_strike"], "sprite": "res://assets/sprites/player/beast.png"},
+	{"id": "thief", "name": "盗贼", "base_hp": 60, "base_speed": 300, "base_attack": 15, "attack_range": 40, "special_ability": "stealth", "special_desc": "隐身 3 秒，下次攻击暴击", "card倾向": "JOKER", "initial_cards": ["quick_slash", "poison_dagger", "defend"], "sprite": "res://assets/sprites/player/thief.png"},
+	{"id": "priest", "name": "圣职", "base_hp": 100, "base_speed": 160, "base_attack": 8, "attack_range": 200, "special_ability": "purify", "special_desc": "清除所有负面效果并治愈", "card倾向": "DEFENSE", "initial_cards": ["heal", "defend", "shield_bash"], "sprite": "res://assets/sprites/player/priest.png"}
+]
