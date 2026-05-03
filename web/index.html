@@ -17,18 +17,22 @@
   <!-- 主菜单 -->
   <div id="menu" class="overlay">
     <div class="panel hero">
-      <div class="ember-logo">
-        <div class="ember-flame"></div>
-      </div>
+      <div class="ember-logo"><div class="ember-flame"></div></div>
       <h1>余 烬</h1>
       <p class="subtitle">一切皆可交换，死亡皆有意义</p>
       <div class="menu-buttons">
-        <button id="startBtn" class="btn-primary">开始献祭</button>
+        <button id="startBtn" class="btn-primary">⚔ 开始献祭</button>
         <button id="installBtn" class="btn-ghost" hidden>📲 安装到桌面</button>
       </div>
+      <div class="menu-stats" style="margin:14px 0 4px;font-size:14px;color:#8c7d6d">🏆 最高分 0 · 最远第 0 波 · 总击杀 0</div>
       <div class="controls-hint">
-        <div class="hint-row">📱 手机：左下摇杆移动 · 双击屏幕冲刺</div>
-        <div class="hint-row">⌨ 电脑：WASD 移动 · 空格/Shift 冲刺</div>
+        <div class="hint-row">📱 左下摇杆移动 · 双击屏幕冲刺</div>
+        <div class="hint-row">⌨ WASD 移动 · 空格冲刺 · 自动攻击</div>
+      </div>
+      <div class="menu-lore">
+        在竞技场中存活 25 波。<br>
+        每张卡牌都让你变强——也夺走一些东西。<br>
+        连续牺牲同一属性三次，将觉醒极端化之力。
       </div>
     </div>
   </div>
@@ -36,7 +40,7 @@
   <!-- 奖励选择 -->
   <div id="reward" class="overlay hidden">
     <div class="panel reward-panel">
-      <h2>献祭你的选择</h2>
+      <h2>选择献祭奖励</h2>
       <p class="reward-subtitle">每张牌让你变强，也夺走一些东西</p>
       <div id="choices" class="choices"></div>
     </div>
@@ -45,10 +49,10 @@
   <!-- 游戏结束 -->
   <div id="gameover" class="overlay hidden">
     <div class="panel gameover-panel">
-      <h2>余烬熄灭</h2>
+      <h2 id="gameoverTitle">余烬熄灭</h2>
       <div id="finalStats"></div>
       <div class="gameover-buttons">
-        <button id="restartBtn" class="btn-primary">再次点燃</button>
+        <button id="restartBtn" class="btn-primary">🔥 再次点燃</button>
         <button id="backMenuBtn" class="btn-ghost">返回菜单</button>
       </div>
     </div>
@@ -59,14 +63,16 @@
 
   <!-- HUD -->
   <div id="hud">
-    <!-- 左上：波次/分数 -->
+    <!-- 左上：波次/分数/连击 -->
     <div class="hud-top-left">
-      <div id="waveText" class="hud-wave">第 1 / 20 波</div>
+      <div class="hud-wave-row">
+        <span id="waveText">第 1 / 25 波</span>
+        <span id="comboText" class="hud-combo" style="display:none">x0</span>
+      </div>
       <div id="scoreText" class="hud-score">分数 0 · 击杀 0</div>
-      <div id="comboText" class="hud-combo" style="display:none">连击 x0</div>
     </div>
 
-    <!-- 顶部：血条 -->
+    <!-- 顶部：血条+护盾条 -->
     <div class="hp-container">
       <div class="hp-bar-bg">
         <div id="barrierBar" class="barrier-bar" style="display:none"></div>
@@ -75,16 +81,22 @@
       <span id="hpText" class="hp-text">100 / 100</span>
     </div>
 
-    <!-- 右上：属性 -->
+    <!-- 末日倒计时 -->
+    <div id="doomTimer" class="doom-timer" style="display:none">☠ <span id="doomTime">45</span>s</div>
+
+    <!-- 右上：属性面板 -->
     <div id="statsText" class="hud-stats"></div>
 
     <!-- 左下：消息日志 -->
     <div id="messageLog" class="hud-messages"></div>
 
-    <!-- 右下：冲刺指示器 -->
-    <div id="dashIndicator" class="dash-indicator" title="冲刺 (空格/双击)">
-      <svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="16" fill="none" stroke="#333" stroke-width="3"/><circle cx="18" cy="18" r="16" fill="none" stroke="#ffd58a" stroke-width="3" stroke-dasharray="100" stroke-dashoffset="0" class="dash-ring"/></svg>
-      <span>冲刺</span>
+    <!-- 右下：冲刺按钮 -->
+    <div id="dashIndicator" class="dash-indicator" title="冲刺">
+      <svg viewBox="0 0 36 36">
+        <circle cx="18" cy="18" r="16" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="3"/>
+        <circle cx="18" cy="18" r="16" fill="none" stroke="#ffd58a" stroke-width="3" stroke-dasharray="100" stroke-dashoffset="0" class="dash-ring"/>
+      </svg>
+      <span>闪避</span>
     </div>
   </div>
 
