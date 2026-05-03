@@ -1,0 +1,13 @@
+{
+  "name": "余烬 Ember 测试版",
+  "short_name": "余烬",
+  "description": "融合卡牌构筑和献祭系统的肉鸽测试版",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#08060d",
+  "theme_color": "#140f1d",
+  "icons": [
+    { "src": "./icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

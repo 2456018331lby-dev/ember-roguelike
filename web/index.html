@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
+  <meta name="theme-color" content="#140f1d" />
+  <title>余烬 Ember - 测试版</title>
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <canvas id="game" width="1280" height="720"></canvas>
+
+  <div id="menu" class="overlay">
+    <div class="panel hero">
+      <div class="ember-mark">◆</div>
+      <h1>余烬</h1>
+      <p>一切皆可交换，死亡皆有意义。</p>
+      <button id="startBtn">开始献祭测试版</button>
+      <button id="installBtn" class="ghost" hidden>安装到桌面</button>
+      <div class="small">手机：左下拖动移动。电脑：WASD / 方向键移动。自动攻击最近敌人。</div>
+    </div>
+  </div>
+
+  <div id="reward" class="overlay hidden">
+    <div class="panel reward-panel">
+      <h2>选择献祭奖励</h2>
+      <p>每张牌都会让你变强，也会夺走一点东西。</p>
+      <div id="choices" class="choices"></div>
+    </div>
+  </div>
+
+  <div id="gameover" class="overlay hidden">
+    <div class="panel">
+      <h2>余烬熄灭</h2>
+      <div id="finalStats"></div>
+      <button id="restartBtn">再来一把</button>
+      <button id="backMenuBtn" class="ghost">返回菜单</button>
+    </div>
+  </div>
+
+  <div id="hud">
+    <div class="top-left">
+      <div id="waveText">第 1 波</div>
+      <div id="scoreText">分数 0</div>
+    </div>
+    <div class="hp-wrap"><div id="hpBar"></div><span id="hpText"></span></div>
+    <div id="statsText"></div>
+    <div id="messageLog"></div>
+  </div>
+
+  <div id="joystick"><div id="knob"></div></div>
+
+  <script type="module" src="./src/main.mjs"></script>
+</body>
+</html>

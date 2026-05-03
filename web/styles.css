@@ -1,0 +1,31 @@
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #08060d; color: #f6e8c8; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; touch-action: none; }
+#game { position: fixed; inset: 0; width: 100vw; height: 100vh; background: radial-gradient(circle at center, #1a1323, #08060d); }
+.overlay { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(5, 4, 8, .76); backdrop-filter: blur(6px); z-index: 20; padding: 22px; }
+.overlay.hidden { display: none; }
+.panel { width: min(720px, 94vw); padding: 28px; border: 1px solid rgba(255, 181, 77, .25); border-radius: 24px; background: linear-gradient(145deg, rgba(32, 22, 42, .96), rgba(12, 9, 18, .96)); box-shadow: 0 24px 80px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.05); text-align: center; }
+.hero h1 { margin: 0; font-size: clamp(56px, 12vw, 108px); letter-spacing: .24em; text-indent: .24em; color: #ffd58a; text-shadow: 0 0 22px #ff6a00aa; }
+.hero p { margin: 8px 0 28px; font-size: 18px; color: #b8a789; }
+.ember-mark { font-size: 42px; color: #ff7b1a; animation: pulse 1.7s ease-in-out infinite; }
+@keyframes pulse { 50% { transform: scale(1.2); filter: drop-shadow(0 0 18px #ff6a00); } }
+button { border: 0; border-radius: 14px; padding: 14px 22px; margin: 8px; color: #1b1006; background: linear-gradient(180deg, #ffd58a, #ff8a2a); font-size: 18px; font-weight: 800; box-shadow: 0 8px 24px rgba(255, 116, 24, .28); }
+button:active { transform: translateY(2px); }
+button.ghost { background: rgba(255,255,255,.07); color: #f6e8c8; box-shadow: none; border: 1px solid rgba(255,255,255,.14); }
+.small { margin-top: 18px; color: #8c7d6d; font-size: 13px; }
+#hud { pointer-events: none; position: fixed; inset: 0; z-index: 5; font-weight: 800; text-shadow: 0 2px 8px #000; }
+.top-left { position: fixed; left: max(14px, env(safe-area-inset-left)); top: max(12px, env(safe-area-inset-top)); display: grid; gap: 6px; font-size: 18px; }
+.hp-wrap { position: fixed; left: 50%; top: max(12px, env(safe-area-inset-top)); transform: translateX(-50%); width: min(460px, 46vw); height: 22px; border: 2px solid rgba(255,255,255,.18); border-radius: 999px; background: rgba(0,0,0,.42); overflow: hidden; }
+#hpBar { height: 100%; width: 100%; background: linear-gradient(90deg, #d62222, #ff7a2f); transition: width .15s; }
+#hpText { position: absolute; inset: 0; display: grid; place-items: center; font-size: 13px; }
+#statsText { position: fixed; right: max(14px, env(safe-area-inset-right)); top: max(12px, env(safe-area-inset-top)); text-align: right; color: #e9d6b2; font-size: 13px; line-height: 1.45; }
+#messageLog { position: fixed; left: max(14px, env(safe-area-inset-left)); bottom: max(18px, env(safe-area-inset-bottom)); width: min(420px, 64vw); display: grid; gap: 4px; font-size: 13px; color: #ffd58a; }
+#joystick { position: fixed; z-index: 8; left: max(28px, env(safe-area-inset-left)); bottom: max(34px, env(safe-area-inset-bottom)); width: 122px; height: 122px; border-radius: 50%; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.13); backdrop-filter: blur(3px); }
+#knob { position: absolute; left: 36px; top: 36px; width: 50px; height: 50px; border-radius: 50%; background: radial-gradient(circle, #ffd58a, #ff7b1a); box-shadow: 0 0 18px rgba(255,123,26,.4); }
+.choices { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 20px; }
+.card { min-height: 210px; padding: 16px; border-radius: 18px; border: 1px solid rgba(255, 213, 138, .25); background: linear-gradient(180deg, rgba(71, 46, 77, .92), rgba(23, 17, 33, .92)); text-align: left; display: flex; flex-direction: column; justify-content: space-between; }
+.card h3 { margin: 0 0 10px; color: #ffd58a; font-size: 20px; }
+.card .type { color: #ff9e46; font-size: 12px; letter-spacing: .1em; }
+.card .desc { color: #f0dfc5; font-size: 14px; line-height: 1.42; }
+.card .cost { margin-top: 12px; color: #ff7777; font-size: 13px; }
+.card:active { transform: translateY(2px); }
+@media (max-width: 700px) { .choices { grid-template-columns: 1fr; } .card { min-height: 138px; } #statsText { display:none; } .hp-wrap { width: 48vw; } }
