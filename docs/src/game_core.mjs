@@ -289,6 +289,7 @@ export function getPlayerStats(run) {
   let critChance = 0, dodgeChance = 0, reflect = 0, rangeBonus = 0;
   let attackSpeedBonus = 0, chain = 0, slow = 0, dot = 0, bleed = 0;
   let scoreBonus = 0, selfDamageChance = 0, doomTimer = 0, decayRate = 0;
+  let regen = 0, barrier = 0;
 
   for (const card of run.player.deck) {
     attack += card.damage ?? 0;
@@ -311,6 +312,8 @@ export function getPlayerStats(run) {
     selfDamageChance += card.selfDamageChance ?? 0;
     doomTimer += card.doomTimer ?? 0;
     decayRate += card.decayRate ?? 0;
+    regen += card.regen ?? 0;
+    barrier += card.barrier ?? 0;
     if (card.damageMultiplier) damageMultiplier *= card.damageMultiplier;
     if (card.perCardsDamage) damageMultiplier *= (1 + Math.floor(run.player.deck.length / 5) * card.perCardsDamage);
   }
@@ -335,6 +338,7 @@ export function getPlayerStats(run) {
     reflect: Math.min(0.8, reflect),
     rangeBonus, chain, slow, dot, bleed,
     scoreBonus, selfDamageChance, doomTimer, decayRate,
+    regen, barrier,
   };
 }
 
@@ -359,8 +363,8 @@ export function updateRun(run, input, dt) {
   if (run.player.hp > stats.maxHp) run.player.hp = stats.maxHp;
 
   // 再生
-  if (run.player.regen > 0) {
-    run.player.hp = Math.min(run.player.maxHp, run.player.hp + run.player.regen * dt);
+  if (stats.regen > 0) {
+    run.player.hp = Math.min(stats.maxHp, run.player.hp + stats.regen * dt);
   }
 
   // 衰败诅咒
