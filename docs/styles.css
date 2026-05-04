@@ -167,6 +167,18 @@ html, body {
 .char-stats-line { font-size: 12px; color: #8c7d6d; margin-top: 6px; }
 .char-unlock { font-size: 11px; color: #ff5252; margin-top: 4px; font-style: italic; }
 
+/* ---- Meta / Codex ---- */
+.meta-preview { margin: 10px 0 6px; color: #ffd58a; font-size: 14px; }
+.menu-actions-secondary { display: flex; gap: 10px; justify-content: center; margin-top: 8px; flex-wrap: wrap; }
+.meta-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+.meta-card { padding: 14px; border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; background: rgba(255,255,255,0.03); text-align: left; }
+.meta-name { font-size: 16px; color: #ffd58a; font-weight: 800; display:flex; justify-content:space-between; }
+.meta-desc { font-size: 13px; color: #a09080; margin-top: 6px; }
+.meta-cost { font-size: 12px; color: #ffb74d; margin-top: 8px; margin-bottom: 10px; }
+.meta-buy[disabled] { opacity: .4; cursor: not-allowed; }
+.codex-section { text-align: left; padding: 14px; border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; background: rgba(255,255,255,0.03); margin-bottom: 10px; }
+.codex-section h3 { margin: 0 0 8px; color: #ffd58a; font-size: 16px; }
+
 /* ---- Responsive ---- */
 @media (max-width: 700px) {
   .choices { grid-template-columns: 1fr; gap: 10px; }

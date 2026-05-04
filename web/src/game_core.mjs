@@ -1,3 +1,5 @@
+import { getMetaBonuses } from './save.mjs';
+
 // ============================================================
 // 余烬 Ember - 游戏核心逻辑 v4
 // 完整重写：敌人AI、弹幕系统、复活限制、数值平衡
@@ -142,6 +144,7 @@ function clone(obj) { return JSON.parse(JSON.stringify(obj)); }
 // ============================================================
 export function createRun(seed = Date.now(), character = null) {
   // 角色默认值（向后兼容）
+  const meta = getMetaBonuses();
   const ch = character || {
     baseHp: 100, baseSpeed: 250, baseAttack: 15, baseAttackCooldown: 0.5,
     startCards: [
@@ -160,7 +163,7 @@ export function createRun(seed = Date.now(), character = null) {
     gameTime: 0,
     rewardChoices: [],
     kills: 0,
-    score: 0,
+    score: meta.startEmber,
     combo: 0,
     maxCombo: 0,
     comboTimer: 0,
@@ -173,8 +176,8 @@ export function createRun(seed = Date.now(), character = null) {
     characterId: ch.id || 'warrior',
     player: {
       x: 640, y: 360, radius: 16,
-      hp: ch.baseHp, maxHp: ch.baseHp,
-      baseSpeed: ch.baseSpeed, baseAttack: ch.baseAttack, baseAttackCooldown: ch.baseAttackCooldown,
+      hp: ch.baseHp + meta.hpBoost, maxHp: ch.baseHp + meta.hpBoost,
+      baseSpeed: ch.baseSpeed + meta.speedBoost, baseAttack: ch.baseAttack + meta.attackBoost, baseAttackCooldown: ch.baseAttackCooldown,
       attackTimer: 0,
       invuln: 0,
       barrier: 0,
@@ -190,6 +193,7 @@ export function createRun(seed = Date.now(), character = null) {
     },
     extremes: [],
     jokers: [],
+    synergies: [],
     enemies: [],
     projectiles: [],     // 敌方弹幕
     playerProjectiles: [], // 玩家弹幕（暂未使用，预留给远程build）
@@ -378,6 +382,56 @@ function applySacrifice(run, s) {
   }
 }
 
+function evaluateSynergies(run) {
+  const deck = run.player.deck;
+  const ids = deck.map(c => c.id);
+  const stats = {
+    damageMultiplier: 1, attackSpeedBonus: 0, lifesteal: 0, dodgeChance: 0, critChance: 0, chain: 0, regen: 0,
+    names: []
+  };
+
+  // 套装/关键词协同
+  if (ids.includes('flame_sword') && ids.includes('meteor')) {
+    stats.damageMultiplier *= 1.35;
+    stats.names.push('烈焰共鸣');
+  }
+  if (ids.includes('quick_blade') && ids.includes('gatling')) {
+    stats.attackSpeedBonus += 0.4;
+    stats.names.push('速射核心');
+  }
+  if (ids.includes('poison_dagger') && ids.includes('bleed_axe')) {
+    stats.damageMultiplier *= 1.2;
+    stats.names.push('腐血瘟疫');
+  }
+  if (ids.includes('dodge_cloak') && ids.includes('phase_shift')) {
+    stats.dodgeChance += 0.1;
+    stats.names.push('虚空步');
+  }
+  if (ids.includes('vampire_edge') && ids.includes('berserker')) {
+    stats.lifesteal += 0.08;
+    stats.names.push('血怒汲取');
+  }
+  if (ids.includes('lightning') && ids.includes('crit_eye')) {
+    stats.chain += 1;
+    stats.critChance += 0.08;
+    stats.names.push('雷暴视界');
+  }
+  if (ids.includes('heal_aura') && ids.includes('barrier')) {
+    stats.regen += 2;
+    stats.names.push('圣愈庇护');
+  }
+
+  // 关键词三连
+  const attackCards = deck.filter(c => c.type === 'attack').length;
+  const defenseCards = deck.filter(c => c.type === 'defense').length;
+  const jokerCards = deck.filter(c => c.type === 'joker').length;
+  if (attackCards >= 5) { stats.damageMultiplier *= 1.15; stats.names.push('武备压制'); }
+  if (defenseCards >= 4) { stats.regen += 1; stats.names.push('钢铁防线'); }
+  if (jokerCards >= 3) { stats.critChance += 0.05; stats.names.push('赌徒狂喜'); }
+
+  return stats;
+}
+
 // ============================================================
 // 属性计算（核心公式）
 // ============================================================
@@ -444,6 +498,17 @@ export function getPlayerStats(run) {
     const hpRatio = p.hp / Math.max(1, maxHp);
     damageMultiplier *= (1 + (1 - hpRatio) * 2); // 满血x1，空血x3
   }
+
+  // 套装/关键词协同
+  const syn = evaluateSynergies(run);
+  damageMultiplier *= syn.damageMultiplier;
+  attackSpeedBonus += syn.attackSpeedBonus;
+  lifesteal += syn.lifesteal;
+  dodgeChance += syn.dodgeChance;
+  critChance += syn.critChance;
+  chain += syn.chain;
+  regen += syn.regen;
+  run.synergies = syn.names;
 
   // 攻速计算
   if (attackSpeedBonus > 0) cooldown /= (1 + attackSpeedBonus);

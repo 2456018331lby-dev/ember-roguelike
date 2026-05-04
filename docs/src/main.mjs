@@ -1,6 +1,6 @@
 import { createRun, updateRun, applyCardChoice, getPlayerStats, dash, restart } from './game_core.mjs';
 import { sfxAttack, sfxCrit, sfxHit, sfxDeath, sfxEnemyDeath, sfxBossDeath, sfxDash, sfxPickup, sfxHeal, sfxRevive, sfxWaveComplete, sfxCardSelect, sfxExtreme, sfxBulletShot, sfxBulletHit, sfxCombo, startBGM, stopBGM, resumeAudio } from './audio.mjs';
-import { getSave, recordRun, completeTutorial, selectCharacter as saveSelectChar } from './save.mjs';
+import { getSave, recordRun, completeTutorial, selectCharacter as saveSelectChar, getMetaBonuses, buyUpgrade, getUpgradeCost } from './save.mjs';
 import { getCharacter, getAllCharacters, CHARACTERS } from './characters.mjs';
 
 // ============================================================
@@ -32,6 +32,9 @@ const barrierBar = document.querySelector('#barrierBar');
 const doomTimer = document.querySelector('#doomTimer');
 const doomTime = document.querySelector('#doomTime');
 const hud = document.querySelector('#hud');
+const metaBtn = document.querySelector('#metaBtn');
+const codexBtn = document.querySelector('#codexBtn');
+const metaPreview = document.querySelector('#metaPreview');
 
 let run = null;
 let last = performance.now();
@@ -142,13 +145,59 @@ function showMenu() {
   screenState = 'menu';
   hud.style.display = 'none';
   stopBGM();
-  // 更新菜单统计
   const save = getSave();
   const statsEl = menuEl.querySelector('.menu-stats');
   if (statsEl) {
     statsEl.innerHTML = `🏆 最高分 ${save.bestScore} · 最远第 ${save.bestWave} 波 · 总击杀 ${save.totalKills}`;
   }
+  if (metaPreview) {
+    const upgradeCount = Object.values(save.metaUpgrades || {}).reduce((a, b) => a + b, 0);
+    metaPreview.textContent = `余烬点 ${save.emberCurrency} · 永久升级 ${upgradeCount} 项`;
+  }
   menuEl.classList.remove('hidden');
+}
+
+function showMetaPanel() {
+  hideAll();
+  let panel = document.querySelector('#metaPanel');
+  const save = getSave();
+  const bonuses = getMetaBonuses();
+  if (!panel) {
+    panel = document.createElement('div');
+    panel.id = 'metaPanel';
+    panel.className = 'overlay';
+    document.body.appendChild(panel);
+  }
+  const upgrades = [
+    ['hpBoost', '生命强化', `+${bonuses.hpBoost} 最大生命`],
+    ['attackBoost', '攻击强化', `+${bonuses.attackBoost} 攻击`],
+    ['speedBoost', '速度强化', `+${bonuses.speedBoost} 移速`],
+    ['rerollCount', '重随强化', `+${bonuses.rerollCount} 次重随`],
+    ['startEmber', '开局赏金', `+${bonuses.startEmber} 初始分数`],
+    ['potionDrop', '恢复掉率', `+${Math.round(bonuses.potionDrop * 100)}% 掉率`],
+  ];
+  panel.innerHTML = `<div class="panel" style="max-width:900px"><h2 style="color:#ffd58a;margin:0 0 8px">⛩ 余烬之炉</h2><p style="color:#8c7d6d;margin:0 0 18px">消耗余烬点购买永久升级</p><div style="font-size:18px;color:#ffd58a;margin-bottom:14px">余烬点：${save.emberCurrency}</div><div class="meta-grid">${upgrades.map(([k,n,d]) => { const cost = getUpgradeCost(k); const lvl = save.metaUpgrades[k] || 0; return `<div class="meta-card"><div class="meta-name">${n} <span>Lv.${lvl}</span></div><div class="meta-desc">${d}</div><div class="meta-cost">${cost === null ? '已满级' : `消耗 ${cost}`}</div><button class="btn-primary meta-buy" data-upg="${k}" ${cost === null || save.emberCurrency < cost ? 'disabled' : ''}>升级</button></div>`; }).join('')}</div><div style="margin-top:20px"><button id="metaBackBtn" class="btn-ghost">返回菜单</button></div></div>`;
+  panel.classList.remove('hidden');
+  panel.querySelectorAll('.meta-buy').forEach(btn => btn.addEventListener('click', () => {
+    const res = buyUpgrade(btn.dataset.upg);
+    if (res.ok) showMetaPanel();
+  }));
+  panel.querySelector('#metaBackBtn').addEventListener('click', () => { panel.classList.add('hidden'); showMenu(); });
+}
+
+function showCodexPanel() {
+  hideAll();
+  let panel = document.querySelector('#codexPanel');
+  const save = getSave();
+  if (!panel) {
+    panel = document.createElement('div');
+    panel.id = 'codexPanel';
+    panel.className = 'overlay';
+    document.body.appendChild(panel);
+  }
+  panel.innerHTML = `<div class="panel" style="max-width:900px"><h2 style="color:#ffd58a;margin:0 0 8px">📘 图鉴</h2><p style="color:#8c7d6d;margin:0 0 18px">已发现的角色、成就与协同</p><div class="codex-section"><h3>角色</h3><div>${save.unlockedCharacters.join('、') || '无'}</div></div><div class="codex-section"><h3>成就</h3><div>${(save.achievements || []).join('、') || '无'}</div></div><div class="codex-section"><h3>协同图鉴</h3><div>${(save.discoveredSynergies || []).join('、') || '尚未发现'}</div></div><div style="margin-top:20px"><button id="codexBackBtn" class="btn-ghost">返回菜单</button></div></div>`;
+  panel.classList.remove('hidden');
+  panel.querySelector('#codexBackBtn').addEventListener('click', () => { panel.classList.add('hidden'); showMenu(); });
 }
 
 // ---- 按钮绑定 ----
@@ -156,6 +205,8 @@ document.querySelector('#startBtn').addEventListener('click', () => {
   resumeAudio();
   showCharSelect();
 });
+metaBtn?.addEventListener('click', () => { resumeAudio(); showMetaPanel(); });
+codexBtn?.addEventListener('click', () => { resumeAudio(); showCodexPanel(); });
 document.querySelector('#restartBtn').addEventListener('click', () => startGame());
 document.querySelector('#backMenuBtn').addEventListener('click', () => showMenu());
 
@@ -356,6 +407,7 @@ function showGameOver(victory) {
     <div class="final-stat">最高连击 <span>${run.maxCombo}</span></div>
     <div class="final-stat">卡牌 <span>${run.player.deck.length}</span></div>
     <div class="final-stat">极端化 <span>${run.extremes.join('、') || '无'}</span></div>
+    <div class="final-stat">协同 <span>${run.synergies?.join('、') || '无'}</span></div>
     <div class="final-stat">复活 <span>${run.reviveUsed ? '已使用' : '未使用'}</span></div>`;
   gameoverEl.classList.remove('hidden');
   // 检查新解锁
@@ -386,6 +438,7 @@ function updateHud() {
   if (stats.chain > 0) h += ` · 链击${stats.chain}`;
   h += ` · 🛡${stats.armor}`;
   if (run.extremes.length > 0) h += `<br>🔥 ${run.extremes.join(' + ')}`;
+  if (run.synergies?.length) h += `<br>✨ ${run.synergies.join(' · ')}`;
   statsText.innerHTML = h;
   messageLog.innerHTML = run.messages.slice(0, 3).map(m => `<div>${m}</div>`).join('');
 }
