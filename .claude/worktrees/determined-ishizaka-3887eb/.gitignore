@@ -1,0 +1,32 @@
+# Godot 4 specific
+.godot/
+*.translation
+
+# Godot-specific ignores
+export_presets.cfg
+.import/
+
+# Builds
+build/
+*.apk
+*.aab
+*.pck
+*.zip
+
+# Node / web tooling
+node_modules/
+
+# Android / Capacitor local files
+android/.gradle/
+android/local.properties
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo

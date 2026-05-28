@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs><radialGradient id="g" cx="50%" cy="55%" r="50%"><stop offset="0" stop-color="#ffe49a"/><stop offset=".45" stop-color="#ff7b1a"/><stop offset="1" stop-color="#7b1020"/></radialGradient></defs>
+  <rect width="512" height="512" rx="96" fill="#120d1a"/>
+  <path d="M256 52c-42 91-126 126-98 242 16 65 64 104 98 145 34-41 82-80 98-145 28-116-56-151-98-242z" fill="url(#g)"/>
+  <path d="M256 151c-21 46-63 63-49 121 8 32 32 52 49 72 17-20 41-40 49-72 14-58-28-75-49-121z" fill="#ffe49a" opacity=".75"/>
+  <text x="256" y="468" text-anchor="middle" fill="#ffd58a" font-size="54" font-family="sans-serif" font-weight="800">余烬</text>
+</svg>

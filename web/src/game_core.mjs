@@ -104,18 +104,18 @@ const BOSS_TYPES = {
     name: '幼龙·烈焰', color: '#D32F2F', radius: 38, hpMult: 18, dmgMult: 3, spdMult: 0.55,
     behavior: 'boss_fire', attackType: 'boss_fire_breath',
     phases: [
-      { hpThreshold: 1.0, attackCooldown: 3.0, pattern: 'circle_shot', bulletCount: 12, bulletSpeed: 200 },
-      { hpThreshold: 0.6, attackCooldown: 2.0, pattern: 'spiral_shot', bulletCount: 8, bulletSpeed: 250 },
-      { hpThreshold: 0.3, attackCooldown: 1.2, pattern: 'aimed_burst', bulletCount: 5, bulletSpeed: 350 },
+      { hpThreshold: 1.0, attackCooldown: 3.2, pattern: 'circle_shot', bulletCount: 10, bulletSpeed: 180 },
+      { hpThreshold: 0.6, attackCooldown: 2.2, pattern: 'spiral_shot', bulletCount: 7, bulletSpeed: 230 },
+      { hpThreshold: 0.3, attackCooldown: 1.5, pattern: 'aimed_burst', bulletCount: 4, bulletSpeed: 300 },
     ],
   },
   lich: {
     name: '巫妖王·寒冰', color: '#37474F', radius: 33, hpMult: 14, dmgMult: 2, spdMult: 0.5,
     behavior: 'boss_ice', attackType: 'boss_ice_storm',
     phases: [
-      { hpThreshold: 1.0, attackCooldown: 3.5, pattern: 'ring_burst', bulletCount: 16, bulletSpeed: 180 },
-      { hpThreshold: 0.5, attackCooldown: 2.5, pattern: 'cross_shot', bulletCount: 4, bulletSpeed: 300 },
-      { hpThreshold: 0.25, attackCooldown: 1.5, pattern: 'random_rain', bulletCount: 20, bulletSpeed: 220 },
+      { hpThreshold: 1.0, attackCooldown: 3.8, pattern: 'ring_burst', bulletCount: 12, bulletSpeed: 160 },
+      { hpThreshold: 0.5, attackCooldown: 2.8, pattern: 'cross_shot', bulletCount: 4, bulletSpeed: 260 },
+      { hpThreshold: 0.25, attackCooldown: 1.8, pattern: 'random_rain', bulletCount: 14, bulletSpeed: 190 },
     ],
   },
   demon: {
@@ -773,53 +773,84 @@ function scoreCardFit(card, analysis, waveProfile) {
   let score = 0;
   const focus = analysis?.focusScores || {};
   const pressure = analysis?.pressure || {};
+  const wave = waveProfile?.wave ?? 0;
   const needsSurvival = (waveProfile?.kind === 'boss' && ((focus.sustain || 0) + (focus.fortress || 0) < 5)) || waveProfile?.rewardGuard === 'survival';
-  const earlyRun = (waveProfile?.wave ?? 0) > 0 ? waveProfile.wave <= 5 : false;
+  const earlyRun = wave > 0 ? wave <= 5 : false;
   const bossPrep = waveProfile?.kind === 'boss' || waveProfile?.rewardGuard === 'survival';
-  const fortressHeavy = (focus.fortress || 0) >= 5;
   const sustainScore = (focus.sustain || 0) + (focus.fortress || 0);
+  const attackScore = (focus.crit || 0) + (focus.barrage || 0) + (focus.bleed || 0);
+  const defenseOverAttack = sustainScore - attackScore;
+  const fortressHeavy = sustainScore >= 5;
+  const defenseDominated = defenseOverAttack >= 4;
   const sustainCard = hasPositiveStat(card, 'regen') || hasPositiveStat(card, 'lifesteal') || hasPositiveStat(card, 'barrier');
   const fortressCard = hasPositiveStat(card, 'armorBonus') || hasPositiveStat(card, 'dodgeChance') || hasPositiveStat(card, 'reflect') || hasPositiveStat(card, 'thorns');
   const attackCard = Boolean(card.damage || card.attackBonus || card.damageMultiplier || card.critChance || card.critDamageBonus || card.attackSpeedBonus || card.chain || card.dot || card.bleed || card.rangeBonus || card.armorPierce || card.slow);
-  const singleTargetNeed = Math.max(0, 52 - (pressure.singleTarget || 0));
+
+  // 单体输出缺口：阈值随波次增长，后期需要更多输出
+  const singleTargetThreshold = 52 + wave * 4;
+  const singleTargetNeed = Math.max(0, singleTargetThreshold - (pressure.singleTarget || 0));
   const aoeNeed = Math.max(0, 20 - (pressure.aoe || 0));
   const sustainNeed = Math.max(0, 48 - ((pressure.sustain || 0) + (pressure.mitigation || 0)));
+
+  // 基础分：攻击牌有基础加成
   if (card.damage || card.attackBonus) score += 1;
   if (card.attackSpeedBonus || card.chain) score += 1;
   if (card.critChance || card.critDamageBonus) score += (focus.crit || 0) * 0.7 + 1;
-  if (sustainCard) score += (focus.sustain || 0) * 0.7 + 1;
-  if (fortressCard) score += (focus.fortress || 0) * 0.7 + 0.8;
+  // 防御牌：有递减收益，focus 越高加成越少
+  const fortressFocusBonus = Math.min((focus.fortress || 0) * 0.5, 3.5);
+  const sustainFocusBonus = Math.min((focus.sustain || 0) * 0.5, 3.5);
+  if (sustainCard) score += sustainFocusBonus + 1;
+  if (fortressCard) score += fortressFocusBonus + 0.8;
   if (card.dot || card.bleed) score += (focus.bleed || 0) * 0.75 + 0.6;
   if (card.type === 'curse') score += (focus.curse || 0) * 0.8;
-  if (singleTargetNeed > 0 && (card.damage || card.attackBonus || card.damageMultiplier || card.critChance || card.critDamageBonus)) score += Math.min(2.4, singleTargetNeed * 0.035);
+
+  // 输出缺口加成：阈值随波次增长，中后期输出牌大幅加分
+  if (singleTargetNeed > 0 && (card.damage || card.attackBonus || card.damageMultiplier || card.critChance || card.critDamageBonus)) score += Math.min(4.0, singleTargetNeed * 0.04);
   if (aoeNeed > 0 && (card.chain || card.attackSpeedBonus || card.rangeBonus || card.slow || card.dot || card.bleed)) score += Math.min(1.9, aoeNeed * 0.05);
   if (sustainNeed > 0 && (sustainCard || fortressCard)) score += Math.min(2.2, sustainNeed * 0.04);
+
+  // 波次标签加成
   if ((waveProfile?.rewardTag || '') === 'survival' && (sustainCard || fortressCard)) score += 1.8;
   if ((waveProfile?.rewardTag || '') === 'burst' && (card.damage || card.damageMultiplier || card.critChance)) score += 1.4;
   if ((waveProfile?.rewardTag || '') === 'aoe' && (card.chain || card.attackSpeedBonus || card.rangeBonus)) score += 1.4;
   if ((waveProfile?.rewardTag || '') === 'stabilize' && (sustainCard || hasPositiveStat(card, 'healAmount') || hasPositiveStat(card, 'dodgeChance'))) score += 1.5;
   if ((waveProfile?.rewardTag || '') === 'snowball' && (card.scoreBonus || card.attackSpeedBonus || card.damageMultiplier)) score += 1.2;
-  if (waveProfile?.kind === 'boss' && isSurvivalCard(card)) score += needsSurvival ? 2.1 : 1.1;
+
+  // Boss 相关
+  if (waveProfile?.kind === 'boss' && isSurvivalCard(card)) score += needsSurvival ? 2.8 : 1.4;
   if (waveProfile?.kind === 'boss' && card.revive) score += 2.4;
   if (waveProfile?.kind === 'boss' && isBossPunishCard(card) && !isSurvivalCard(card)) score -= 1.5;
   if ((waveProfile?.rewardGuard === 'survival' || waveProfile?.kind === 'boss') && card.id === 'blood_pact') score -= 2.4;
   if ((waveProfile?.rewardGuard === 'survival' || waveProfile?.kind === 'boss') && (card.decayRate || card.doomTimer)) score -= 2.1;
   if (earlyRun && card.id === 'blood_pact') score -= 1.4;
-  if (bossPrep && fortressHeavy && fortressCard && !sustainCard) score -= 1.2;
-  if (bossPrep && fortressHeavy && card.id === 'shadow_blade') score += 1.9;
-  if (bossPrep && fortressHeavy && (card.id === 'frost_staff' || card.id === 'bleed_axe' || card.id === 'meteor')) score += 1.1;
-  if (bossPrep && fortressHeavy && card.attackSpeedBonus > 0) score += 0.6;
+
+  // 防御堆叠预防：有防御优势时，降低防御牌吸引力，提高攻击牌
+  if (defenseOverAttack >= 4 && fortressCard && !sustainCard && !attackCard) {
+    score -= 1.2 + Math.min(defenseOverAttack * 0.2, 2.0);
+  }
+  if (defenseOverAttack >= 4 && attackCard) {
+    score += 0.8 + Math.min(defenseOverAttack * 0.15, 1.5);
+  }
+  if (defenseOverAttack >= 6 && (card.damageMultiplier || card.critChance || card.critDamageBonus || card.attackSpeedBonus || card.chain)) {
+    score += 0.8;
+  }
+
+  // Boss 前的特定牌加分
+  if (bossPrep && fortressHeavy) {
+    if (card.id === 'shadow_blade') score += 1.9;
+    if (card.id === 'frost_staff' || card.id === 'bleed_axe' || card.id === 'meteor') score += 1.1;
+    if (card.attackSpeedBonus > 0) score += 0.6;
+  }
   if (bossPrep && sustainScore >= 4) {
     if (attackCard) score += 1.15;
     if (card.damageMultiplier || card.critChance || card.critDamageBonus || card.attackSpeedBonus || card.chain || card.dot || card.bleed || card.rangeBonus || card.armorPierce || card.slow) score += 0.95;
     if (fortressCard && !sustainCard) score -= 1.1;
   }
-  if (bossPrep && sustainScore >= 6) {
-    if (fortressCard && !sustainCard) score -= 1.6;
-    if (sustainCard) score -= 0.25;
-    if (attackCard) score += 0.85;
-  }
-  if (bossPrep && sustainScore < 4 && sustainCard) score += 0.8;
+  if (bossPrep && sustainScore < 4 && sustainCard) score += 1.2;
+  // 非 Boss 波但下一波是 Boss 时，如果防御不足，生存牌小幅加分
+  if (waveProfile?.kind !== 'boss' && wave % 5 === 4 && sustainScore < 4 && sustainCard) score += 0.5;
+
+  // 牺牲属性与主轴冲突
   if (card.sacrifice?.stat && analysis?.primaryFocus) {
     if ((card.sacrifice.stat === 'speed' && analysis.primaryFocus === 'barrage') ||
       (card.sacrifice.stat === 'health' && analysis.primaryFocus === 'sustain') ||

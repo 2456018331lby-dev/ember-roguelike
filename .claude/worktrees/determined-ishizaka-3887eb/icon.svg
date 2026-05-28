@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <defs>
+    <radialGradient id="ember" cx="50%" cy="60%" r="50%">
+      <stop offset="0%" style="stop-color:#FFD700"/>
+      <stop offset="40%" style="stop-color:#FF6600"/>
+      <stop offset="100%" style="stop-color:#8B0000"/>
+    </radialGradient>
+  </defs>
+  <rect width="128" height="128" fill="#1a1420" rx="16"/>
+  <path d="M64 15 C55 35, 35 45, 40 70 C43 85, 55 95, 64 105 C73 95, 85 85, 88 70 C93 45, 73 35, 64 15Z" fill="url(#ember)"/>
+  <path d="M64 35 C59 48, 48 55, 52 72 C54 80, 60 86, 64 92 C68 86, 74 80, 76 72 C80 55, 69 48, 64 35Z" fill="#FFD700" opacity="0.7"/>
+  <text x="64" y="120" text-anchor="middle" fill="#FFD700" font-size="16" font-family="sans-serif" font-weight="bold">余烬</text>
+</svg>

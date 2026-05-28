@@ -1,0 +1,133 @@
+[gd_scene load_steps=2 format=3 uid="uid://main_menu"]
+
+[ext_resource type="Script" path="res://scripts/ui/main_menu.gd" id="1_main"]
+
+[node name="MainMenu" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_main")
+
+[node name="BG" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.08, 0.06, 0.12, 1)
+
+[node name="VBox" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -200.0
+offset_top = -250.0
+offset_right = 200.0
+offset_bottom = 250.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 20
+
+[node name="TitleLabel" type="Label" parent="VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "余 烬"
+horizontal_alignment = 1
+vertical_alignment = 1
+theme_override_font_sizes/font_size = 72
+
+[node name="Subtitle" type="Label" parent="VBox"]
+layout_mode = 2
+text = "一切皆可交换，死亡皆有意义"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 18
+theme_override_colors/font_color = Color(0.7, 0.6, 0.5, 1)
+
+[node name="Spacer" type="Control" parent="VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 30)
+
+[node name="BtnSacrifice" type="Button" parent="VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(300, 60)
+text = "献 祭 模 式"
+theme_override_font_sizes/font_size = 24
+
+[node name="BtnParasite" type="Button" parent="VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(300, 60)
+text = "寄 生 模 式"
+theme_override_font_sizes/font_size = 24
+
+[node name="BtnSettings" type="Button" parent="VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(300, 50)
+text = "设 置"
+theme_override_font_sizes/font_size = 20
+
+[node name="BtnQuit" type="Button" parent="VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(300, 50)
+text = "退 出"
+theme_override_font_sizes/font_size = 20
+
+[node name="InfoBar" type="HBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -50.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_constants/separation = 30
+alignment = 1
+
+[node name="LblEmber" type="Label" parent="InfoBar"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "余烬: 0"
+theme_override_font_sizes/font_size = 18
+theme_override_colors/font_color = Color(1, 0.7, 0.2, 1)
+
+[node name="LblStats" type="Label" parent="InfoBar"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "总运行: 0 | 胜利: 0 | 胜率: 0%"
+theme_override_font_sizes/font_size = 16
+theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
+
+[node name="SettingsPanel" type="Panel" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -200.0
+offset_top = -150.0
+offset_right = 200.0
+offset_bottom = 150.0
+
+[node name="SettingsTitle" type="Label" parent="SettingsPanel"]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -50.0
+offset_top = 20.0
+offset_right = 50.0
+text = "设置"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 24
