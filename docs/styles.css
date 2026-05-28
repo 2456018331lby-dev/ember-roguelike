@@ -438,6 +438,14 @@ body::before {
 .char-sub, .char-desc, .char-stats-line, .char-unlock, .meta-desc, .meta-cost { color: #94a3b8; font-size: 12px; }
 .meta-name { display: flex; justify-content: space-between; color: #f8fafc; font-size: 16px; font-weight: 800; }
 .codex-section h3 { margin: 0 0 8px; color: #f8fafc; font-size: 16px; }
+/* Forge and Shop cards */
+.forge-card { border-color: rgba(245,158,11,.4) !important; background: linear-gradient(135deg, rgba(245,158,11,.08), rgba(239,68,68,.06)) !important; }
+.forge-card:hover { border-color: rgba(245,158,11,.7) !important; box-shadow: 0 0 20px rgba(245,158,11,.2) !important; }
+.shop-card { border-color: rgba(34,211,238,.3) !important; }
+.shop-card:hover { border-color: rgba(34,211,238,.6) !important; }
+.shop-disabled { opacity: 0.4; cursor: not-allowed !important; }
+.shop-disabled:hover { border-color: rgba(34,211,238,.3) !important; }
+
 /* Death summary enhancements */
 .final-stat.reason span:last-child { color: #f87171; font-weight: 700; }
 .final-stat.hint { background: rgba(245,158,11,0.08); border-radius: 6px; padding: 6px 8px; }

@@ -105,6 +105,14 @@ const ENEMY_TYPES = {
     behavior: 'summoner', attackType: 'summon',
     attackCooldown: 6.0, attackRange: 0, summonType: 'slime', summonCount: 2,
   },
+  charger: {
+    name: '冲锋者', color: '#FF5722', radius: 16, hpMult: 1.5, dmgMult: 2.0, spdMult: 1.4,
+    behavior: 'chase', attackType: 'melee', attackCooldown: 1.8, attackRange: 40,
+  },
+  bomber: {
+    name: '自爆者', color: '#FFC107', radius: 12, hpMult: 0.4, dmgMult: 4.0, spdMult: 1.6,
+    behavior: 'chase', attackType: 'melee', attackCooldown: 0.5, attackRange: 50,
+  },
 };
 
 const BOSS_TYPES = {

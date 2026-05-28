@@ -301,6 +301,8 @@ function processAudioEvents() {
 function onStateChange(prevState) {
   if (!run) return;
   if (run.state === 'reward') { showReward(); sfxWaveComplete(); stopBGM(); }
+  if (run.state === 'forge') { showForge(); sfxWaveComplete(); stopBGM(); }
+  if (run.state === 'shop') { showShop(); sfxWaveComplete(); stopBGM(); }
   if (run.state === 'gameover') { showResult(false); sfxDeath(); stopBGM(); }
   if (run.state === 'victory') { showResult(true); sfxBossDeath(); stopBGM(); }
 }
@@ -340,6 +342,65 @@ function showReward() {
       sfxCardSelect();
       applyCardChoice(run, card);
       rewardEl.classList.add('hidden');
+      startBGM();
+    };
+    choicesEl.appendChild(el);
+  }
+  rewardEl.classList.remove('hidden');
+}
+
+function showForge() {
+  choicesEl.innerHTML = '';
+  const presentation = buildRunPresentation(run, getPlayerStats(run), getCharacter(run.characterId));
+  if (rewardMeta) rewardMeta.textContent = '🔥 余烬锻造 — 选择一项强化';
+  if (waveSummaryText) waveSummaryText.textContent = '升级已有卡牌、净化献祭代价、或重铸弱牌';
+  if (rewardWhyText) rewardWhyText.textContent = '';
+  if (rerollBtn) rerollBtn.style.display = 'none';
+  for (const choice of run.forgeChoices) {
+    const el = document.createElement('button');
+    el.className = `card ${choice.rarity || 'epic'} forge-card`;
+    const actionLabel = { upgrade: '🔨 升级', purify: '✨ 净化', reforge: '♻ 重铸' }[choice.forgeAction] || '🔥 锻造';
+    el.innerHTML = `
+      <div>
+        <div class="type">${actionLabel}</div>
+        <h3>${choice.name}</h3>
+        <div class="desc">${choice.forgeDesc || choice.desc || ''}</div>
+      </div>`;
+    el.onclick = () => {
+      sfxCardSelect();
+      applyForgeChoice(run, choice);
+      rewardEl.classList.add('hidden');
+      if (rerollBtn) rerollBtn.style.display = '';
+      startBGM();
+    };
+    choicesEl.appendChild(el);
+  }
+  rewardEl.classList.remove('hidden');
+}
+
+function showShop() {
+  choicesEl.innerHTML = '';
+  const embers = Math.floor(run.score);
+  if (rewardMeta) rewardMeta.textContent = `🏪 余烬商人 — 余烬 ${embers}`;
+  if (waveSummaryText) waveSummaryText.textContent = '花费余烬购买增益，或直接离开';
+  if (rewardWhyText) rewardWhyText.textContent = '';
+  if (rerollBtn) rerollBtn.style.display = 'none';
+  for (const choice of run.shopChoices) {
+    const el = document.createElement('button');
+    const canAfford = embers >= choice.cost;
+    el.className = `card ${canAfford ? 'rare' : 'common'} shop-card ${!canAfford ? 'shop-disabled' : ''}`;
+    el.innerHTML = `
+      <div>
+        <div class="type">${choice.cost > 0 ? `💰 ${choice.cost} 余烬` : '免费'}</div>
+        <h3>${choice.name}</h3>
+        <div class="desc">${choice.desc || ''}</div>
+      </div>`;
+    el.onclick = () => {
+      if (!canAfford) return;
+      sfxCardSelect();
+      applyShopChoice(run, choice);
+      rewardEl.classList.add('hidden');
+      if (rerollBtn) rerollBtn.style.display = '';
       startBGM();
     };
     choicesEl.appendChild(el);
@@ -481,6 +542,8 @@ function draw() {
     drawPlayer();
     drawParticles();
     drawMinimap();
+    drawBossHpBar();
+    drawWaveProgress();
     if (run.screenFlash > 0) {
       ctx.globalAlpha = run.screenFlash * 0.4;
       ctx.fillStyle = '#fff';
@@ -735,6 +798,53 @@ function drawParticles() {
     }
     ctx.restore();
   }
+}
+
+function drawBossHpBar() {
+  const boss = run.enemies.find(e => e.isBoss);
+  if (!boss) return;
+  const x = 200, y = 12, w = 880, h = 18;
+  // Background
+  ctx.fillStyle = 'rgba(0,0,0,.7)';
+  ctx.fillRect(x - 2, y - 2, w + 4, h + 4);
+  // HP bar
+  const hpPct = Math.max(0, boss.hp / boss.maxHp);
+  const grd = ctx.createLinearGradient(x, y, x + w * hpPct, y);
+  grd.addColorStop(0, '#ef4444');
+  grd.addColorStop(0.5, '#f97316');
+  grd.addColorStop(1, '#fbbf24');
+  ctx.fillStyle = grd;
+  ctx.fillRect(x, y, w * hpPct, h);
+  // Border
+  ctx.strokeStyle = '#7f1d1d';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(x - 2, y - 2, w + 4, h + 4);
+  // Boss name
+  ctx.fillStyle = '#fbbf24';
+  ctx.font = 'bold 13px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(boss.name, x + w / 2, y + 13);
+  // HP text
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 11px sans-serif';
+  ctx.textAlign = 'right';
+  ctx.fillText(`${Math.ceil(Math.max(0, boss.hp))} / ${boss.maxHp}`, x + w - 6, y + 13);
+}
+
+function drawWaveProgress() {
+  const x = 20, y = 690, w = 120, h = 6;
+  ctx.fillStyle = 'rgba(0,0,0,.5)';
+  ctx.fillRect(x, y, w, h);
+  const pct = Math.min(1, run.wave / run.totalWaves);
+  const grd = ctx.createLinearGradient(x, y, x + w * pct, y);
+  grd.addColorStop(0, '#6366f1');
+  grd.addColorStop(1, '#a78bfa');
+  ctx.fillStyle = grd;
+  ctx.fillRect(x, y, w * pct, h);
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '10px sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText(`${run.wave}/${run.totalWaves}`, x + w + 8, y + 6);
 }
 
 function drawMinimap() {
