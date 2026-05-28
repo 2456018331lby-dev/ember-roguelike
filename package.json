@@ -5,6 +5,14 @@
   "type": "module",
   "scripts": {
     "test": "node tests/game_core.test.mjs",
-    "serve": "python3 -m http.server 5173 --directory web"
+    "serve": "python3 -m http.server 5173 --directory web",
+    "sync:web": "node scripts/sync-web.mjs",
+    "sync:android": "node ./node_modules/@capacitor/cli/bin/capacitor sync android",
+    "build:android:debug": "powershell -NoProfile -Command \"$env:GRADLE_USER_HOME=(Resolve-Path '.').Path + '\\.gradle-home'; Set-Location android; ./gradlew.bat assembleDebug --no-daemon --max-workers=1\""
+  },
+  "devDependencies": {
+    "@capacitor/android": "^8.3.1",
+    "@capacitor/cli": "^8.3.1",
+    "@capacitor/core": "^8.3.1"
   }
 }

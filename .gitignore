@@ -12,6 +12,8 @@ build/
 *.aab
 *.pck
 *.zip
+.gradle-home/
+node_modules/
 
 # OS files
 .DS_Store
@@ -23,3 +25,9 @@ desktop.ini
 .idea/
 *.swp
 *.swo
+
+# Android build artifacts
+android/app/build/
+android/capacitor-cordova-android-plugins/build/
+android/.gradle/
+android/build/

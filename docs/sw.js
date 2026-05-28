@@ -1,4 +1,4 @@
-const CACHE = 'ember-mvp-v1';
+const CACHE = 'ember-v3';
 const ASSETS = [
   './', './index.html', './styles.css', './manifest.webmanifest', './sw.js',
   './src/main.mjs', './src/game_core.mjs', './icons/icon.svg'
@@ -12,5 +12,11 @@ self.addEventListener('activate', event => {
   self.clients.claim();
 });
 self.addEventListener('fetch', event => {
-  event.respondWith(caches.match(event.request).then(hit => hit || fetch(event.request)));
+  event.respondWith(
+    fetch(event.request).then(resp => {
+      const clone = resp.clone();
+      caches.open(CACHE).then(cache => cache.put(event.request, clone));
+      return resp;
+    }).catch(() => caches.match(event.request))
+  );
 });

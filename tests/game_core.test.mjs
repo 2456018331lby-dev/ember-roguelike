@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
 import {
-  createRun, applyCardChoice, rollCardChoices, rerollRewardChoices, getPlayerStats,
+  createRun, applyCardChoice, rollCardChoices, rerollRewardChoices, enrichRewardChoices, getPlayerStats,
   resolveAutoAttack, updateRun, dash, updateWaveState,
 } from '../web/src/game_core.mjs';
+import { buildRunPresentation } from '../web/src/presentation.mjs';
 
 function test(name, fn) {
   try { fn(); console.log(`✓ ${name}`); }
@@ -43,6 +44,39 @@ function simulateAutoRun(seed, maxTicks = 8000) {
   }
   return run;
 }
+
+test('presentation 会输出短板强度与奖励解释数值', () => {
+  const run = createRun(2026);
+  run.buildAnalysis = {
+    descriptors: ['速攻'],
+    weaknesses: {
+      singleTarget: true,
+      aoe: false,
+      sustain: true,
+      safety: false,
+    },
+    pressure: {
+      singleTarget: 34,
+      aoe: 28,
+      sustain: 12,
+      mitigation: 20,
+      safety: 6,
+    },
+  };
+  run.nextWavePreview = {
+    kind: 'boss',
+    label: '首领战',
+    summary: '准备迎战',
+    risk: '高压单点',
+  };
+
+  const presentation = buildRunPresentation(run, getPlayerStats(run), { name: '战士' });
+  assert.match(presentation.weaknessSummary, /首领输出不足/);
+  assert.match(presentation.weaknessSummary, /当前强度 34/);
+  assert.match(presentation.rewardWhy, /首领战/);
+  assert.match(presentation.rewardWhy, /34/);
+  assert.match(presentation.rewardWhy, /32/);
+});
 
 test('开局基础属性和初始卡牌', () => {
   const run = createRun(123);
@@ -354,7 +388,7 @@ test('螺旋 Boss 弹幕由模拟驱动而不是依赖真实定时器', () => {
 
 test('精英波会生成精英敌人并标记', () => {
   const run = createRun(888);
-  while (run.wave < 3) {
+  while (run.wave < 6) {
     run.enemies = [];
     run.waveEnemyQueue = [];
     run.state = 'playing';
@@ -372,7 +406,7 @@ test('精英波会生成精英敌人并标记', () => {
 
   fastForward(run, 1);
   const hasElite = run.waveEnemyQueue.some(entry => entry.elite === true) || run.enemies.some(enemy => enemy.isElite === true);
-  assert.equal(run.wave, 3);
+  assert.equal(run.wave, 6);
   assert.equal(hasElite, true);
 });
 
@@ -609,34 +643,50 @@ test('Boss 前低血线奖励应给出至少两张生存向选择', () => {
   assert.ok(survivalChoices.length >= 2, `预期至少两张生存向奖励，实际只有 ${survivalChoices.length} 张`);
 });
 
-test('首个 Boss 前不应把 blood_pact 排在 heal_aura 前面', () => {
+test('首个 Boss 前高风险牌评分应低于治疗牌', () => {
   const run = createRun(15);
-  const dt = 0.05;
-  let ticks = 0;
-  while (ticks < 4000) {
-    if (run.state === 'wave_transition') {
-      run.waveTransitionTimer = 0;
-      updateRun(run, { x: 0, y: 0 }, 0.001);
-    }
-    if (run.state === 'reward' && run.wave === 2) {
-      const bloodPact = run.rewardChoices.find(card => card.id === 'blood_pact');
-      const healAura = run.rewardChoices.find(card => card.id === 'heal_aura');
-      assert.ok(bloodPact, '需要出现 blood_pact');
-      assert.ok(healAura, '需要出现 heal_aura');
-      assert.ok(healAura.fitScore > bloodPact.fitScore, `heal_aura 应优先于 blood_pact，当前 ${healAura.fitScore} <= ${bloodPact.fitScore}`);
-      return;
-    }
-    if (run.state === 'reward') {
-      applyCardChoice(run, run.rewardChoices[0]);
-      if (run.state === 'wave_transition') {
-        run.waveTransitionTimer = 0;
-        updateRun(run, { x: 0, y: 0 }, 0.001);
-      }
-    }
-    updateRun(run, { x: 0, y: 0 }, dt);
-    ticks += 1;
-  }
-  assert.fail('未能在预期时间内走到第 2 波奖励');
+  run.buildAnalysis = {
+    primaryFocus: 'barrage',
+    focusScores: { crit: 0, barrage: 2, sustain: 0, fortress: 0, curse: 0, bleed: 0, control: 0, greed: 0 },
+    pressure: {
+      singleTarget: 22,
+      aoe: 12,
+      sustain: 6,
+      mitigation: 8,
+      safety: 4,
+    },
+  };
+  run.waveProfile = {
+    kind: 'boss',
+    wave: 5,
+    rewardTag: 'survival',
+    rewardGuard: 'survival',
+  };
+  const rawChoices = [
+    {
+      id: 'blood_pact',
+      name: '血之契约',
+      type: 'joker',
+      rarity: 'rare',
+      attackBonus: 15,
+      sacrifice: { stat: 'health', amount: 0.08 },
+    },
+    {
+      id: 'heal_aura',
+      name: '治愈光环',
+      type: 'defense',
+      rarity: 'rare',
+      regen: 3,
+      sacrifice: { stat: 'attack', amount: 0.08 },
+    },
+  ];
+
+  run.rewardChoices = enrichRewardChoices(run, rawChoices, run.waveProfile);
+  const bloodPact = run.rewardChoices.find(card => card.id === 'blood_pact');
+  const healAura = run.rewardChoices.find(card => card.id === 'heal_aura');
+  assert.ok(bloodPact, '需要出现 blood_pact');
+  assert.ok(healAura, '需要出现 heal_aura');
+  assert.ok(healAura.fitScore > bloodPact.fitScore, `heal_aura 应优先于 blood_pact，当前 ${healAura.fitScore} <= ${bloodPact.fitScore}`);
 });
 
 test('固定 seed 14 的自动选牌应能通过第 5 波', () => {
@@ -644,23 +694,34 @@ test('固定 seed 14 的自动选牌应能通过第 5 波', () => {
   assert.ok(run.wave > 5, `预期固定 seed 14 至少通过第 5 波，实际停在第 ${run.wave} 波`);
 });
 
-test('Boss 前不应让纯防守牌大幅压过 shadow_blade 这类过关输出牌', () => {
-  const run = createRun(9);
-  const dt = 0.05;
+test('固定 seed 4 的自动选牌应能通过第 5 波', () => {
+  const run = simulateAutoRun(4);
+  assert.ok(run.wave > 5, `预期固定 seed 4 至少通过第 5 波，实际停在第 ${run.wave} 波`);
+});
+
+test('固定 seed 10 的自动选牌应能通过第 5 波', () => {
+  const run = simulateAutoRun(10);
+  assert.ok(run.wave > 5, `预期固定 seed 10 至少通过第 5 波，实际停在第 ${run.wave} 波`);
+});
+
+test('固定 seed 20 在第 4 波输出/控场牌应优于纯防守牌', () => {
+  const run = createRun(20);
+  const dt = 0.08;
   let ticks = 0;
-  while (ticks < 4000) {
+  while (ticks < 800) {
     if (run.state === 'wave_transition') {
       run.waveTransitionTimer = 0;
       updateRun(run, { x: 0, y: 0 }, 0.001);
     }
-    if (run.state === 'reward' && run.wave === 4) {
-      const reflectShield = run.rewardChoices.find(card => card.id === 'reflect_shield');
-      const shadowBlade = run.rewardChoices.find(card => card.id === 'shadow_blade');
-      if (!reflectShield || !shadowBlade) continue;
-      assert.ok(shadowBlade.fitScore >= reflectShield.fitScore - 1, `shadow_blade 不应被 reflect_shield 大幅压制，当前 ${shadowBlade.fitScore} vs ${reflectShield.fitScore}`);
-      return;
-    }
     if (run.state === 'reward') {
+      if (run.wave === 4) {
+        const gatling = run.rewardChoices.find(c => c.id === 'gatling');
+        const reflectShield = run.rewardChoices.find(c => c.id === 'reflect_shield');
+        assert.ok(gatling, '需要出现 gatling');
+        assert.ok(reflectShield, '需要出现 reflect_shield');
+        assert.ok(gatling.fitScore > reflectShield.fitScore, `gatling 应优先于 reflect_shield，当前 ${gatling.fitScore} <= ${reflectShield.fitScore}`);
+        return;
+      }
       applyCardChoice(run, run.rewardChoices[0]);
       if (run.state === 'wave_transition') {
         run.waveTransitionTimer = 0;
@@ -673,64 +734,32 @@ test('Boss 前不应让纯防守牌大幅压过 shadow_blade 这类过关输出�
   assert.fail('未能在预期时间内走到第 4 波奖励');
 });
 
-test('Boss 前已具备足够生存时，应更积极推荐输出牌而不是继续叠纯防守', () => {
-  const run = createRun(10);
-  const dt = 0.05;
-  let ticks = 0;
-  while (ticks < 4000) {
-    if (run.state === 'wave_transition') {
-      run.waveTransitionTimer = 0;
-      updateRun(run, { x: 0, y: 0 }, 0.001);
-    }
-    if (run.state === 'reward' && run.wave === 3) {
-      const dodgeCloak = run.rewardChoices.find(card => card.id === 'dodge_cloak');
-      const critDamage = run.rewardChoices.find(card => card.id === 'crit_damage');
-      assert.ok(dodgeCloak, '需要出现 dodge_cloak');
-      assert.ok(critDamage, '需要出现 crit_damage');
-      assert.ok(critDamage.fitScore >= dodgeCloak.fitScore - 0.2, `已有足够生存时不应继续让 dodge_cloak 明显压过 crit_damage，当前 ${critDamage.fitScore} vs ${dodgeCloak.fitScore}`);
-      return;
-    }
-    if (run.state === 'reward') {
-      applyCardChoice(run, run.rewardChoices[0]);
-      if (run.state === 'wave_transition') {
-        run.waveTransitionTimer = 0;
-        updateRun(run, { x: 0, y: 0 }, 0.001);
-      }
-    }
-    updateRun(run, { x: 0, y: 0 }, dt);
-    ticks += 1;
-  }
-  assert.fail('未能在预期时间内走到第 3 波奖励');
-});
+test('首个 Boss 前若当前血线安全，奖励不应强制保底生存牌', () => {
+  const run = createRun(1700);
+  fastForward(run, 1);
+  run.wave = 4;
+  run.state = 'reward';
+  run.player.hp = 98;
+  run.rewardRerolls = 1;
+  run.waveProfile = {
+    kind: 'prelude',
+    rewardTag: 'burst',
+    rewardGuard: null,
+  };
+  run.nextWavePreview = {
+    kind: 'boss',
+    rewardTag: 'burst',
+    rewardGuard: null,
+  };
+  run.rewardContext = { choiceCount: 3, rarityBonus: 2, targetTag: 'burst' };
+  run.rewardChoices = [];
 
-test('固定 seed 10 在 Boss 前应优先转向输出牌', () => {
-  const run = createRun(10);
-  const dt = 0.05;
-  let ticks = 0;
-  while (ticks < 4000) {
-    if (run.state === 'wave_transition') {
-      run.waveTransitionTimer = 0;
-      updateRun(run, { x: 0, y: 0 }, 0.001);
-    }
-    if (run.state === 'reward' && run.wave === 4) {
-      const frostStaff = run.rewardChoices.find(card => card.id === 'frost_staff');
-      const vampireEdge = run.rewardChoices.find(card => card.id === 'vampire_edge');
-      assert.ok(frostStaff, '需要出现 frost_staff');
-      assert.ok(vampireEdge, '需要出现 vampire_edge');
-      assert.ok(frostStaff.fitScore > vampireEdge.fitScore, `Boss 前输出/控场牌应优先于续航 Joker，当前 ${frostStaff.fitScore} <= ${vampireEdge.fitScore}`);
-      return;
-    }
-    if (run.state === 'reward') {
-      applyCardChoice(run, run.rewardChoices[0]);
-      if (run.state === 'wave_transition') {
-        run.waveTransitionTimer = 0;
-        updateRun(run, { x: 0, y: 0 }, 0.001);
-      }
-    }
-    updateRun(run, { x: 0, y: 0 }, dt);
-    ticks += 1;
-  }
-  assert.fail('未能在预期时间内走到第 4 波奖励');
+  const ok = rerollRewardChoices(run);
+  assert.equal(ok, true);
+  const survivalChoices = run.rewardChoices.filter(card => (
+    card.regen || card.lifesteal || card.barrier || card.armorBonus || card.dodgeChance || card.reflect || card.thorns || card.revive
+  ));
+  assert.ok(survivalChoices.length <= 1, `高血线 Boss 前不应继续强制塞满生存牌，实际生存牌 ${survivalChoices.length} 张`);
 });
 
 test('护盾牌应在新波次开始时恢复保底护盾', () => {
@@ -759,4 +788,117 @@ test('护盾牌应在新波次开始时恢复保底护盾', () => {
   });
 
   assert.ok(run.player.barrier >= 30, `新波次开始时应恢复护盾，实际 ${run.player.barrier}`);
+});
+
+test('事件波（余烬锻造）应有 event 类型和更高奖励', () => {
+  // seed 3: wave 1 -> 2 -> 3 应该是 event 波
+  const run = createRun(3);
+  // Wave 1 (hunt)
+  assert.equal(run.waveProfile.kind, 'hunt');
+  fastForward(run, 30);
+  // Clear wave 1
+  run.enemies = [];
+  run.waveEnemyQueue = [];
+  run.state = 'playing';
+  updateWaveState(run, 0);
+  assert.equal(run.state, 'reward');
+  // Pick reward to advance
+  applyCardChoice(run, run.rewardChoices[0]);
+  // Wave 2 (recovery)
+  assert.equal(run.waveProfile.kind, 'recovery');
+  fastForward(run, 30);
+  run.enemies = [];
+  run.waveEnemyQueue = [];
+  run.state = 'playing';
+  updateWaveState(run, 0);
+  applyCardChoice(run, run.rewardChoices[0]);
+  // Wave 3 should be event
+  assert.equal(run.waveProfile.kind, 'event', `Wave 3 应该是 event 类型，实际 ${run.waveProfile.kind}`);
+  assert.ok(run.waveProfile.label.includes('锻造'), `事件波标签应含"锻造"，实际 ${run.waveProfile.label}`);
+  assert.ok(run.waveProfile.healRatio >= 0.3, `事件波应有高回血比，实际 ${run.waveProfile.healRatio}`);
+});
+
+test('事件波奖励应有更高稀有度加成', () => {
+  const run = createRun(3);
+  // Wave 1
+  fastForward(run, 30);
+  run.enemies = []; run.waveEnemyQueue = []; run.state = 'playing';
+  updateWaveState(run, 0);
+  applyCardChoice(run, run.rewardChoices[0]); // starts wave 2
+  // Wave 2
+  fastForward(run, 30);
+  run.enemies = []; run.waveEnemyQueue = []; run.state = 'playing';
+  updateWaveState(run, 0);
+  applyCardChoice(run, run.rewardChoices[0]); // starts wave 3 (event)
+  // Wave 3 is event wave - clear it
+  fastForward(run, 30);
+  run.enemies = []; run.waveEnemyQueue = []; run.state = 'playing';
+  updateWaveState(run, 0);
+  // 此时应该是 event 波的 reward
+  assert.equal(run.wave, 3);
+  assert.equal(run.state, 'reward');
+  // 事件波应有至少 3 个选择
+  assert.ok(run.rewardChoices.length >= 3, `事件波应有至少3个奖励选择，实际 ${run.rewardChoices.length}`);
+  // rarity bonus 应该更高
+  assert.ok(run.rewardContext.rarityBonus > 0, `事件波 rarity bonus 应 > 0，实际 ${run.rewardContext.rarityBonus}`);
+});
+
+test('Boss 前准备恩惠应额外回血', () => {
+  const run = createRun(48);
+  // 推进到 wave 4
+  for (let i = 0; i < 3; i++) {
+    fastForward(run, 30);
+    run.enemies = []; run.waveEnemyQueue = []; run.state = 'playing';
+    updateWaveState(run, 0);
+    if (run.state === 'reward') applyCardChoice(run, run.rewardChoices[0]);
+  }
+  // 推进 wave 4
+  fastForward(run, 30);
+  run.enemies = []; run.waveEnemyQueue = []; run.state = 'playing';
+  updateWaveState(run, 0);
+  if (run.state === 'reward') {
+    // 扣血到低状态
+    const stats = getPlayerStats(run);
+    run.player.hp = Math.floor(stats.maxHp * 0.3);
+    const hpBefore = run.player.hp;
+    applyCardChoice(run, run.rewardChoices[0]);
+    // Wave 5 是 Boss 波，应有准备恩惠
+    assert.equal(run.waveProfile.kind, 'boss');
+    assert.ok(run.player.hp > hpBefore, `Boss 前应有额外回血，血量 ${hpBefore} -> ${run.player.hp}`);
+  }
+});
+
+test('死亡复盘应包含波次上下文和构筑建议', () => {
+  const run = createRun(100);
+  // 制造一个 gameover 状态 + 死亡复盘数据
+  run.state = 'gameover';
+  run.wave = 5;
+  run.waveProfile = { kind: 'boss', label: '第 5 波 Boss 讨伐' };
+  run.buildAnalysis = {
+    primaryFocus: 'barrage',
+    weaknesses: { singleTarget: true, sustain: false, aoe: false, safety: false },
+    pressure: { singleTarget: 30, aoe: 15, sustain: 20, mitigation: 10, safety: 5 },
+    summary: '速攻',
+  };
+  run.deathSummary = {
+    message: '余烬熄灭。',
+    reason: 'Boss 讨伐失败：输出不足，未能在弹幕窗口内击杀首领。',
+    weaknessTags: ['singleTarget'],
+    wave: 5,
+    waveKind: 'boss',
+    waveLabel: '第 5 波 Boss 讨伐',
+    deckSize: 6,
+    focus: '速攻',
+    buildTip: '输出缺口太大，下次优先拿高伤害或暴击牌。',
+    gameTime: 120,
+    kills: 35,
+    extremes: 0,
+    synergies: 0,
+  };
+  const stats = getPlayerStats(run);
+  const pres = buildRunPresentation(run, stats, { name: '战士' });
+  assert.ok(pres.deathReason.length > 0, '死亡原因不应为空');
+  assert.ok(pres.deathWaveLabel.length > 0, `应有阵亡波次标签，实际 "${pres.deathWaveLabel}"`);
+  assert.ok(pres.deathBuildTip.length > 0, `应有构筑建议，实际 "${pres.deathBuildTip}"`);
+  assert.equal(pres.deathReason, 'Boss 讨伐失败：输出不足，未能在弹幕窗口内击杀首领。');
 });

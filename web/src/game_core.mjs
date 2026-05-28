@@ -17,7 +17,9 @@ const CARD_POOL = [
   { id: 'shadow_blade', name: '暗影之刃', type: 'attack', rarity: 'epic', damage: 30, critChance: 0.25, desc: '25% 暴击率，暴击伤害 x2.5', sacrifice: { stat: 'health', amount: 0.12 } },
   { id: 'frost_staff', name: '冰霜法杖', type: 'attack', rarity: 'rare', damage: 12, slow: 0.5, desc: '攻击减速 50%，持续 2 秒', sacrifice: { stat: 'attack', amount: 0.06 } },
   { id: 'meteor', name: '陨石术', type: 'attack', rarity: 'epic', damage: 45, attackSpeedBonus: -0.3, desc: '超高伤害 +45，但攻速 -30%', sacrifice: { stat: 'speed', amount: 0.12 } },
-  { id: 'gatling', name: '加特林', type: 'attack', rarity: 'epic', damage: 3, attackSpeedBonus: 1.0, desc: '每次攻击只造成 3 伤害，但攻速 x2', sacrifice: { stat: 'health', amount: 0.1 } },
+  { id: 'gatling', name: '加特林', type: 'attack', rarity: 'epic', damage: 3, attackSpeedBonus: 0.7, chain: 1, desc: '高频扫射并附带 1 次弹射，更偏清场构筑', sacrifice: { stat: 'health', amount: 0.1 } },
+  { id: 'shock_orb', name: '震荡电球', type: 'attack', rarity: 'rare', damage: 10, chain: 1, slow: 0.25, desc: '补一点首领伤害，同时带少量清场与减速', sacrifice: { stat: 'health', amount: 0.07 } },
+  { id: 'hunter_mark', name: '猎手刻印', type: 'passive', rarity: 'rare', attackBonus: 12, armorPierce: 4, desc: '稳定补首领输出与破甲', sacrifice: { stat: 'speed', amount: 0.07 } },
 
   // ===== 防御牌 =====
   { id: 'iron_wall', name: '铁壁', type: 'defense', rarity: 'common', armorBonus: 6, desc: '护甲 +6', sacrifice: { stat: 'speed', amount: 0.08 } },
@@ -117,12 +119,12 @@ const BOSS_TYPES = {
     ],
   },
   demon: {
-    name: '恶魔领主·混沌', color: '#B71C1C', radius: 42, hpMult: 25, dmgMult: 4, spdMult: 0.4,
+    name: '恶魔领主·混沌', color: '#B71C1C', radius: 42, hpMult: 18, dmgMult: 3.0, spdMult: 0.44,
     behavior: 'boss_chaos', attackType: 'boss_chaos',
     phases: [
-      { hpThreshold: 1.0, attackCooldown: 2.5, pattern: 'circle_shot', bulletCount: 20, bulletSpeed: 220 },
-      { hpThreshold: 0.7, attackCooldown: 2.0, pattern: 'spiral_shot', bulletCount: 12, bulletSpeed: 280 },
-      { hpThreshold: 0.4, attackCooldown: 1.0, pattern: 'aimed_burst', bulletCount: 8, bulletSpeed: 400 },
+      { hpThreshold: 1.0, attackCooldown: 2.8, pattern: 'circle_shot', bulletCount: 16, bulletSpeed: 200 },
+      { hpThreshold: 0.7, attackCooldown: 2.2, pattern: 'spiral_shot', bulletCount: 10, bulletSpeed: 250 },
+      { hpThreshold: 0.4, attackCooldown: 1.4, pattern: 'aimed_burst', bulletCount: 6, bulletSpeed: 340 },
     ],
   },
 };
@@ -254,10 +256,11 @@ function startNextWave(run) {
   run.combo = 0;
 
   const isBoss = run.wave % 5 === 0;
-  const isEliteWave = !isBoss && run.wave > 1 && run.wave % 3 === 0;
+  const isEventWave = !isBoss && (run.wave === 3 || (run.wave > 8 && (run.wave - 3) % 8 === 0));
+  const isEliteWave = !isBoss && !isEventWave && run.wave > 1 && run.wave % 3 === 0;
   const analysis = analyzeBuild(run);
   run.buildAnalysis = analysis;
-  run.waveProfile = createWaveProfile(run.wave, { isBoss, isEliteWave, analysis });
+  run.waveProfile = createWaveProfile(run.wave, { isBoss, isEliteWave, isEventWave, analysis });
   run.waveHistory.push({
     wave: run.wave,
     kind: run.waveProfile.kind,
@@ -300,6 +303,11 @@ function startNextWave(run) {
     }
   }
 
+  // 事件波特殊处理
+  if (run.waveProfile.kind === 'event') {
+    pushMessage(run, '🔥 余烬锻造：弱敌来袭，击杀后进入锻造选择。');
+  }
+
   // 每波开始：回血 + 小丑牌特殊效果
   const stats = getPlayerStats(run);
   if (stats.barrier > 0) {
@@ -310,6 +318,13 @@ function startNextWave(run) {
   run.player.hp = Math.min(stats.maxHp, run.player.hp + healAmount);
   if (healAmount > 0) run.particles.push({ type: 'heal', x: run.player.x, y: run.player.y - 25, life: 1.2, maxLife: 1.2, value: healAmount });
 
+  // Boss 前准备恩惠：Boss 波额外回血
+  if (isBoss && run.wave > 5) {
+    const graceHeal = Math.floor(stats.maxHp * 0.08);
+    run.player.hp = Math.min(stats.maxHp, run.player.hp + graceHeal);
+    if (graceHeal > 0) run.particles.push({ type: 'heal', x: run.player.x, y: run.player.y - 35, life: 1, maxLife: 1, value: graceHeal });
+  }
+
   // 血之契约：每波扣血
   if (run.jokers.some(j => j.id === 'blood_pact')) {
     const dmg = Math.floor(stats.maxHp * 0.05);
@@ -319,7 +334,7 @@ function startNextWave(run) {
   pushMessage(run, `${run.waveProfile.label}：${run.waveProfile.summary}`);
 }
 
-function createWaveProfile(wave, { isBoss, isEliteWave, analysis }) {
+function createWaveProfile(wave, { isBoss, isEliteWave, isEventWave, analysis }) {
   if (isBoss) {
     const bossStage = Math.floor(wave / 5);
     const introBoss = wave === 5;
@@ -331,20 +346,43 @@ function createWaveProfile(wave, { isBoss, isEliteWave, analysis }) {
       danger: introBoss ? 4 : 5,
       rewardBias: introBoss ? 3 : 2,
       spawnInterval: introBoss ? 0.95 : Math.max(0.46, 0.84 - bossStage * 0.05),
-      enemyCount: introBoss ? 1 : Math.max(2, 2 + Math.floor((wave - 5) / 5)),
+      enemyCount: introBoss ? 1 : Math.max(2, Math.min(4, 2 + Math.floor((wave - 5) / 6))),
       enemyTierCap: introBoss ? 1 : Math.min(Object.keys(ENEMY_TYPES).length - 1, 1 + Math.floor(wave / 5)),
       spawnPressure: introBoss ? 0.72 : 0.88,
-      enemyHpScale: introBoss ? 0.62 : Math.min(0.96, 0.82 + bossStage * 0.04),
-      enemyDamageScale: introBoss ? 0.58 : Math.min(0.92, 0.8 + bossStage * 0.04),
+      enemyHpScale: introBoss ? 0.62 : Math.min(0.9, 0.78 + bossStage * 0.03),
+      enemyDamageScale: introBoss ? 0.58 : Math.min(0.88, 0.76 + bossStage * 0.03),
       enemySpeedScale: introBoss ? 0.88 : 0.98,
-      healRatio: introBoss ? 0.26 : 0.2,
-      healFlat: introBoss ? 11 : 7,
+      healRatio: introBoss ? 0.26 : 0.24,
+      healFlat: introBoss ? 11 : 10,
       eliteCount: 0,
       supportDropBonus: introBoss ? 0.32 : 0.18,
       rewardTag: bossFocus,
       rewardGuard: introBoss ? 'survival' : null,
       risk: introBoss ? '首个 Boss 会先单独入场，先看弹幕节奏，再处理延后出现的杂兵。' : 'Boss 与杂兵双线施压，优先保留冲刺处理弹幕窗口。',
       summary: introBoss ? '首个 Boss 波先给读招窗口，再考验你补的生存牌能否接住第二段压力。' : '首领压场，强调爆发、走位与留技能窗口。',
+    };
+  }
+  if (isEventWave) {
+    return {
+      wave,
+      kind: 'event',
+      label: `第 ${wave} 波 余烬锻造`,
+      danger: 1,
+      rewardBias: 3,
+      spawnInterval: 1.2,
+      enemyCount: Math.min(3 + Math.floor(wave * 0.6), 10),
+      enemyTierCap: Math.min(Object.keys(ENEMY_TYPES).length - 1, Math.floor(wave / 3)),
+      spawnPressure: 0.5,
+      enemyHpScale: 0.55,
+      enemyDamageScale: 0.5,
+      enemySpeedScale: 0.85,
+      healRatio: 0.35,
+      healFlat: 15,
+      eliteCount: 0,
+      supportDropBonus: 0.5,
+      rewardTag: 'forge',
+      risk: '极弱敌人，击杀后获得锻造奖励，可以升级已有卡牌或获得额外稀有牌。',
+      summary: '余烬锻造波：击杀敌人后进入锻造阶段，可选择升级或强化。',
     };
   }
   if (isEliteWave) {
@@ -392,29 +430,6 @@ function createWaveProfile(wave, { isBoss, isEliteWave, analysis }) {
       rewardTag: 'stabilize',
       risk: '敌人较弱，但要主动吃掉恢复球，为后续高压波做准备。',
       summary: '补给波提供喘息和回收资源的机会。',
-    };
-  }
-  if (wave === 4 || (wave > 7 && wave % 4 === 3)) {
-    return {
-      wave,
-      kind: 'onslaught',
-      label: `第 ${wave} 波 猛攻潮`,
-      danger: Math.min(5, 2 + Math.floor(wave / 4)),
-      rewardBias: 1,
-      spawnInterval: Math.max(0.26, 0.56 - wave * 0.012),
-      enemyCount: Math.min(9 + Math.floor(wave * 1.55), 28),
-      enemyTierCap: Math.min(Object.keys(ENEMY_TYPES).length - 1, 1 + Math.floor(wave / 3)),
-      spawnPressure: 0.9,
-      enemyHpScale: 0.8,
-      enemyDamageScale: 0.8,
-      enemySpeedScale: 1.03,
-      healRatio: 0.14,
-      healFlat: 3,
-      eliteCount: 0,
-      supportDropBonus: 0.08,
-      rewardTag: analysis.primaryFocus === 'barrage' ? 'snowball' : 'aoe',
-      risk: '刷怪频率快，清场能力不足时会被包围。',
-      summary: '猛攻波强调清怪效率和站位管理。',
     };
   }
   if (wave === 4 || (wave > 7 && wave % 4 === 3)) {
@@ -490,9 +505,11 @@ function previewNextWaveProfile(run) {
   const nextWave = run.wave + 1;
   const isBoss = nextWave % 5 === 0;
   const isEliteWave = !isBoss && nextWave > 1 && nextWave % 3 === 0;
+  const isEventWave = !isBoss && !isEliteWave && (nextWave === 3 || (nextWave > 8 && (nextWave - 3) % 8 === 0));
   return createWaveProfile(nextWave, {
     isBoss,
     isEliteWave,
+    isEventWave,
     analysis: analyzeBuild(run),
   });
 }
@@ -650,8 +667,12 @@ function needsBossPrep(run, targetProfile) {
   const hpRatio = run.player.hp / Math.max(1, stats.maxHp);
   const sustain = focus.sustain || 0;
   const fortress = focus.fortress || 0;
+  const defenseLoad = sustain + fortress;
   const hasRevive = run.player.deck.some(card => card.revive && !card.used);
-  return hpRatio < 0.82 || (sustain + fortress) < 5 || !hasRevive;
+  const hpUnsafe = hpRatio < 0.72;
+  const defenseThin = defenseLoad < 4;
+  const noSafetyNet = !hasRevive && hpRatio < 0.58;
+  return hpUnsafe || defenseThin || noSafetyNet;
 }
 
 function pickGuaranteedCard(run, rarityBonus, predicate, excludedIds = new Set()) {
@@ -737,7 +758,7 @@ export function applyCardChoice(run, card) {
   }
 }
 
-function enrichRewardChoices(run, cards, targetProfile = null) {
+export function enrichRewardChoices(run, cards, targetProfile = null) {
   const analysis = analyzeBuild(run);
   run.buildAnalysis = analysis;
   return cards.map(card => {
@@ -751,6 +772,7 @@ function enrichRewardChoices(run, cards, targetProfile = null) {
 function scoreCardFit(card, analysis, waveProfile) {
   let score = 0;
   const focus = analysis?.focusScores || {};
+  const pressure = analysis?.pressure || {};
   const needsSurvival = (waveProfile?.kind === 'boss' && ((focus.sustain || 0) + (focus.fortress || 0) < 5)) || waveProfile?.rewardGuard === 'survival';
   const earlyRun = (waveProfile?.wave ?? 0) > 0 ? waveProfile.wave <= 5 : false;
   const bossPrep = waveProfile?.kind === 'boss' || waveProfile?.rewardGuard === 'survival';
@@ -759,6 +781,9 @@ function scoreCardFit(card, analysis, waveProfile) {
   const sustainCard = hasPositiveStat(card, 'regen') || hasPositiveStat(card, 'lifesteal') || hasPositiveStat(card, 'barrier');
   const fortressCard = hasPositiveStat(card, 'armorBonus') || hasPositiveStat(card, 'dodgeChance') || hasPositiveStat(card, 'reflect') || hasPositiveStat(card, 'thorns');
   const attackCard = Boolean(card.damage || card.attackBonus || card.damageMultiplier || card.critChance || card.critDamageBonus || card.attackSpeedBonus || card.chain || card.dot || card.bleed || card.rangeBonus || card.armorPierce || card.slow);
+  const singleTargetNeed = Math.max(0, 52 - (pressure.singleTarget || 0));
+  const aoeNeed = Math.max(0, 20 - (pressure.aoe || 0));
+  const sustainNeed = Math.max(0, 48 - ((pressure.sustain || 0) + (pressure.mitigation || 0)));
   if (card.damage || card.attackBonus) score += 1;
   if (card.attackSpeedBonus || card.chain) score += 1;
   if (card.critChance || card.critDamageBonus) score += (focus.crit || 0) * 0.7 + 1;
@@ -766,6 +791,9 @@ function scoreCardFit(card, analysis, waveProfile) {
   if (fortressCard) score += (focus.fortress || 0) * 0.7 + 0.8;
   if (card.dot || card.bleed) score += (focus.bleed || 0) * 0.75 + 0.6;
   if (card.type === 'curse') score += (focus.curse || 0) * 0.8;
+  if (singleTargetNeed > 0 && (card.damage || card.attackBonus || card.damageMultiplier || card.critChance || card.critDamageBonus)) score += Math.min(2.4, singleTargetNeed * 0.035);
+  if (aoeNeed > 0 && (card.chain || card.attackSpeedBonus || card.rangeBonus || card.slow || card.dot || card.bleed)) score += Math.min(1.9, aoeNeed * 0.05);
+  if (sustainNeed > 0 && (sustainCard || fortressCard)) score += Math.min(2.2, sustainNeed * 0.04);
   if ((waveProfile?.rewardTag || '') === 'survival' && (sustainCard || fortressCard)) score += 1.8;
   if ((waveProfile?.rewardTag || '') === 'burst' && (card.damage || card.damageMultiplier || card.critChance)) score += 1.4;
   if ((waveProfile?.rewardTag || '') === 'aoe' && (card.chain || card.attackSpeedBonus || card.rangeBonus)) score += 1.4;
@@ -863,14 +891,49 @@ function evaluateSynergies(run) {
     stats.regen += 2;
     stats.names.push('圣愈庇护');
   }
+  if (ids.includes('shadow_blade') && ids.includes('crit_eye')) {
+    stats.critChance += 0.06;
+    stats.critDamageBonus += 0.3;
+    stats.names.push('暗影暴击');
+  }
+  if (ids.includes('iron_wall') && ids.includes('stone_skin')) {
+    stats.armorBonus = (stats.armorBonus || 0) + 4;
+    stats.names.push('不破铁壁');
+  }
+  if (ids.includes('reflect_shield') && ids.includes('thorn_skin')) {
+    stats.reflect = (stats.reflect || 0) + 0.08;
+    stats.thorns = (stats.thorns || 0) + 4;
+    stats.names.push('反弹荆棘');
+  }
+  if (ids.includes('decay') && ids.includes('doom')) {
+    stats.damageMultiplier *= 1.15;
+    stats.names.push('命定之死');
+  }
+  if (ids.includes('frost_staff') && ids.includes('shock_orb')) {
+    stats.slow = (stats.slow || 0) + 0.1;
+    stats.chain += 1;
+    stats.names.push('冰雷双控');
+  }
+  if (ids.includes('heavy_core') && ids.includes('swift_feet')) {
+    stats.attackBonus = (stats.attackBonus || 0) + 6;
+    stats.speedBonus = (stats.speedBonus || 0) + 18;
+    stats.names.push('均衡之力');
+  }
+  if (ids.includes('collector') && ids.includes('greed')) {
+    stats.scoreBonus = (stats.scoreBonus || 0) + 0.25;
+    stats.damageMultiplier *= 1.08;
+    stats.names.push('财富即力量');
+  }
 
   // 关键词三连
   const attackCards = deck.filter(c => c.type === 'attack').length;
   const defenseCards = deck.filter(c => c.type === 'defense').length;
   const jokerCards = deck.filter(c => c.type === 'joker').length;
+  const curseCards = deck.filter(c => c.type === 'curse').length;
   if (attackCards >= 5) { stats.damageMultiplier *= 1.15; stats.names.push('武备压制'); }
   if (defenseCards >= 4) { stats.regen += 1; stats.names.push('钢铁防线'); }
   if (jokerCards >= 3) { stats.critChance += 0.05; stats.names.push('赌徒狂喜'); }
+  if (curseCards >= 3) { stats.damageMultiplier *= 1.12; stats.decayRate = (stats.decayRate || 0) + 0.4; stats.names.push('诅咒亲和'); }
 
   return stats;
 }
@@ -888,6 +951,14 @@ function analyzeBuild(run) {
     greed: 0,
   };
 
+  const pressure = {
+    singleTarget: 0,
+    aoe: 0,
+    sustain: 0,
+    mitigation: 0,
+    safety: 0,
+  };
+
   for (const card of deck) {
     if (card.critChance || card.critDamageBonus) focus.crit += 2;
     if ((card.attackSpeedBonus ?? 0) > 0 || card.chain || card.rangeBonus) focus.barrage += 2;
@@ -900,13 +971,19 @@ function analyzeBuild(run) {
     if (card.type === 'attack') focus.barrage += 0.6;
     if (card.type === 'defense') focus.fortress += 0.6;
     if (card.type === 'joker') focus.curse += 0.4;
+
+    pressure.singleTarget += (card.damage || 0) + (card.attackBonus || 0) + ((card.damageMultiplier || 1) > 1 ? 14 : 0) + ((card.critChance || 0) * 18) + ((card.critDamageBonus || 0) * 10);
+    pressure.aoe += (card.chain || 0) * 16 + ((card.attackSpeedBonus || 0) > 0 ? 8 : 0) + (card.rangeBonus || 0) * 0.05 + (card.slow ? 6 : 0);
+    pressure.sustain += (card.regen || 0) * 10 + (card.lifesteal || 0) * 80 + (card.barrier || 0) * 0.25;
+    pressure.mitigation += Math.max(0, card.armorBonus || 0) * 2 + (card.dodgeChance || 0) * 40 + (card.reflect || 0) * 22 + (card.thorns || 0) * 0.8;
+    pressure.safety += (card.revive || 0) * 40 + (card.barrier || 0) * 0.18 + (card.dodgeChance || 0) * 24;
   }
 
   for (const name of run.extremes || []) {
-    if (name === '磐石之躯') focus.fortress += 3;
-    if (name === '诅咒之王') focus.curse += 3;
-    if (name === '幽灵血脉') focus.sustain += 2;
-    if (name === '巨炮节奏') focus.barrage += 3;
+    if (name === '磐石之躯') { focus.fortress += 3; pressure.singleTarget += 18; pressure.mitigation += 22; }
+    if (name === '诅咒之王') { focus.curse += 3; pressure.aoe += 22; pressure.singleTarget += 12; }
+    if (name === '幽灵血脉') { focus.sustain += 2; pressure.sustain += 24; pressure.safety += 12; }
+    if (name === '巨炮节奏') { focus.barrage += 3; pressure.singleTarget += 28; }
   }
 
   const ranked = Object.entries(focus).sort((a, b) => b[1] - a[1]);
@@ -919,19 +996,30 @@ function analyzeBuild(run) {
     secondaryFocus,
     descriptors,
     focusScores: focus,
+    pressure,
     summary: descriptors.length ? descriptors.join(' / ') : '均衡',
+    weaknesses: {
+      singleTarget: pressure.singleTarget < 52,
+      aoe: pressure.aoe < 20,
+      sustain: (pressure.sustain + pressure.mitigation) < 48,
+      safety: pressure.safety < 18,
+    },
   };
 }
 
 function describeCardFit(card, analysis) {
   const reasons = [];
   const focus = analysis?.focusScores || {};
+  const pressure = analysis?.pressure || {};
   if ((card.critChance || card.critDamageBonus) && (focus.crit || 0) >= 2) reasons.push('补强暴击主轴');
   if ((card.attackSpeedBonus || card.chain || card.rangeBonus) && (focus.barrage || 0) >= 2) reasons.push('提升清场节奏');
   if ((card.regen || card.lifesteal || card.barrier) && (focus.sustain || 0) >= 2) reasons.push('增强续航稳定性');
   if ((card.armorBonus || card.dodgeChance || card.reflect || card.thorns) && (focus.fortress || 0) >= 2) reasons.push('巩固生存下限');
   if ((card.dot || card.bleed) && (focus.bleed || 0) >= 2) reasons.push('放大持续伤害');
   if ((card.type === 'curse' || card.decayRate || card.doomTimer) && (focus.curse || 0) >= 2) reasons.push('强化高风险爆发');
+  if (reasons.length === 0 && pressure.singleTarget < 45 && (card.damage || card.attackBonus || card.critChance || card.damageMultiplier)) reasons.push('补首领输出缺口');
+  if (reasons.length === 0 && pressure.aoe < 18 && (card.chain || card.attackSpeedBonus || card.rangeBonus || card.slow)) reasons.push('补清场与控场');
+  if (reasons.length === 0 && pressure.sustain + pressure.mitigation < 42 && (card.regen || card.lifesteal || card.barrier || card.armorBonus || card.dodgeChance || card.reflect)) reasons.push('补容错短板');
   if (reasons.length === 0 && card.type === 'attack') reasons.push('直接抬升输出');
   if (reasons.length === 0 && card.type === 'defense') reasons.push('补当前容错');
   if (reasons.length === 0 && card.type === 'joker') reasons.push('改变战斗节奏');
@@ -1015,6 +1103,14 @@ export function getPlayerStats(run) {
   critChance += syn.critChance;
   chain += syn.chain;
   regen += syn.regen;
+  if (syn.armorBonus) armor += syn.armorBonus;
+  if (syn.reflect) reflect += syn.reflect;
+  if (syn.thorns) thorns += syn.thorns;
+  if (syn.slow) slow += syn.slow;
+  if (syn.scoreBonus) scoreBonus += syn.scoreBonus;
+  if (syn.speedBonus) speed += syn.speedBonus;
+  if (syn.attackBonus) attack += syn.attackBonus;
+  if (syn.decayRate) decayRate += syn.decayRate;
   run.synergies = syn.names;
 
   // 攻速计算
@@ -1370,6 +1466,8 @@ function performRangedAttack(run, e) {
       fromEnemy: true,
     });
   }
+  if (e.typeKey === 'archer') pushMessage(run, '⚠ 弓箭手拉弓，准备侧移。');
+  if (e.typeKey === 'fire_mage') pushMessage(run, '⚠ 火焰法师准备扇形弹幕。');
   run.particles.push({ type: 'shoot_flash', x: e.x + dirX * e.radius, y: e.y + dirY * e.radius, life: 0.15, maxLife: 0.15 });
   run.events.push('bullet_shot');
 }
@@ -1388,6 +1486,7 @@ function performBossAttack(run, boss, phase, dirX, dirY, dist) {
     life: run.wave === 5 ? 0.52 : 0.4, maxLife: run.wave === 5 ? 0.52 : 0.4, color: 'rgba(255,0,0,0.2)',
     type: 'circle', owner: boss.id,
   });
+  pushMessage(run, `⚠ ${boss.name} 即将发动 ${bossAttackLabel(pattern)}。`);
 
   switch (pattern) {
     case 'circle_shot': {
@@ -1646,9 +1745,81 @@ function takeDamage(run, amount) {
 
 function die(run, msg) {
   run.state = 'gameover';
+  const analysis = run.buildAnalysis || analyzeBuild(run);
+  const weaknesses = analysis?.weaknesses || {};
+  const stats = getPlayerStats(run);
+  const waveProfile = run.waveProfile || {};
+  let reason = '余烬熄灭。';
+  if (stats.doomTimer > 0 && run.gameTime >= stats.doomTimer) {
+    reason = '末日计时耗尽，属于高风险爆发构筑失控。';
+  } else if (waveProfile.kind === 'boss') {
+    if (weaknesses.singleTarget) {
+      reason = 'Boss 讨伐失败：输出不足，未能在弹幕窗口内击杀首领。';
+    } else if (weaknesses.sustain) {
+      reason = 'Boss 讨伐失败：容错不够，一次失误就再难回正。';
+    } else {
+      reason = 'Boss 讨伐失败：走位和弹幕处理还需优化。';
+    }
+  } else if (waveProfile.kind === 'elite') {
+    reason = '精英波失利：精英敌人抗打且输出高，当前构筑吃不住集中火力。';
+  } else if (waveProfile.kind === 'onslaught' || waveProfile.kind === 'siege') {
+    if (weaknesses.aoe) {
+      reason = '被围杀压垮：清场能力不足，被怪群消耗致死。';
+    } else if (weaknesses.sustain) {
+      reason = '被围杀压垮：续航不足，持续消耗下血线崩盘。';
+    } else {
+      reason = '被围杀压垮：站位管理失误，被多路夹击。';
+    }
+  } else if (weaknesses.singleTarget && !weaknesses.sustain) {
+    reason = '你撑住了血线，但首领处理速度不足。';
+  } else if (weaknesses.sustain && !weaknesses.singleTarget) {
+    reason = '你的输出已成型，但容错与续航不足。';
+  } else if (weaknesses.aoe) {
+    reason = '你更像单挑构筑，清场与控场能力不足。';
+  } else if (weaknesses.safety) {
+    reason = '构筑缺少安全网，失误后很难回正。';
+  }
+
+  // 构筑回顾
+  const deckSize = run.player.deck.length;
+  const focus = analysis?.summary || '均衡';
+  const buildTip = getBuildTip(analysis);
+
+  run.deathSummary = {
+    message: msg,
+    reason,
+    weaknessTags: Object.entries(weaknesses).filter(([,v]) => v).map(([k]) => k),
+    wave: run.wave,
+    waveKind: waveProfile.kind,
+    waveLabel: waveProfile.label,
+    deckSize,
+    focus,
+    buildTip,
+    gameTime: Math.floor(run.gameTime),
+    kills: run.kills,
+    extremes: run.extremes?.length || 0,
+    synergies: run.synergies?.length || 0,
+  };
   pushMessage(run, msg);
+  pushMessage(run, `☠ ${reason}`);
+  if (buildTip) pushMessage(run, `💡 ${buildTip}`);
   run.screenShake = 0.6;
   run.screenFlash = 0.5;
+}
+
+function getBuildTip(analysis) {
+  if (!analysis) return null;
+  const w = analysis.weaknesses || {};
+  const focus = analysis.primaryFocus;
+  if (w.singleTarget && w.sustain) return '下次尝试在攻击和防御之间更均衡地分配牌选择。';
+  if (w.singleTarget) return '输出缺口太大，下次优先拿高伤害或暴击牌。';
+  if (w.sustain) return '容错太低，下次补一些回血/护盾/闪避牌。';
+  if (w.aoe) return '清场能力不足，下次拿链击/范围/减速牌。';
+  if (w.safety) return '缺少安全网，凤凰余烬或屏障牌可以救命。';
+  if (focus === 'fortress') return '防御堆太满会缺输出，下次在 Boss 前补一些攻击牌。';
+  if (focus === 'barrage') return '速攻构筑需要配合控制，考虑加减速或链击。';
+  if (focus === 'crit') return '暴击流需要足够的攻击基础，确保底攻不低。';
+  return null;
 }
 
 // ============================================================
@@ -1730,6 +1901,17 @@ function updatePickups(run, dt) {
   run.pickups = run.pickups.filter(p => p.life > 0);
 }
 
+function bossAttackLabel(pattern) {
+  return {
+    circle_shot: '环形喷发',
+    spiral_shot: '螺旋弹幕',
+    aimed_burst: '定点连射',
+    ring_burst: '双环爆发',
+    cross_shot: '十字冰枪',
+    random_rain: '冰雨覆盖',
+  }[pattern] || '高压技能';
+}
+
 function updateWaveSpawning(run, dt) {
   if (run.waveEnemyQueue.length === 0) return;
   run.spawnTimer -= dt;
@@ -1756,10 +1938,11 @@ function checkWaveComplete(run) {
     } else {
       run.state = 'reward';
       run.nextWavePreview = previewNextWaveProfile(run);
+      const eventBonus = run.waveProfile?.kind === 'event' ? 2 : 0;
       run.rewardContext = {
-        choiceCount: 3,
-        rarityBonus: Math.floor(run.wave / 6) + (run.waveProfile?.rewardBias || 0) + (run.nextWavePreview?.rewardBias || 0),
-        targetTag: run.nextWavePreview?.rewardTag || run.waveProfile?.rewardTag || 'tempo',
+        choiceCount: run.waveProfile?.kind === 'event' ? 4 : 3,
+        rarityBonus: Math.floor(run.wave / 6) + (run.waveProfile?.rewardBias || 0) + (run.nextWavePreview?.rewardBias || 0) + eventBonus,
+        targetTag: run.waveProfile?.kind === 'event' ? 'forge' : (run.nextWavePreview?.rewardTag || run.waveProfile?.rewardTag || 'tempo'),
       };
       run.rewardChoices = buildRewardChoices(run, run.rewardContext.choiceCount, run.rewardContext.rarityBonus, run.nextWavePreview);
       pushMessage(run, `${run.waveProfile?.label || `第 ${run.wave} 波`} 已清空，选择献祭奖励。`);
