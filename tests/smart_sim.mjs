@@ -1,5 +1,5 @@
 
-import { createRun, applyCardChoice, applyForgeChoice, updateRun, getPlayerStats, dash } from '../web/src/game_core.mjs';
+import { createRun, applyCardChoice, applyForgeChoice, applyShopChoice, applyRestChoice, updateRun, getPlayerStats, dash } from '../web/src/game_core.mjs';
 
 function simulateAutoRun(seed, maxTicks = 10000) {
   const run = createRun(seed);
@@ -12,10 +12,8 @@ function simulateAutoRun(seed, maxTicks = 10000) {
       updateRun(run, { x: 0, y: 0 }, 0.001);
     }
     if (run.state === 'forge') {
-      // 锻造：优先升级攻击牌，其次净化高代价牌，最后重铸
       const choices = run.forgeChoices || [];
       let picked = null;
-      // 优先升级攻击牌
       const upgradeAttack = choices.find(c => c.forgeAction === 'upgrade' && (c.type === 'attack' || c.damage || c.attackBonus));
       const purify = choices.find(c => c.forgeAction === 'purify' && c.sacrifice === null);
       const reforge = choices.find(c => c.forgeAction === 'reforge');
@@ -24,10 +22,37 @@ function simulateAutoRun(seed, maxTicks = 10000) {
       else if (reforge) picked = reforge;
       else picked = choices[0];
       if (picked) applyForgeChoice(run, picked);
-      if (run.state === 'wave_transition') {
-        run.waveTransitionTimer = 0;
-        updateRun(run, { x: 0, y: 0 }, 0.001);
+      if (run.state === 'wave_transition') { run.waveTransitionTimer = 0; updateRun(run, { x: 0, y: 0 }, 0.001); }
+      continue;
+    }
+    if (run.state === 'shop') {
+      const choices = run.shopChoices || [];
+      const stats = getPlayerStats(run);
+      const hpRatio = run.player.hp / Math.max(1, stats.maxHp);
+      let picked = choices.find(c => c.shopAction === 'skip');
+      // Only buy if HP is critical
+      if (hpRatio < 0.4) {
+        const heal = choices.find(c => c.shopAction === 'heal');
+        if (heal) picked = heal;
       }
+      if (picked) applyShopChoice(run, picked);
+      if (run.state === 'wave_transition') { run.waveTransitionTimer = 0; updateRun(run, { x: 0, y: 0 }, 0.001); }
+      continue;
+    }
+    if (run.state === 'rest') {
+      const choices = run.restChoices || [];
+      const stats = getPlayerStats(run);
+      const hpRatio = run.player.hp / Math.max(1, stats.maxHp);
+      let picked;
+      if (hpRatio < 0.4) {
+        picked = choices.find(c => c.restAction === 'heal');
+      } else {
+        // Prefer meditate to reduce sacrifice costs permanently
+        picked = choices.find(c => c.restAction === 'meditate');
+      }
+      if (!picked) picked = choices[0];
+      if (picked) applyRestChoice(run, picked);
+      if (run.state === 'wave_transition') { run.waveTransitionTimer = 0; updateRun(run, { x: 0, y: 0 }, 0.001); }
       continue;
     }
     if (run.state === 'reward') {
@@ -48,10 +73,7 @@ function simulateAutoRun(seed, maxTicks = 10000) {
         }
       }
       applyCardChoice(run, choices[bestIdx] || choices[0]);
-      if (run.state === 'wave_transition') {
-        run.waveTransitionTimer = 0;
-        updateRun(run, { x: 0, y: 0 }, 0.001);
-      }
+      if (run.state === 'wave_transition') { run.waveTransitionTimer = 0; updateRun(run, { x: 0, y: 0 }, 0.001); }
     }
 
     let input = { x: 0, y: 0 };

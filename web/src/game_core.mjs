@@ -199,6 +199,9 @@ export function createRun(seed = Date.now(), character = null) {
     gameTime: 0,
     rewardChoices: [],
     forgeChoices: [],      // 锻造选择（事件波专属）
+    shopChoices: [],       // Boss后商店选项
+    restChoices: [],       // Boss前休息选项
+    decisionLog: [],       // 决策记录（用于死亡回顾）
     rewardRerolls: meta.rerollCount,
     rewardContext: { choiceCount: 3, rarityBonus: 0 },
     waveProfile: null,
@@ -269,6 +272,7 @@ function startNextWave(run) {
   run.midWaveEventTriggered = false;
   run.midWaveEventKills = 0;
   run.player.tempAttackBonus = 0;
+  run.player.tempAttackSpeedBonus = 0;
 
   const isBoss = run.wave % 5 === 0;
   const isEventWave = !isBoss && (run.wave === 3 || (run.wave > 8 && (run.wave - 3) % 8 === 0));
@@ -905,6 +909,209 @@ export function applyForgeChoice(run, choice) {
   startNextWave(run);
 }
 
+// ============================================================
+// Boss 后商店系统
+// ============================================================
+export function generateShopChoices(run) {
+  const stats = getPlayerStats(run);
+  const choices = [];
+  const embers = Math.floor(run.score);
+
+  // 1. 回血（花费 150 余烬）
+  if (embers >= 150) {
+    const healAmt = Math.floor(stats.maxHp * 0.4);
+    choices.push({
+      id: 'shop_heal', name: '余烬回春', type: 'shop',
+      shopAction: 'heal', cost: 150,
+      desc: `回复 40% 最大生命（${healAmt} HP）`,
+      value: healAmt,
+    });
+  }
+
+  // 2. 移除一张牌（花费 200 余烬）
+  if (embers >= 200) {
+    choices.push({
+      id: 'shop_remove', name: '净化熔炉', type: 'shop',
+      shopAction: 'remove', cost: 200,
+      desc: '移除牌组中最弱的一张牌',
+    });
+  }
+
+  // 3. 升级随机牌（花费 300 余烬）
+  if (embers >= 300) {
+    choices.push({
+      id: 'shop_upgrade', name: '锻造强化', type: 'shop',
+      shopAction: 'upgrade', cost: 300,
+      desc: '随机强化一张牌（数值 +40%，代价 -30%）',
+    });
+  }
+
+  // 4. 获得稀有牌（花费 400 余烬）
+  if (embers >= 400) {
+    choices.push({
+      id: 'shop_rare', name: '秘宝抽取', type: 'shop',
+      shopAction: 'rare', cost: 400,
+      desc: '获得一张稀有/史诗牌',
+    });
+  }
+
+  // 5. 全体献祭减免（花费 500 余烬）
+  if (embers >= 500) {
+    choices.push({
+      id: 'shop_purify_all', name: '集体净化', type: 'shop',
+      shopAction: 'purify_all', cost: 500,
+      desc: '所有牌的献祭代价降低 15%',
+    });
+  }
+
+  // 6. 免跳过
+  choices.push({
+    id: 'shop_skip', name: '离开商店', type: 'shop',
+    shopAction: 'skip', cost: 0,
+    desc: '不购买，继续前进',
+  });
+
+  return choices;
+}
+
+export function applyShopChoice(run, choice) {
+  if (!choice || run.state !== 'shop') return;
+
+  if (choice.cost > 0) {
+    run.score -= choice.cost;
+  }
+
+  const stats = getPlayerStats(run);
+
+  if (choice.shopAction === 'heal') {
+    run.player.hp = Math.min(stats.maxHp, run.player.hp + choice.value);
+    run.particles.push({ type: 'heal', x: run.player.x, y: run.player.y - 25, life: 1.5, maxLife: 1.5, value: choice.value });
+    pushMessage(run, `💚 余烬回春：回复 ${choice.value} 生命！`);
+  } else if (choice.shopAction === 'remove') {
+    const deck = run.player.deck.filter(c => !c.starter);
+    if (deck.length > 0) {
+      const weakest = deck.reduce((a, b) => {
+        const aS = (a.damage || 0) + (a.attackBonus || 0) + (a.armorBonus || 0) * 2 + (a.regen || 0) * 5;
+        const bS = (b.damage || 0) + (b.attackBonus || 0) + (b.armorBonus || 0) * 2 + (b.regen || 0) * 5;
+        return aS < bS ? a : b;
+      });
+      const idx = run.player.deck.indexOf(weakest);
+      if (idx >= 0) {
+        run.player.deck.splice(idx, 1);
+        pushMessage(run, `♻ 净化熔炉：移除了【${weakest.name}】`);
+      }
+    }
+  } else if (choice.shopAction === 'upgrade') {
+    const deck = run.player.deck.filter(c => !c.starter);
+    if (deck.length > 0) {
+      const card = deck[Math.floor(run.rand() * deck.length)];
+      if (card.damage) card.damage = Math.ceil(card.damage * 1.4);
+      if (card.attackBonus) card.attackBonus = Math.ceil(card.attackBonus * 1.4);
+      if (card.armorBonus) card.armorBonus = Math.ceil(card.armorBonus * 1.4);
+      if (card.critChance) card.critChance = Math.min(0.8, card.critChance * 1.4);
+      if (card.regen) card.regen = +(card.regen * 1.4).toFixed(1);
+      if (card.sacrifice) card.sacrifice.amount = +(card.sacrifice.amount * 0.7).toFixed(3);
+      card.name = `${card.name}+`;
+      card.forged = true;
+      pushMessage(run, `🔥 锻造强化：【${card.name}】已升级！`);
+    }
+  } else if (choice.shopAction === 'rare') {
+    const cards = rollCardChoices(run, 1, 3);
+    if (cards.length > 0) {
+      const card = clone(cards[0]);
+      card.forged = true;
+      run.player.deck.push(card);
+      pushMessage(run, `✨ 秘宝抽取：获得【${card.name}】（${card.rarity}）！`);
+    }
+  } else if (choice.shopAction === 'purify_all') {
+    for (const card of run.player.deck) {
+      if (card.sacrifice) card.sacrifice.amount = +(card.sacrifice.amount * 0.85).toFixed(3);
+    }
+    pushMessage(run, '✨ 集体净化：所有献祭代价降低 15%！');
+  } else if (choice.shopAction === 'skip') {
+    pushMessage(run, '离开商店，继续前进。');
+  }
+
+  // Log decision
+  run.decisionLog.push({
+    wave: run.wave,
+    type: 'shop',
+    action: choice.shopAction,
+    name: choice.name,
+    cost: choice.cost,
+  });
+
+  run.buildAnalysis = analyzeBuild(run);
+  run.state = 'playing';
+  run.shopChoices = [];
+  startNextWave(run);
+}
+
+// ============================================================
+// Boss 前休息站
+// ============================================================
+export function generateRestChoices(run) {
+  const stats = getPlayerStats(run);
+  const hpRatio = run.player.hp / Math.max(1, stats.maxHp);
+  const choices = [];
+
+  // 1. 休息：回血
+  const healPct = hpRatio < 0.5 ? 0.4 : 0.25;
+  choices.push({
+    id: 'rest_heal', name: '篝火休息', type: 'rest',
+    restAction: 'heal',
+    desc: `回复 ${Math.round(healPct * 100)}% 最大生命`,
+    value: Math.floor(stats.maxHp * healPct),
+  });
+
+  // 2. 冥想：降低献祭代价
+  choices.push({
+    id: 'rest_meditate', name: '余烬冥想', type: 'rest',
+    restAction: 'meditate',
+    desc: '所有献祭代价永久降低 10%',
+  });
+
+  // 3. 训练：下波临时增益
+  choices.push({
+    id: 'rest_train', name: '战斗训练', type: 'rest',
+    restAction: 'train',
+    desc: '下一波攻击 +20，攻速 +15%',
+  });
+
+  return choices;
+}
+
+export function applyRestChoice(run, choice) {
+  if (!choice || run.state !== 'rest') return;
+
+  if (choice.restAction === 'heal') {
+    const stats = getPlayerStats(run);
+    run.player.hp = Math.min(stats.maxHp, run.player.hp + choice.value);
+    run.particles.push({ type: 'heal', x: run.player.x, y: run.player.y - 25, life: 1.5, maxLife: 1.5, value: choice.value });
+    pushMessage(run, `🔥 篝火休息：回复 ${choice.value} 生命！`);
+  } else if (choice.restAction === 'meditate') {
+    for (const card of run.player.deck) {
+      if (card.sacrifice) card.sacrifice.amount = +(card.sacrifice.amount * 0.9).toFixed(3);
+    }
+    pushMessage(run, '🧘 余烬冥想：所有献祭代价降低 10%！');
+  } else if (choice.restAction === 'train') {
+    run.player.tempAttackBonus = (run.player.tempAttackBonus || 0) + 20;
+    run.player.tempAttackSpeedBonus = 0.15;
+    pushMessage(run, '⚔ 战斗训练：下一波攻击 +20，攻速 +15%！');
+  }
+
+  run.decisionLog.push({
+    wave: run.wave,
+    type: 'rest',
+    action: choice.restAction,
+    name: choice.name,
+  });
+
+  run.state = 'playing';
+  run.restChoices = [];
+  startNextWave(run);
+}
+
 export function applyCardChoice(run, card) {
   const c = clone(card);
   run.player.deck.push(c);
@@ -918,9 +1125,18 @@ export function applyCardChoice(run, card) {
   run.buildAnalysis = analyzeBuild(run);
 
   if (run.state === 'reward') {
-    run.state = 'playing';
-    run.rewardChoices = [];
-    startNextWave(run);
+    // Boss 后奖励 -> 进商店
+    if (run.waveProfile?.kind === 'boss' && run.wave >= 5) {
+      run.state = 'shop';
+      run.rewardChoices = [];
+      run.shopChoices = generateShopChoices(run);
+      run.nextWavePreview = previewNextWaveProfile(run);
+      pushMessage(run, '🏪 Boss 已倒！余烬商人出现了。');
+    } else {
+      run.state = 'playing';
+      run.rewardChoices = [];
+      startNextWave(run);
+    }
   }
 }
 
@@ -1241,8 +1457,9 @@ export function getPlayerStats(run) {
   let attack = p.baseAttack * Math.max(0.15, 1 - s.attack.amount);
   let cooldown = p.baseAttackCooldown * (1 + s.attack_speed.amount);
 
-  // 临时攻击加成（波次内事件）
+  // 临时攻击加成（波次内事件/休息训练）
   attack += p.tempAttackBonus || 0;
+  if (p.tempAttackSpeedBonus) attackSpeedBonus += p.tempAttackSpeedBonus;
 
   // 累加卡牌属性
   let armor = 0, thorns = 0, lifesteal = 0, damageMultiplier = 1, revive = 0;

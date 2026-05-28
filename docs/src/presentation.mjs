@@ -11,6 +11,8 @@ export function buildRunPresentation(run, stats, character) {
     hpLine: `${Math.ceil(Math.max(0, run.player.hp))} / ${stats.maxHp}`,
     comboLine: run.combo >= 3 ? `x${run.combo}` : '',
     statsLine: buildStatsLine(run, stats),
+    forgeChoices: run.forgeChoices || [],
+    isForge: run.state === 'forge',
     rewardLine: buildRewardLine(run),
     waveKindLine: buildWaveKindLine(run),
     waveSummary: targetProfile?.summary || '',
@@ -141,7 +143,7 @@ function buildHudMood(run, stats, targetProfile) {
   const hpRatio = Math.max(0, run.player.hp) / Math.max(1, stats.maxHp);
   if (targetProfile?.kind === "boss") return hpRatio < 0.4 ? "濒临决战" : "准备迎战";
   if (targetProfile?.kind === "elite") return hpRatio < 0.5 ? "高压处理" : "压节奏";
-  if (targetProfile?.kind === "event") return "锻造时刻";
+  if (targetProfile?.kind === "event" || run.state === 'forge') return "锻造时刻";
   if (targetProfile?.kind === "recovery") return "补给窗口";
   if (targetProfile?.kind === "hunt") return "稳定推进";
   return "保持构筑";
