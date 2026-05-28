@@ -50,6 +50,14 @@ const CARD_POOL = [
   { id: 'greed', name: '贪婪', type: 'joker', rarity: 'rare', scoreBonus: 0.6, desc: '击杀得分 +60%', sacrifice: { stat: 'health', amount: 0.06 } },
   { id: 'berserker', name: '狂战士', type: 'joker', rarity: 'legendary', desc: '生命越低伤害越高（最高 x3）', sacrifice: { stat: 'health', amount: 0.2 } },
 
+  // ===== 机制牌（独特玩法效果） =====
+  { id: 'chain_detonate', name: '连锁爆破', type: 'attack', rarity: 'epic', damage: 8, chain: 2, onKillExplosion: 35, desc: '击杀敌人时引爆，对周围敌人造成 35 伤害', sacrifice: { stat: 'health', amount: 0.09 } },
+  { id: 'soul_drain', name: '吸魂', type: 'attack', rarity: 'rare', damage: 10, healOnKill: 0.08, desc: '击杀敌人回复其 8% 最大生命', sacrifice: { stat: 'speed', amount: 0.07 } },
+  { id: 'ember_echo', name: '余烬共鸣', type: 'passive', rarity: 'rare', perCardDamage: 0.02, desc: '每拥有一张牌，攻击 +2%', sacrifice: { stat: 'attack', amount: 0.04 } },
+  { id: 'time_rift', name: '时间裂隙', type: 'joker', rarity: 'epic', waveStartSlow: 3.0, desc: '每波开始时，所有敌人减速 80% 持续 3 秒', sacrifice: { stat: 'health', amount: 0.1 } },
+  { id: 'sacrifice_shift', name: '献祭转移', type: 'joker', rarity: 'legendary', sacrificeReduce: 0.3, desc: '所有卡牌的献祭代价降低 30%', sacrifice: { stat: 'health', amount: 0.18 } },
+  { id: 'fate_wheel', name: '命运之轮', type: 'joker', rarity: 'epic', rewardDoubleChance: 0.35, desc: '35% 几率使奖励翻倍（额外获得一张牌）', sacrifice: { stat: 'attack_speed', amount: 0.1 } },
+
   // ===== 诅咒牌 =====
   { id: 'doom', name: '末日', type: 'curse', rarity: 'epic', damageMultiplier: 2.8, doomTimer: 45, desc: '伤害 x2.8，但 45 秒后强制死亡', sacrifice: { stat: 'health', amount: 0.2 } },
   { id: 'decay', name: '衰败', type: 'curse', rarity: 'rare', attackBonus: 25, decayRate: 1.5, desc: '攻击 +25，每秒失去 1.5 生命', sacrifice: { stat: 'speed', amount: 0.08 } },
@@ -110,12 +118,12 @@ const BOSS_TYPES = {
     ],
   },
   lich: {
-    name: '巫妖王·寒冰', color: '#37474F', radius: 33, hpMult: 14, dmgMult: 2, spdMult: 0.5,
+    name: '巫妖王·寒冰', color: '#37474F', radius: 33, hpMult: 12, dmgMult: 1.8, spdMult: 0.5,
     behavior: 'boss_ice', attackType: 'boss_ice_storm',
     phases: [
-      { hpThreshold: 1.0, attackCooldown: 3.8, pattern: 'ring_burst', bulletCount: 12, bulletSpeed: 160 },
-      { hpThreshold: 0.5, attackCooldown: 2.8, pattern: 'cross_shot', bulletCount: 4, bulletSpeed: 260 },
-      { hpThreshold: 0.25, attackCooldown: 1.8, pattern: 'random_rain', bulletCount: 14, bulletSpeed: 190 },
+      { hpThreshold: 1.0, attackCooldown: 4.0, pattern: 'ring_burst', bulletCount: 10, bulletSpeed: 150 },
+      { hpThreshold: 0.5, attackCooldown: 3.0, pattern: 'cross_shot', bulletCount: 4, bulletSpeed: 240 },
+      { hpThreshold: 0.25, attackCooldown: 2.0, pattern: 'random_rain', bulletCount: 12, bulletSpeed: 180 },
     ],
   },
   demon: {
@@ -190,6 +198,7 @@ export function createRun(seed = Date.now(), character = null) {
     totalWaves: 25,
     gameTime: 0,
     rewardChoices: [],
+    forgeChoices: [],      // 锻造选择（事件波专属）
     rewardRerolls: meta.rerollCount,
     rewardContext: { choiceCount: 3, rarityBonus: 0 },
     waveProfile: null,
@@ -238,6 +247,9 @@ export function createRun(seed = Date.now(), character = null) {
     waveEnemyQueue: [],
     spawnTimer: 0,
     events: [],            // 音效/UI事件队列
+    midWaveEvent: null,    // 波次内随机事件
+    midWaveEventKills: 0,  // 触发事件需要的击杀数
+    midWaveEventTriggered: false,
   };
   startNextWave(run);
   return run;
@@ -254,6 +266,9 @@ function startNextWave(run) {
   run.waveEnemyQueue = [];
   run.spawnTimer = 0;
   run.combo = 0;
+  run.midWaveEventTriggered = false;
+  run.midWaveEventKills = 0;
+  run.player.tempAttackBonus = 0;
 
   const isBoss = run.wave % 5 === 0;
   const isEventWave = !isBoss && (run.wave === 3 || (run.wave > 8 && (run.wave - 3) % 8 === 0));
@@ -331,6 +346,16 @@ function startNextWave(run) {
     run.player.hp = Math.max(1, run.player.hp - dmg);
     run.particles.push({ type: 'self_damage', x: run.player.x, y: run.player.y - 25, life: 1, maxLife: 1, value: dmg });
   }
+  // 时间裂隙：波开始时减速所有敌人
+  const slowStats = getPlayerStats(run);
+  if (slowStats.waveStartSlow > 0) {
+    for (const e of run.enemies) {
+      e.slowTimer = Math.max(e.slowTimer || 0, slowStats.waveStartSlow);
+      e.slowAmount = 0.2;
+    }
+    pushMessage(run, '⏳ 时间裂隙：敌人减速 3 秒！');
+  }
+
   pushMessage(run, `${run.waveProfile.label}：${run.waveProfile.summary}`);
 }
 
@@ -739,6 +764,147 @@ export function rerollRewardChoices(run) {
   return true;
 }
 
+// ============================================================
+// 锻造系统（事件波专属）
+// ============================================================
+export function generateForgeChoices(run) {
+  const deck = run.player.deck.filter(c => !c.starter); // 排除初始牌
+  const choices = [];
+  const seen = new Set();
+
+  // 选项1-3：升级已有卡牌（增强数值 + 降低代价）
+  const upgradeable = deck.filter(c => {
+    const stats = ['damage', 'attackBonus', 'armorBonus', 'regen', 'critChance', 'dodgeChance', 'barrier', 'thorns', 'lifesteal', 'chain', 'slow', 'dot', 'bleed', 'reflect'];
+    return stats.some(s => (c[s] || 0) > 0);
+  });
+
+  for (const card of upgradeable) {
+    if (choices.length >= 3 || seen.has(card.id)) continue;
+    seen.add(card.id);
+    const upgraded = clone(card);
+    upgraded.forgeAction = 'upgrade';
+    upgraded.originalId = card.id;
+    upgraded.name = `${card.name}+`;
+    upgraded.forgeDesc = generateForgeDesc(card);
+    choices.push(upgraded);
+  }
+
+  // 选项4：净化（移除一张牌的献祭代价）
+  const sacrificable = deck.filter(c => c.sacrifice && c.sacrifice.amount > 0);
+  if (sacrificable.length > 0 && choices.length < 4) {
+    const pick = sacrificable[Math.floor(run.rand() * sacrificable.length)];
+    const purified = clone(pick);
+    purified.forgeAction = 'purify';
+    purified.originalId = pick.id;
+    purified.name = `${pick.name}·净`;
+    purified.sacrifice = null;
+    purified.forgeDesc = `净化【${pick.name}】的献祭代价（${sacrificeText(pick.sacrifice)} → 无）`;
+    choices.push(purified);
+  }
+
+  // 选项5：精炼（移除一张牌，获得双倍稀有度的随机牌）
+  if (deck.length >= 4 && choices.length < 5) {
+    choices.push({
+      id: 'forge_reforge', name: '重铸', type: 'forge',
+      forgeAction: 'reforge',
+      forgeDesc: '移除一张低价值牌，获得一张更高稀有度的随机牌',
+      rarity: 'special',
+    });
+  }
+
+  return choices;
+}
+
+function generateForgeDesc(card) {
+  const parts = [];
+  if (card.damage) parts.push(`伤害 +${Math.ceil(card.damage * 0.4)}`);
+  if (card.attackBonus) parts.push(`攻击 +${Math.ceil(card.attackBonus * 0.4)}`);
+  if (card.armorBonus) parts.push(`护甲 +${Math.ceil(card.armorBonus * 0.4)}`);
+  if (card.critChance) parts.push(`暴击 +${Math.round(card.critChance * 40)}%`);
+  if (card.dodgeChance) parts.push(`闪避 +${Math.round(card.dodgeChance * 40)}%`);
+  if (card.regen) parts.push(`回血 +${(card.regen * 0.4).toFixed(1)}/秒`);
+  if (card.barrier) parts.push(`护盾 +${Math.ceil(card.barrier * 0.4)}`);
+  if (card.thorns) parts.push(`反伤 +${Math.ceil(card.thorns * 0.4)}`);
+  if (card.lifesteal) parts.push(`吸血 +${Math.round(card.lifesteal * 40)}%`);
+  if (card.chain) parts.push(`弹射 +1`);
+  if (card.slow) parts.push(`减速 +${Math.round(card.slow * 30)}%`);
+  if (card.dot) parts.push(`中毒 +${Math.ceil(card.dot * 0.4)}/秒`);
+  if (card.bleed) parts.push(`流血 +${Math.ceil(card.bleed * 0.4)}/秒`);
+  if (card.reflect) parts.push(`反弹 +${Math.round(card.reflect * 30)}%`);
+  if (card.sacrifice) parts.push(`代价 -30%`);
+  return `强化【${card.name}】：${parts.join('，')}`;
+}
+
+export function applyForgeChoice(run, choice) {
+  if (!choice || run.state !== 'forge') return;
+
+  if (choice.forgeAction === 'upgrade') {
+    // 找到并升级原卡牌
+    const idx = run.player.deck.findIndex(c => c.id === choice.originalId);
+    if (idx >= 0) {
+      const card = run.player.deck[idx];
+      // 增强数值
+      if (card.damage) card.damage = Math.ceil(card.damage * 1.4);
+      if (card.attackBonus) card.attackBonus = Math.ceil(card.attackBonus * 1.4);
+      if (card.armorBonus) card.armorBonus = Math.ceil(card.armorBonus * 1.4);
+      if (card.critChance) card.critChance = Math.min(0.8, card.critChance * 1.4);
+      if (card.dodgeChance) card.dodgeChance = Math.min(0.65, card.dodgeChance * 1.4);
+      if (card.regen) card.regen = +(card.regen * 1.4).toFixed(1);
+      if (card.barrier) card.barrier = Math.ceil(card.barrier * 1.4);
+      if (card.thorns) card.thorns = Math.ceil(card.thorns * 1.4);
+      if (card.lifesteal) card.lifesteal = Math.min(0.5, card.lifesteal * 1.4);
+      if (card.chain) card.chain += 1;
+      if (card.slow) card.slow = Math.min(0.8, card.slow * 1.3);
+      if (card.dot) card.dot = Math.ceil(card.dot * 1.4);
+      if (card.bleed) card.bleed = Math.ceil(card.bleed * 1.4);
+      if (card.reflect) card.reflect = Math.min(0.8, card.reflect * 1.3);
+      // 降低代价
+      if (card.sacrifice) card.sacrifice.amount = +(card.sacrifice.amount * 0.7).toFixed(3);
+      card.name = `${card.name}+`;
+      card.forged = true;
+      pushMessage(run, `🔥 锻造成功：【${card.name}】已强化！`);
+    }
+  } else if (choice.forgeAction === 'purify') {
+    const idx = run.player.deck.findIndex(c => c.id === choice.originalId);
+    if (idx >= 0) {
+      run.player.deck[idx].sacrifice = null;
+      run.player.deck[idx].name = `${run.player.deck[idx].name}·净`;
+      run.player.deck[idx].purified = true;
+      pushMessage(run, `✨ 净化成功：【${run.player.deck[idx].name}】献祭代价已移除！`);
+    }
+  } else if (choice.forgeAction === 'reforge') {
+    // 移除最低价值牌，获得高稀有度牌
+    const deck = run.player.deck.filter(c => !c.starter);
+    if (deck.length > 0) {
+      // 移除最弱的牌
+      const weakest = deck.reduce((a, b) => {
+        const aScore = (a.damage || 0) + (a.attackBonus || 0) + (a.armorBonus || 0) * 2;
+        const bScore = (b.damage || 0) + (b.attackBonus || 0) + (b.armorBonus || 0) * 2;
+        return aScore < bScore ? a : b;
+      });
+      const removeIdx = run.player.deck.indexOf(weakest);
+      if (removeIdx >= 0) {
+        run.player.deck.splice(removeIdx, 1);
+        pushMessage(run, `♻ 移除了【${weakest.name}】`);
+      }
+      // 获得一张高稀有度牌
+      const rarityBonus = 3;
+      const newCards = rollCardChoices(run, 1, rarityBonus);
+      if (newCards.length > 0) {
+        const newCard = clone(newCards[0]);
+        newCard.forged = true;
+        run.player.deck.push(newCard);
+        pushMessage(run, `🔥 重铸获得：【${newCard.name}】（${newCard.rarity}）`);
+      }
+    }
+  }
+
+  run.buildAnalysis = analyzeBuild(run);
+  run.state = 'playing';
+  run.forgeChoices = [];
+  startNextWave(run);
+}
+
 export function applyCardChoice(run, card) {
   const c = clone(card);
   run.player.deck.push(c);
@@ -870,8 +1036,12 @@ function sacrificeText(s) {
 function applySacrifice(run, s) {
   const bucket = run.sacrifices[s.stat];
   if (!bucket) return;
+  // 献祭转移：降低所有献祭代价
+  const stats = getPlayerStats(run);
+  const reduction = 1 - (stats.sacrificeReduce || 0);
+  const effectiveAmount = s.amount * reduction;
   bucket.count += 1;
-  bucket.amount += s.amount;
+  bucket.amount += effectiveAmount;
   if (bucket.count >= 3) {
     const map = { speed: '磐石之躯', attack: '诅咒之王', health: '幽灵血脉', attack_speed: '巨炮节奏' };
     const name = map[s.stat];
@@ -1071,6 +1241,9 @@ export function getPlayerStats(run) {
   let attack = p.baseAttack * Math.max(0.15, 1 - s.attack.amount);
   let cooldown = p.baseAttackCooldown * (1 + s.attack_speed.amount);
 
+  // 临时攻击加成（波次内事件）
+  attack += p.tempAttackBonus || 0;
+
   // 累加卡牌属性
   let armor = 0, thorns = 0, lifesteal = 0, damageMultiplier = 1, revive = 0;
   let critChance = 0, critDamageBonus = 0.5; // 基础暴击伤害 +50%
@@ -1079,6 +1252,8 @@ export function getPlayerStats(run) {
   let scoreBonus = 0, selfDamageChance = 0, doomTimer = 0, decayRate = 0;
   let regen = 0, barrier = 0;
   let armorPierce = 0, speedPenalty = 0;
+  let onKillExplosion = 0, healOnKill = 0, perCardDamage = 0;
+  let waveStartSlow = 0, sacrificeReduce = 0, rewardDoubleChance = 0;
 
   for (const card of p.deck) {
     attack += card.damage ?? 0;
@@ -1106,6 +1281,12 @@ export function getPlayerStats(run) {
     barrier += card.barrier ?? 0;
     armorPierce += card.armorPierce ?? 0;
     speedPenalty += card.speedPenalty ?? 0;
+    onKillExplosion += card.onKillExplosion ?? 0;
+    healOnKill += card.healOnKill ?? 0;
+    perCardDamage += card.perCardDamage ?? 0;
+    waveStartSlow += card.waveStartSlow ?? 0;
+    sacrificeReduce += card.sacrificeReduce ?? 0;
+    rewardDoubleChance += card.rewardDoubleChance ?? 0;
     if (card.damageMultiplier) damageMultiplier *= card.damageMultiplier;
     if (card.perCardsDamage) damageMultiplier *= (1 + Math.floor(p.deck.length / 4) * card.perCardsDamage);
   }
@@ -1118,6 +1299,9 @@ export function getPlayerStats(run) {
   if (run.extremes.includes('幽灵血脉')) { maxHp = Math.max(1, maxHp * 0.35); speed += 120; dodgeChance += 0.15; }
   if (run.extremes.includes('巨炮节奏')) { cooldown *= 2.0; damageMultiplier *= 2.5; }
   if (run.extremes.includes('诅咒之王')) { attack *= 0.4; damageMultiplier *= 2.2; chain += 2; }
+
+  // 余烬共鸣：每张牌增加伤害
+  if (perCardDamage > 0) damageMultiplier *= (1 + perCardDamage * p.deck.length);
 
   // 狂战士：生命越低伤害越高
   if (run.jokers.some(j => j.id === 'berserker')) {
@@ -1164,6 +1348,8 @@ export function getPlayerStats(run) {
     rangeBonus, chain, slow, dot, bleed,
     scoreBonus, selfDamageChance, doomTimer, decayRate,
     regen, barrier, armorPierce,
+    onKillExplosion, healOnKill, perCardDamage: perCardDamage * p.deck.length,
+    waveStartSlow, sacrificeReduce, rewardDoubleChance,
   };
 }
 
@@ -1232,6 +1418,7 @@ export function updateRun(run, input, dt) {
   updateProjectiles(run, dt, stats);
   updateParticles(run, dt);
   updatePickups(run, dt);
+  checkMidWaveEvent(run);
   updateWaveSpawning(run, dt);
   checkWaveComplete(run);
 }
@@ -1730,6 +1917,28 @@ function damageEnemy(run, enemy, amount, stats, isCrit) {
     run.screenShake = Math.max(run.screenShake, enemy.isBoss ? 1.0 : 0.15);
     if (enemy.isBoss) run.screenFlash = 0.4;
     run.events.push(enemy.isBoss ? 'boss_death' : 'enemy_death');
+
+    // 连锁爆破：击杀时对周围敌人造成伤害
+    if (stats.onKillExplosion > 0) {
+      for (const other of run.enemies) {
+        if (other !== enemy && other.hp > 0) {
+          const d = Math.hypot(other.x - enemy.x, other.y - enemy.y);
+          if (d < 150) {
+            const explDmg = Math.floor(stats.onKillExplosion * stats.damageMultiplier);
+            other.hp -= explDmg;
+            other.hitFlash = 1;
+            run.particles.push({ type: 'explosion', x: other.x, y: other.y, life: 0.4, maxLife: 0.4 });
+          }
+        }
+      }
+    }
+
+    // 吸魂：击杀时回复生命
+    if (stats.healOnKill > 0) {
+      const healAmt = Math.floor((enemy.maxHp || 50) * stats.healOnKill);
+      run.player.hp = Math.min(getPlayerStats(run).maxHp, run.player.hp + healAmt);
+      run.particles.push({ type: 'heal', x: run.player.x, y: run.player.y - 25, life: 0.8, maxLife: 0.8, value: healAmt });
+    }
   }
 }
 
@@ -1959,6 +2168,51 @@ function updateWaveSpawning(run, dt) {
   }
 }
 
+// ============================================================
+// 波次内随机事件
+// ============================================================
+function checkMidWaveEvent(run) {
+  if (run.midWaveEventTriggered || run.state !== 'playing') return;
+  if (run.waveProfile?.kind === 'event' || run.waveProfile?.kind === 'boss') return;
+
+  // 每波击杀数达到阈值时，有几率触发事件
+  const killThreshold = Math.floor(run.waveProfile?.enemyCount * 0.5) || 3;
+  if (run.kills - (run.midWaveEventKills || 0) < killThreshold) return;
+
+  // 20% 几率触发
+  if (run.rand() > 0.2) {
+    run.midWaveEventKills = run.kills;
+    return;
+  }
+
+  const eventType = run.rand();
+  if (eventType < 0.4) {
+    // 余烬宝箱：免费回血
+    const healAmt = Math.floor(getPlayerStats(run).maxHp * 0.15);
+    run.player.hp = Math.min(getPlayerStats(run).maxHp, run.player.hp + healAmt);
+    run.particles.push({ type: 'heal', x: run.player.x, y: run.player.y - 25, life: 1.5, maxLife: 1.5, value: healAmt });
+    pushMessage(run, `🎁 余烬宝箱：回复 ${healAmt} 生命！`);
+  } else if (eventType < 0.7) {
+    // 余烬涌动：临时攻击力提升（本波有效）
+    run.player.tempAttackBonus = (run.player.tempAttackBonus || 0) + 15;
+    pushMessage(run, '⚡ 余烬涌动：本波攻击 +15！');
+  } else {
+    // 诅咒商人：扣 10% 最大生命，获得一张稀有牌
+    const stats = getPlayerStats(run);
+    const cost = Math.floor(stats.maxHp * 0.1);
+    run.player.hp = Math.max(1, run.player.hp - cost);
+    const cards = rollCardChoices(run, 1, 2);
+    if (cards.length > 0) {
+      const card = clone(cards[0]);
+      card.forged = true;
+      run.player.deck.push(card);
+      run.buildAnalysis = analyzeBuild(run);
+      pushMessage(run, `👤 诅咒商人：付出 ${cost} 生命，获得【${card.name}】！`);
+    }
+  }
+  run.midWaveEventTriggered = true;
+}
+
 function checkWaveComplete(run) {
   if (run.state !== 'playing') return;
   if (run.enemies.length === 0 && run.waveEnemyQueue.length === 0) {
@@ -1966,16 +2220,30 @@ function checkWaveComplete(run) {
       run.state = 'victory';
       run.screenFlash = 0.8;
       pushMessage(run, '🏆 余烬永不熄灭！通关！');
+    } else if (run.waveProfile?.kind === 'event') {
+      // 事件波 -> 锻造阶段
+      run.state = 'forge';
+      run.nextWavePreview = previewNextWaveProfile(run);
+      run.forgeChoices = generateForgeChoices(run);
+      pushMessage(run, `🔥 ${run.waveProfile?.label || `第 ${run.wave} 波`} 已清空，进入余烬锻造！`);
     } else {
       run.state = 'reward';
       run.nextWavePreview = previewNextWaveProfile(run);
-      const eventBonus = run.waveProfile?.kind === 'event' ? 2 : 0;
       run.rewardContext = {
-        choiceCount: run.waveProfile?.kind === 'event' ? 4 : 3,
-        rarityBonus: Math.floor(run.wave / 6) + (run.waveProfile?.rewardBias || 0) + (run.nextWavePreview?.rewardBias || 0) + eventBonus,
-        targetTag: run.waveProfile?.kind === 'event' ? 'forge' : (run.nextWavePreview?.rewardTag || run.waveProfile?.rewardTag || 'tempo'),
+        choiceCount: 3,
+        rarityBonus: Math.floor(run.wave / 6) + (run.waveProfile?.rewardBias || 0) + (run.nextWavePreview?.rewardBias || 0),
+        targetTag: run.nextWavePreview?.rewardTag || run.waveProfile?.rewardTag || 'tempo',
       };
       run.rewardChoices = buildRewardChoices(run, run.rewardContext.choiceCount, run.rewardContext.rarityBonus, run.nextWavePreview);
+      // 命运之轮：额外牌
+      const dblStats = getPlayerStats(run);
+      if (dblStats.rewardDoubleChance > 0 && run.rand() < dblStats.rewardDoubleChance) {
+        const extraCards = rollCardChoices(run, 1, run.rewardContext.rarityBonus);
+        if (extraCards.length > 0) {
+          run.rewardChoices.push(clone(extraCards[0]));
+          pushMessage(run, '🎰 命运之轮触发！额外奖励已出现！');
+        }
+      }
       pushMessage(run, `${run.waveProfile?.label || `第 ${run.wave} 波`} 已清空，选择献祭奖励。`);
     }
   }
