@@ -1040,12 +1040,15 @@ function isBossDamageCard(card) {
     hasPositiveStat(card, 'damage') ||
     hasPositiveStat(card, 'attackBonus') ||
     (card.damageMultiplier || 1) > 1 ||
+    hasPositiveStat(card, 'attackSpeedBonus') ||
     hasPositiveStat(card, 'critChance') ||
     hasPositiveStat(card, 'critDamageBonus') ||
     hasPositiveStat(card, 'dot') ||
     hasPositiveStat(card, 'bleed') ||
     hasPositiveStat(card, 'armorPierce') ||
-    hasPositiveStat(card, 'slow')
+    hasPositiveStat(card, 'slow') ||
+    hasPositiveStat(card, 'perCardDamage') ||
+    hasPositiveStat(card, 'perCardsDamage')
   );
 }
 
@@ -1057,6 +1060,48 @@ function isReliableBossDamageCard(card) {
     !card.selfDamageChance &&
     !(card.armorBonus < 0)
   );
+}
+
+function isAoeRepairCard(card) {
+  return Boolean(
+    hasPositiveStat(card, 'chain') ||
+    hasPositiveStat(card, 'attackSpeedBonus') ||
+    hasPositiveStat(card, 'rangeBonus') ||
+    hasPositiveStat(card, 'slow') ||
+    hasPositiveStat(card, 'dot') ||
+    hasPositiveStat(card, 'bleed') ||
+    hasPositiveStat(card, 'onKillExplosion') ||
+    hasPositiveStat(card, 'waveStartSlow')
+  );
+}
+
+function isSustainRepairCard(card) {
+  return Boolean(
+    hasPositiveStat(card, 'regen') ||
+    hasPositiveStat(card, 'lifesteal') ||
+    hasPositiveStat(card, 'barrier') ||
+    hasPositiveStat(card, 'armorBonus') ||
+    hasPositiveStat(card, 'reflect') ||
+    hasPositiveStat(card, 'thorns') ||
+    hasPositiveStat(card, 'healOnKill')
+  );
+}
+
+function isUnsafePressureRepairCard(card) {
+  return Boolean(
+    card.doomTimer ||
+    card.decayRate ||
+    card.selfDamageChance ||
+    card.armorBonus < 0
+  );
+}
+
+function isPressureRepairCard(card, key) {
+  if (!card || isUnsafePressureRepairCard(card)) return false;
+  if (key === 'singleTarget') return isReliableBossDamageCard(card);
+  if (key === 'aoe') return isAoeRepairCard(card);
+  if (key === 'sustain') return isSustainRepairCard(card);
+  return false;
 }
 
 function isBossPunishCard(card) {
@@ -1128,13 +1173,38 @@ function getRequiredSurvivalChoices(run, targetProfile) {
   return 1;
 }
 
+function getPriorityPressureRepairKey(run, targetProfile) {
+  if (!targetProfile) return null;
+  const targetWave = targetProfile.wave ?? run.wave + 1;
+  if (targetWave < 8) return null;
+  const analysis = run.buildAnalysis || analyzeBuild(run);
+  const gaps = buildPressureGaps(
+    analysis?.pressure || {},
+    buildPressureTargets(targetWave, targetProfile)
+  );
+  const minimumGap = {
+    singleTarget: targetProfile.kind === 'boss' ? 14 : 18,
+    aoe: targetProfile.kind === 'onslaught' || targetProfile.kind === 'siege' ? 7 : 9,
+    sustain: targetProfile.kind === 'boss' || targetProfile.kind === 'elite' ? 9 : 12,
+  };
+  const ranked = Object.entries(gaps)
+    .filter(([candidate]) => candidate !== 'safety')
+    .filter(([candidate, value]) => value >= (minimumGap[candidate] || 10))
+    .sort((a, b) => b[1] - a[1]);
+  const [key, gap] = ranked[0] || [];
+  const secondGap = ranked[1]?.[1] || 0;
+  return gap >= secondGap + 6 ? key : null;
+}
+
 function enforceRewardArchetype(run, cards, targetProfile, rarityBonus) {
   if (!targetProfile) return cards;
   const targetTag = targetProfile.rewardTag || 'tempo';
   const guaranteeSurvival = targetTag === 'survival' || targetTag === 'stabilize' || targetProfile.rewardGuard === 'survival' || needsBossPrep(run, targetProfile);
   const requiredBossDamageChoices = getRequiredBossDamageChoices(run, targetProfile);
   const guaranteeBossDamage = requiredBossDamageChoices > 0;
-  if (!guaranteeSurvival && !guaranteeBossDamage) return cards;
+  const pressureRepairKey = getPriorityPressureRepairKey(run, targetProfile);
+  const guaranteePressureRepair = Boolean(pressureRepairKey);
+  if (!guaranteeSurvival && !guaranteeBossDamage && !guaranteePressureRepair) return cards;
   const nextCards = [...cards];
   const requiredSurvivalChoices = guaranteeSurvival
     ? Math.min(nextCards.length, Math.max(1, getRequiredSurvivalChoices(run, targetProfile)))
@@ -1163,6 +1233,27 @@ function enforceRewardArchetype(run, cards, targetProfile, rarityBonus) {
     nextCards[i] = guaranteed;
     excludedIds.add(guaranteed.id);
     bossDamageCount += 1;
+  }
+
+  if (guaranteePressureRepair && !nextCards.some(card => isPressureRepairCard(card, pressureRepairKey))) {
+    const analysis = run.buildAnalysis || analyzeBuild(run);
+    const replaceIndex = nextCards
+      .map((card, index) => ({ card, index, score: scoreCardFit(card, analysis, targetProfile) }))
+      .filter(({ card }) => {
+        const wouldBreakSurvival = isSurvivalCard(card) && survivalCount <= requiredSurvivalChoices;
+        const wouldBreakBossDamage = guaranteeBossDamage && isReliableBossDamageCard(card) && bossDamageCount <= requiredBossDamageChoices;
+        return !wouldBreakSurvival && !wouldBreakBossDamage;
+      })
+      .sort((a, b) => a.score - b.score)[0]?.index;
+    const guaranteed = Number.isInteger(replaceIndex)
+      ? pickGuaranteedCard(run, rarityBonus, card => isPressureRepairCard(card, pressureRepairKey), excludedIds)
+      : null;
+    if (guaranteed) {
+      if (isSurvivalCard(nextCards[replaceIndex])) survivalCount -= 1;
+      if (isReliableBossDamageCard(nextCards[replaceIndex])) bossDamageCount -= 1;
+      nextCards[replaceIndex] = guaranteed;
+      excludedIds.add(guaranteed.id);
+    }
   }
 
   return nextCards;
@@ -1902,7 +1993,7 @@ function scoreCardFit(card, analysis, waveProfile) {
 
   // 输出缺口加成：阈值随波次增长，中后期输出牌大幅加分
   if (singleTargetNeed > 0 && (card.damage || card.attackBonus || card.damageMultiplier || card.critChance || card.critDamageBonus)) score += Math.min(4.0, singleTargetNeed * 0.04);
-  if (aoeNeed > 0 && (card.chain || card.attackSpeedBonus || card.rangeBonus || card.slow || card.dot || card.bleed)) score += Math.min(1.9, aoeNeed * 0.05);
+  if (aoeNeed > 0 && isAoeRepairCard(card)) score += Math.min(2.2, aoeNeed * 0.06);
   if (sustainNeed > 0 && (sustainCard || fortressCard)) score += Math.min(2.2, sustainNeed * 0.04);
   if (strongSafetyGap && safetyCard && !firstBossOutputGap) score += Math.min(2.4, safetyNeed * 0.06);
 
@@ -2205,13 +2296,13 @@ function describeCardFit(card, analysis, waveProfile = null) {
   const targets = buildPressureTargets(waveProfile?.wave || 1, waveProfile);
   const gaps = buildPressureGaps(pressure, targets);
   if ((card.critChance || card.critDamageBonus) && (focus.crit || 0) >= 2) reasons.push('补强暴击主轴');
-  if ((card.attackSpeedBonus || card.chain || card.rangeBonus) && (focus.barrage || 0) >= 2) reasons.push('提升清场节奏');
+  if (isAoeRepairCard(card) && (focus.barrage || 0) >= 2) reasons.push('提升清场节奏');
   if ((card.regen || card.lifesteal || card.barrier) && (focus.sustain || 0) >= 2) reasons.push('增强续航稳定性');
   if ((card.armorBonus || card.dodgeChance || card.reflect || card.thorns) && (focus.fortress || 0) >= 2) reasons.push('巩固生存下限');
   if ((card.dot || card.bleed) && (focus.bleed || 0) >= 2) reasons.push('放大持续伤害');
   if ((card.type === 'curse' || card.decayRate || card.doomTimer) && (focus.curse || 0) >= 2) reasons.push('强化高风险爆发');
   if (reasons.length === 0 && gaps.singleTarget > 0 && (card.damage || card.attackBonus || card.critChance || card.damageMultiplier)) reasons.push('补首领输出缺口');
-  if (reasons.length === 0 && gaps.aoe > 0 && (card.chain || card.attackSpeedBonus || card.rangeBonus || card.slow)) reasons.push('补清场与控场');
+  if (reasons.length === 0 && gaps.aoe > 0 && isAoeRepairCard(card)) reasons.push('补清场与控场');
   if (reasons.length === 0 && gaps.sustain > 0 && (card.regen || card.lifesteal || card.barrier || card.armorBonus || card.dodgeChance || card.reflect)) reasons.push('补容错短板');
   if (reasons.length === 0 && gaps.safety > 0 && (card.revive || card.barrier || card.dodgeChance)) reasons.push('补高波安全网');
   if (reasons.length === 0 && card.type === 'attack') reasons.push('直接抬升输出');

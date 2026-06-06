@@ -1408,6 +1408,54 @@ test('中后期 Boss 安全网缺口应让复活牌压过继续堆输出', () =>
   assert.equal(phoenixEmber.fitHint, '补高波安全网');
 });
 
+test('中后期奖励应保底修复最大构筑短板', () => {
+  const run = createRun(426);
+  run.player.deck = run.player.deck.filter(card => card.id.startsWith('starter_'));
+  run.buildAnalysis = {
+    primaryFocus: 'sustain',
+    focusScores: { crit: 0, barrage: 0, sustain: 5, fortress: 2, curse: 0, bleed: 0, control: 0, greed: 0 },
+    pressure: {
+      singleTarget: 132,
+      aoe: 8,
+      sustain: 58,
+      mitigation: 42,
+      safety: 34,
+    },
+  };
+  run.wave = 14;
+  run.state = 'reward';
+  run.rewardRerolls = 1;
+  run.waveProfile = {
+    wave: 14,
+    kind: 'onslaught',
+    rewardTag: 'survival',
+    rewardGuard: null,
+  };
+  run.nextWavePreview = {
+    wave: 15,
+    kind: 'boss',
+    rewardTag: 'survival',
+    rewardGuard: null,
+  };
+  run.rewardContext = { choiceCount: 3, rarityBonus: 1, targetTag: 'survival' };
+  run.rewardChoices = [];
+
+  const ok = rerollRewardChoices(run);
+  assert.equal(ok, true);
+
+  const aoeRepair = run.rewardChoices.filter(card => (
+    card.chain ||
+    card.attackSpeedBonus > 0 ||
+    card.rangeBonus ||
+    card.slow ||
+    card.dot ||
+    card.bleed ||
+    card.onKillExplosion
+  ));
+  assert.ok(aoeRepair.length >= 1, `最大清场短板应至少保底一张修复牌，实际 ${run.rewardChoices.map(card => card.id).join(',')}`);
+  assert.match(aoeRepair[0].fitHint, /清场|控场/, `修复牌提示应说明清场短板，实际 ${aoeRepair[0].fitHint}`);
+});
+
 test('固定 seed 1 的自动选牌应能通过第 5 波', () => {
   const run = simulateAutoRun(1);
   assert.ok(run.wave > 5, `预期固定 seed 1 至少通过第 5 波，实际停在第 ${run.wave} 波`);

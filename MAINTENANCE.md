@@ -1,12 +1,37 @@
 # 余烬 Ember - 维护与接手文档
 
-最后更新：2026-06-06（本轮继续修高波 Boss 前 safety 和读招可读性：极低最大生命的脆皮构筑现在会在压力模型中记录 `fragilityDebt`，第 25 波等高波 Boss 前选择 `烟幕疾行` 时可附带 1 次 `残影保命`；临时防死现在记录来源，护符仍显示金色 `护符 1`，烟幕残影显示蓝色 `残影 1`，触发文案也会区分“余烬护符碎裂”和“烟幕残影散尽”。本轮新增高波 Boss 左上读招面板，会显示当前阶段技能名和蓄力百分比；debug snapshot 同步暴露 `bossPatternLabel` / `bossCharge`，视觉 smoke 会断言这些字段存在；service worker 预缓存改为逐资源容错，避免 Android WebView 因 `Cache.addAll` 内部错误产生启动期 fatal log。对应已跑过 core 回归、Boss checkpoint、Web smoke、视觉回归、Playwright 高波读招检查、Android debug APK 构建和 `NightRunner35` 模拟器点击 smoke，并已同步 `web -> docs -> android`；当前 `boss-checkpoints` 最新结果为 `baseline avgWave 18.68`、`smart avgWave 23.75`，其中 smart 第 5 波 `60/60` 通过、第 25 波到达 `51/60`、通关 `48/60`，且 smart 已无 max-tick 卡局。最新 debug APK SHA256 为 `8D104114BB89AA0E3AB5BC19FA5233383257B3195D42835D7ACC22E222F758C2`。前序记录中的职业身份、早期敌压、阶段压力环、延迟 `aimed_burst`、Boss 前营火链路、护符 HUD、竖屏布局、视觉像素回归、参考图竞技场背景、沉浸式 Android 外壳与 Web smoke / APK 内容校验仍继续成立）
+最后更新：2026-06-06（本轮继续补中后期奖励推荐和维护交接：奖励池现在会在第 8 波以后检查 `singleTarget / aoe / sustain` 最大压力缺口，若缺口足够突出，会保底替换一张不破坏生存/Boss 输出保底的低契合牌，避免玩家因为随机奖励完全拿不到输出、清场或续航修复方向；`safety` 仍由 Boss 前生存保底、复活牌评分和营火护符/烟幕链路处理，避免通用奖励保底过度抢占输出成长位。Boss 输出识别同步补上攻速和随卡组增伤类牌。新增回归覆盖“中后期奖励应保底修复最大构筑短板”。本轮也把维护文档改成先给下一位 AI 的快速交接，再保留详细历史证据。前序记录中的脆皮 `fragilityDebt`、烟幕残影保命、Boss 读招面板、逐资源 service worker 预缓存、视觉回归、Android debug APK 构建和模拟器点击 smoke 仍继续成立。）
 
 本文件给下一个继续维护的人或 AI，用来快速判断三件事：
 
 - 这个项目当前已经稳定到什么程度
 - 哪些链路已经有实证，哪些仍然只是方向
 - 下一步应该优先动哪里，避免重复踩坑
+
+---
+
+## 0. 下一位 AI 先做这些
+
+接手后先执行这 6 步，不要直接改 `docs/src/*`：
+
+1. 先跑 `git status --short --branch` 和 `git diff --stat`，确认有没有用户或上一个 AI 留下的未提交改动；不要回退不属于当前任务的改动。
+2. 源码只优先改 `web/`、`tests/`、顶层维护文档；`docs/` 是发布镜像，`android/app/src/main/assets/public/` 是 Capacitor 派生产物，改完用 `node scripts/sync-web.mjs` 生成。
+3. 玩法和平衡改动先在 `tests/game_core.test.mjs` 加回归，再改 `web/src/game_core.mjs`；核心逻辑必须保持可被 Node 测试直接驱动，不要把玩法判断塞进 UI。
+4. 前端改动先看 `web/src/main.mjs`、`web/styles.css`、`web/src/presentation.mjs`；保持 `presentation.mjs` 做展示边界，不要让 HUD/卡片渲染重新承担构筑推导。
+5. Android 交付链路优先跑 `npm run build:android:debug`；需要证明能开玩时跑 `npm run verify:android:smoke`，它会安装 APK、启动 App、点击到局内并扫描 fatal log。
+6. 提交必须遵守 Lore Commit Protocol：第一行写为什么改，正文写约束和取舍，尾部用 `Constraint:`、`Rejected:`、`Confidence:`、`Scope-risk:`、`Tested:`、`Not-tested:` 等 trailer。
+
+本轮新增的核心改动位置：
+
+- `web/src/game_core.mjs`：`isAoeRepairCard()`、`isSustainRepairCard()`、`isPressureRepairCard()` 和 `getPriorityPressureRepairKey()` 共同负责中后期奖励短板修复保底；通用奖励保底刻意不覆盖 `safety`。
+- `tests/game_core.test.mjs`：`中后期奖励应保底修复最大构筑短板` 锁定清场缺口必须至少出现一张修复牌。
+- `docs/src/game_core.mjs`：不要手工维护；由 `node scripts/sync-web.mjs` 从 `web/src/game_core.mjs` 同步。
+
+本轮以后最值得继续做的事情：
+
+- 继续用 `npm run test:boss-checkpoints` 观察第 10/15/20/25 波，不要只优化第 5 波。
+- 继续强化 `构筑缺口 -> 奖励推荐 -> 战前准备 -> 波次风险提示 -> 死亡复盘` 这一条闭环。
+- 继续补区域级视觉回归和实体 Android 真机复测；目前已有模拟器点击流证据，但真机仍是剩余平台风险。
 
 ---
 
@@ -178,16 +203,16 @@ npm run serve
 
 ### 当前验证结果
 
-- `baseline_sim`：
+- `baseline_sim`（前序单脚本样本，本轮未重跑该单脚本）：
   - `avgWave = 18.45`
   - `wave5failSeeds = 1 / 60`（seed 39，站桩 baseline 仍会在第 5 波输出/容错双缺口时失败）
   - 站桩 baseline 仍是保守压力参考，不等同真实玩家操作；smart 策略已稳定通过首个 Boss
-- `smart_sim`：
+- `smart_sim`（前序单脚本样本，本轮未重跑该单脚本）：
   - `avgWave = 22.68`
   - `wave5failSeeds = 0 / 60`
 - `npm run test:boss-checkpoints`：
-  - baseline：第 5 波 `59/60` 通过；第 10/15/20 波 Boss 死亡分别为 `0 / 2 / 13`
-  - smart：第 5 波 `60/60` 通过；第 10/15/20/25 波 Boss 死亡分别为 `1 / 1 / 1 / 3`，第 25 波到达 `51/60`，通关 `48/60`
+  - baseline：`avgWave = 19.12`；第 5 波 `59/60` 通过；第 10/15/20 波 Boss 死亡分别为 `0 / 0 / 10`
+  - smart：`avgWave = 23.00`；第 5 波 `60/60` 通过；第 10/15/20/25 波 Boss 死亡分别为 `3 / 2 / 3 / 3`，第 20 波到达 `51/60`，第 25 波到达 `46/60`，通关 `43/60`
   - smart `maxTickStops = []`，历史 seed 59 场外弓箭手卡局已消失，当前该 seed 可推进到胜利
   - 当前最集中的短板标签仍是 `safety`；第 20/25 波 Boss 仍是下一轮主要平衡对象，不建议为站桩 baseline 的单个第 5 波失败继续削弱首个 Boss
 - `npm test`：
@@ -202,6 +227,7 @@ npm run serve
   - 已覆盖第 20 波即使 safety 缺口不大、但机动性明显不足时，也应出现 `烟幕疾行`
   - 已覆盖中后期压力目标会随波次提高，并验证死亡复盘会输出数值缺口和最后决策
   - 已覆盖中后期 Boss safety 缺口较大时，复活安全网应压过继续堆输出，同时不破坏首个 Boss 输出缺口优先级
+  - 已覆盖中后期奖励会按 `singleTarget / aoe / sustain` 的最大突出短板保底提供修复牌，同时不把 `safety` 纳入通用奖励保底
   - 已覆盖早期 `末日` 降权，以及中后期 Boss / survival 场景里 `末日` 不应压过 `凤凰余烬` 这类安全网牌；首个 Boss 前输出缺口推荐、极大单体缺口双输出保底、`玻璃炮` 与吸血续航排序、历史第 5 波失败 seed 回归也仍保留
   - 已覆盖普通远程敌人不能退到场外导致波次无法结束
   - 已覆盖核心状态机无出口检查：`reward / forge / shop / rest` 必须有选择项或离开项，并能在 `steady / standard / trial`、seed 1..30 下至少推进到第 10 波
@@ -256,7 +282,7 @@ npm run serve
 - Android 构建：
   - `npm run build:android:debug` 当前返回成功
   - APK 路径：`android/app/build/outputs/apk/debug/app-debug.apk`
-  - 当前 APK SHA256：`8D104114BB89AA0E3AB5BC19FA5233383257B3195D42835D7ACC22E222F758C2`
+  - 当前构建 APK SHA256：`000FA7BDC3F7F6B853615238B378C85765778927953CE480706D2931F0A64A06`
   - 构建脚本会自动验证 APK 内容，避免 Web 修复没有同步进 Android 包
   - 已验证 APK 内包含当前 Web 资源关键标记：
     - `assets/public/index.html` 含 `Arena Roguelike`
@@ -269,7 +295,7 @@ npm run serve
     - `assets/public/assets/ember-enemies-spritesheet.png` 存在
 - Android 模拟器安装 / 启动 / 点击流：
   - 命令：`npm run verify:android:smoke`
-  - 当前验证 APK SHA256：`8D104114BB89AA0E3AB5BC19FA5233383257B3195D42835D7ACC22E222F758C2`
+  - 最近一次模拟器点击流验证 APK SHA256：`000FA7BDC3F7F6B853615238B378C85765778927953CE480706D2931F0A64A06`
   - 结果：APK 安装成功，`com.ember.roguelike/.MainActivity` 冷启动成功
   - 没有在线设备时，脚本已自动发现唯一 AVD `NightRunner35` 并启动，验证后自动关闭
   - emulator `sys.boot_completed` 后会额外等待 8 秒再启动验证，减少冷启动期误报 `ActivityManager` ANR

@@ -71,7 +71,7 @@ http://127.0.0.1:5173
 
 - `npm run serve` 现在使用仓库内的 Node 静态服务，`.mjs` MIME 正确，不再依赖 Python 的默认静态服务器行为。
 - `npm test` 会验证核心玩法和平衡回归；其中包含奖励 / 锻造 / 商店 / 营火等决策状态不能进入无出口卡死状态的状态机检查。
-- `npm run test:boss-checkpoints` 会跑 baseline / smart 两套 60 seed 模拟，输出第 5/10/15/20/25 波 Boss 检查点、死亡 seed、短板标签和少量死亡样本，方便继续调中后期节奏；当前最近一次结果为 `baseline avgWave 18.68`、`smart avgWave 23.75`，其中 smart 第 5 波 `60/60` 通过、第 25 波到达 `51/60`、通关 `48/60`，且没有 max-tick 卡局。
+- `npm run test:boss-checkpoints` 会跑 baseline / smart 两套 60 seed 模拟，输出第 5/10/15/20/25 波 Boss 检查点、死亡 seed、短板标签和少量死亡样本，方便继续调中后期节奏；当前最近一次结果为 `baseline avgWave 19.12`、`smart avgWave 23.00`，其中 smart 第 5 波 `60/60` 通过、第 20 波到达 `51/60`、第 25 波到达 `46/60`、通关 `43/60`，且没有 max-tick 卡局。
 - `npm run test:web-smoke` 会验证 spritesheet 尺寸/内容、service worker 预缓存清单、本地服务 MIME、UI 状态路由，以及核心逻辑发出的粒子类型是否都被前端绘制，不需要新增浏览器测试依赖。
 - `npm run test:visual-smoke` 会用本机 Chrome/Edge 做桌面和移动端视觉 smoke，覆盖菜单、角色选择、局内 canvas、奖励选择页、Boss 前营火、Boss 波进入、桌面/移动端活跃 Boss 战读招画面，以及固定的第 20 波高波 Boss 桌面场景；高波样本会断言 debug snapshot 中存在 `bossPatternLabel` 与 `bossCharge`，截图输出到 `output/visual-smoke/`，不需要新增 Playwright/Puppeteer 依赖。
 - `npm run test:visual-regression` 会先跑视觉 smoke，再读取 PNG 像素并和 `tests/visual-regression-baseline.json` 对比；角色选择等稳定界面使用严格 RGBA 哈希，动画界面使用像素亮度/色彩比例容差。
@@ -85,7 +85,9 @@ http://127.0.0.1:5173
 
 当前仓库已经验证过可在本机生成 debug APK，并在本机 `NightRunner35` Android 模拟器完成安装、冷启动、焦点窗口、点击进入角色选择、点击进入局内战斗、截图和 logcat 致命错误扫描。
 
-最近一次验证 APK SHA256：`8D104114BB89AA0E3AB5BC19FA5233383257B3195D42835D7ACC22E222F758C2`
+最近一次构建 APK SHA256：`000FA7BDC3F7F6B853615238B378C85765778927953CE480706D2931F0A64A06`
+
+最近一次模拟器点击流验证 APK SHA256：`000FA7BDC3F7F6B853615238B378C85765778927953CE480706D2931F0A64A06`
 
 ```bash
 npm run build:android:debug
