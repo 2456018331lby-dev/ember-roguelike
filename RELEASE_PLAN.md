@@ -40,7 +40,7 @@ android/app/build/outputs/apk/debug/app-debug.apk
 当前最近一次验证 APK SHA256：
 
 ```text
-61FEDFD055AE46EDFC81FAAC1A96AD1CFB8488A30492F4865F2ABA0844CE337F
+997CE343CCEC06B8D82634E213AD972625F6AFC5AD439464D5932238C573BA79
 ```
 
 ### 安装 / 启动验证
@@ -90,6 +90,7 @@ output/android-smoke/gameplay.png
 - logcat fatal-error scan 通过
 - 当前验证包已包含第 19 波锻造后转入 Boss 前营火；`烟幕疾行` 现在除了高波极端 safety 缺口，也会在第 20 波以后机动性短板明显时出现
 - 当前验证包也包含战前营火推荐标签与建议文案，且 verifier 会在 AVD `sys.boot_completed` 后额外等待 8 秒再启动检查
+- verifier 的 Android 点击 smoke 现在会对菜单和角色选择页使用多候选点击点位，降低 HUD / 按钮布局微调后脚本立刻失效的概率
 
 如果不走这个脚本，再手工执行时要注意：
 

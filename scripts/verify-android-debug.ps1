@@ -501,6 +501,61 @@ function Get-FileSha256 {
   }
 }
 
+function Invoke-TapUntilScreenshotChanges {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$RepoRoot,
+    [Parameter(Mandatory = $true)]
+    [string]$AdbPath,
+    [Parameter(Mandatory = $true)]
+    [string]$Serial,
+    [Parameter(Mandatory = $true)]
+    [string]$PackageName,
+    [Parameter(Mandatory = $true)]
+    [string]$ActivityComponent,
+    [Parameter(Mandatory = $true)]
+    [int]$Width,
+    [Parameter(Mandatory = $true)]
+    [int]$Height,
+    [Parameter(Mandatory = $true)]
+    [string]$BaselineHash,
+    [Parameter(Mandatory = $true)]
+    [long]$BaselineFileBytes,
+    [Parameter(Mandatory = $true)]
+    [string]$FileName,
+    [Parameter(Mandatory = $true)]
+    [string]$Description,
+    [Parameter(Mandatory = $true)]
+    [object[]]$Ratios,
+    [int]$WaitSeconds = 2,
+    [long]$MinFileBytesDelta = 0
+  )
+
+  foreach ($ratio in $Ratios) {
+    Invoke-DeviceTapRatio -AdbPath $AdbPath -Serial $Serial -Width $Width -Height $Height -XRatio $ratio.X -YRatio $ratio.Y
+    Start-Sleep -Seconds $WaitSeconds
+    Assert-AppFocused -RepoRoot $RepoRoot -AdbPath $AdbPath -Serial $Serial -PackageName $PackageName -ActivityComponent $ActivityComponent
+    $screenshotPath = Save-LaunchScreenshot -RepoRoot $RepoRoot -AdbPath $AdbPath -Serial $Serial -FileName $FileName
+    if (!$screenshotPath) {
+      throw "Could not save Android $Description screenshot."
+    }
+    $hash = Get-FileSha256 -Path $screenshotPath
+    $fileBytes = (Get-Item $screenshotPath).Length
+    if ($hash -ne $BaselineHash -and [Math]::Abs($fileBytes - $BaselineFileBytes) -ge $MinFileBytesDelta) {
+      Write-Host "$Description screenshot=$screenshotPath"
+      return [PSCustomObject]@{
+        Path = $screenshotPath
+        Hash = $hash
+        FileBytes = $fileBytes
+        XRatio = $ratio.X
+        YRatio = $ratio.Y
+      }
+    }
+  }
+
+  throw "Android tap smoke did not reach a new $Description screen after trying all tap candidates."
+}
+
 function Invoke-AndroidTapSmoke {
   param(
     [Parameter(Mandatory = $true)]
@@ -521,34 +576,53 @@ function Invoke-AndroidTapSmoke {
   Write-Host "Android tap smoke display=$($display.Width)x$($display.Height)"
 
   $launchHash = Get-FileSha256 -Path $LaunchScreenshotPath
+  $launchFileBytes = (Get-Item $LaunchScreenshotPath).Length
 
-  # Menu: tap the primary "开始远征" button.
-  Invoke-DeviceTapRatio -AdbPath $AdbPath -Serial $Serial -Width $display.Width -Height $display.Height -XRatio 0.5 -YRatio 0.56
-  Start-Sleep -Seconds 2
-  Assert-AppFocused -RepoRoot $RepoRoot -AdbPath $AdbPath -Serial $Serial -PackageName $PackageName -ActivityComponent $ActivityComponent
-  $characterScreenshotPath = Save-LaunchScreenshot -RepoRoot $RepoRoot -AdbPath $AdbPath -Serial $Serial -FileName 'character-select.png'
-  if (!$characterScreenshotPath) {
-    throw "Could not save Android character-select screenshot."
-  }
-  $characterHash = Get-FileSha256 -Path $characterScreenshotPath
-  if ($characterHash -eq $launchHash) {
-    throw "Android tap smoke did not leave the menu after tapping Start. Screenshot did not change."
-  }
-  Write-Host "Character select screenshot=$characterScreenshotPath"
+  # Menu: try a small cluster of taps around the primary "开始远征" button so
+  # minor UI layout shifts do not break Android smoke.
+  $characterResult = Invoke-TapUntilScreenshotChanges `
+    -RepoRoot $RepoRoot `
+    -AdbPath $AdbPath `
+    -Serial $Serial `
+    -PackageName $PackageName `
+    -ActivityComponent $ActivityComponent `
+    -Width $display.Width `
+    -Height $display.Height `
+    -BaselineHash $launchHash `
+    -BaselineFileBytes $launchFileBytes `
+    -FileName 'character-select.png' `
+    -Description 'character-select' `
+    -Ratios @(
+      @{ X = 0.50; Y = 0.542 },
+      @{ X = 0.50; Y = 0.52 },
+      @{ X = 0.50; Y = 0.56 }
+    ) `
+    -MinFileBytesDelta 20000
+  $characterScreenshotPath = $characterResult.Path
+  $characterHash = $characterResult.Hash
+  $characterFileBytes = $characterResult.FileBytes
 
-  # Character select: tap the bottom-left "开始战斗" sticky action.
-  Invoke-DeviceTapRatio -AdbPath $AdbPath -Serial $Serial -Width $display.Width -Height $display.Height -XRatio 0.285 -YRatio 0.91
-  Start-Sleep -Seconds 4
-  Assert-AppFocused -RepoRoot $RepoRoot -AdbPath $AdbPath -Serial $Serial -PackageName $PackageName -ActivityComponent $ActivityComponent
-  $gameplayScreenshotPath = Save-LaunchScreenshot -RepoRoot $RepoRoot -AdbPath $AdbPath -Serial $Serial -FileName 'gameplay.png'
-  if (!$gameplayScreenshotPath) {
-    throw "Could not save Android gameplay screenshot."
-  }
-  $gameplayHash = Get-FileSha256 -Path $gameplayScreenshotPath
-  if ($gameplayHash -eq $characterHash -or $gameplayHash -eq $launchHash) {
-    throw "Android tap smoke did not reach a new gameplay screen. Screenshot did not change."
-  }
-  Write-Host "Gameplay screenshot=$gameplayScreenshotPath"
+  # Character select: try the sticky bottom action area with a few nearby taps.
+  $gameplayResult = Invoke-TapUntilScreenshotChanges `
+    -RepoRoot $RepoRoot `
+    -AdbPath $AdbPath `
+    -Serial $Serial `
+    -PackageName $PackageName `
+    -ActivityComponent $ActivityComponent `
+    -Width $display.Width `
+    -Height $display.Height `
+    -BaselineHash $characterHash `
+    -BaselineFileBytes $characterFileBytes `
+    -FileName 'gameplay.png' `
+    -Description 'gameplay' `
+    -Ratios @(
+      @{ X = 0.27; Y = 0.924 },
+      @{ X = 0.27; Y = 0.95 },
+      @{ X = 0.29; Y = 0.91 }
+    ) `
+    -WaitSeconds 4 `
+    -MinFileBytesDelta 20000
+  $gameplayScreenshotPath = $gameplayResult.Path
   Write-Host "Android tap smoke reached gameplay."
 }
 

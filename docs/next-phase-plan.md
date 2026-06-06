@@ -1,6 +1,6 @@
 # Ember 下一阶段执行计划
 
-最后更新：2026-06-06（本轮把高波准备继续往“更会自救”方向推了一步：`烟幕疾行` 现在除了高波极端 safety 缺口，也会在第 20 波以后机动性短板明显时出现；`末日` / `衰败` 在中后期 Boss 与 survival 场景会被更明显地下调推荐权重，减少高风险路线压过安全网牌；checkpoint smart 策略也改成按 `fitScore` 选营火，避免测试低估战前推荐体系。对应 core 回归、Boss checkpoint 模拟、Web smoke、视觉回归、Android debug APK 构建与 `verify:android:smoke` 已重新通过；smart `avgWave` 已到 `21.52`，第 25 波到达 `33/60`、通关 `27/60`；最新 debug APK SHA256 为 `61FEDFD055AE46EDFC81FAAC1A96AD1CFB8488A30492F4865F2ABA0844CE337F`。前序记录包含 Boss 战阶段压力环、弹幕形状预览、Boss 血条阶段刻度、紧凑顶部生命 HUD、固定 `boss-fight-highwave-desktop.png` 第 20 波高压样本、竖屏竞技场上移、`余烬护符` 可见反馈、Android 自动 AVD smoke、`末日` 从拿牌时倒计时、中后期压力目标、奖励解释、死亡复盘和最后决策记录、视觉截图像素回归、覆盖层状态路由集中化、核心状态机无出口回归测试、奖励页首选/豪赌决策层级强化、参考图风格竞技场背景、核心战斗粒子绘制补全、沉浸式 Android 外壳、首个 Boss 奖励推荐再平衡、移动端首屏修复、Web smoke 与 APK 内容校验已接入；下一步继续补中后期 Boss 安全网、更多高波阶段特效和真机复测）
+最后更新：2026-06-06（本轮把“职业区分、早期敌压、界面完成度、Android 验证”一起往前推了一步：四个角色现在分别使用近战突进 / 奥术球 / 飞刀扇射 / 噬魂咒弹，不再只是同模板改数值；早中期小怪补了 skirmish / hybrid / lobber 型弹幕压力；战士已修正中距离追击断层，Boss 也加回场内边界约束；角色选择页、HUD 战术读板和本地生成敌人 spritesheet 又做了一轮强化；Android verifier 改成多候选点击 smoke，更能扛布局变化。对应 core 回归、Boss checkpoint、Web smoke、视觉 smoke、视觉回归、Android debug APK 构建与 `verify:android:smoke` 已重新通过；smart `avgWave` 已到 `21.87`，第 25 波到达 `37/60`、通关 `34/60`；最新 debug APK SHA256 为 `997CE343CCEC06B8D82634E213AD972625F6AFC5AD439464D5932238C573BA79`。前序记录中的阶段压力环、弹幕形状预览、Boss 血条阶段刻度、竖屏竞技场上移、护符可见反馈、`末日` 拿牌计时、奖励解释 / 死亡复盘、视觉像素回归、覆盖层状态路由集中化、核心状态机无出口检查、参考图竞技场背景、沉浸式 Android 外壳、移动端首屏修复和 Web smoke / APK 内容校验仍继续成立；下一步继续补中后期 Boss 安全网、更多高波阶段特效和真机复测）
 
 这个文件只回答一个问题：下一阶段最值得继续做什么。
 
@@ -37,7 +37,10 @@
 - 奖励卡片已经能展示适配度、标签、建议方向和首选/豪赌/稳血线等决策标签
 - 奖励 / 锻造 / 商店 / 营火点击后的 UI 状态同步已集中到 `syncOverlayForRunState`
 - 角色选择页和局内玩家模型已换成 AI 生成 spritesheet，明显弱化了原先的占位感
+- 角色选择页现在会直接展示职业职责、武器、战斗备注和起手流派，锁定职业也保持基本可读
+- HUD 右上角已从单块文本墙整理成分区式战术读板，波次 / 血线 / 构筑 / 风险的层级更清晰
 - 普通敌人、远程/支援敌人和三种 Boss 已接入本地生成 spritesheet，原 SVG 符号保留为资源兜底
+- 敌人本地图集继续加强了 slime / bat / skeleton / golem / archer / fire_mage / healer / summoner 的 silhouette，缩小到战场里也更容易读类别
 - 敌人近战、远程射击、支援/召唤和 Boss 蓄力已有基础画面提示；链击、爆炸、子弹命中、护盾吸收、自伤、冲刺残影、复活和死亡爆裂等核心粒子都已有绘制路径
 - Boss 阶段危险已经能在画面里读到：活跃 Boss 战会显示竞技场压力环、阶段读招环、不同弹幕形状预览和血条阶段刻度
 - 顶部生命 HUD 已压缩，避免第 5 波 Boss 入场和读招环被界面遮住
@@ -65,10 +68,10 @@
 ### 已验证数据
 
 - `node tests/baseline_sim.mjs`：`avgWave 18.83`
-- `node tests/smart_sim.mjs`：`avgWave 21.52`
+- `node tests/smart_sim.mjs`：`avgWave 21.87`
 - `smart_sim` 第 5 波失败样本：`0 / 60`
 - `baseline_sim` 第 5 波失败样本：`0 / 60`
-- `npm run test:boss-checkpoints`：baseline 第 10/15/20 波 Boss 死亡 `2 / 5 / 23`；smart 第 10/15/20/25 波 Boss 死亡 `4 / 3 / 13 / 6`，第 25 波到达 `33/60`，通关 `27/60`；短板标签仍以 `safety` 最集中，但 `末日计时耗尽` 已从 smart checkpoint 的 16 次降到 1 次
+- `npm run test:boss-checkpoints`：baseline 第 5 波 `59/60` 通过，第 10/15/20 波 Boss 死亡 `1 / 3 / 6`；smart 第 5 波 `60/60` 通过，第 10/15/20/25 波 Boss 死亡 `3 / 2 / 8 / 3`，第 25 波到达 `37/60`，通关 `34/60`；短板标签仍以 `safety` 最集中，但首个 Boss 已不再是主硬断点
 - `npm test`：核心逻辑测试全部通过；已覆盖早期卡牌推荐回归、Boss 前营火链路、中后期压力目标成长、死亡复盘缺口/决策展示，以及 `reward / forge / shop / rest` 无出口状态机检查
 - `npm run test:web-smoke`：资源、缓存清单、UI 状态路由、离线 fallback、本地 MIME 和核心粒子绘制覆盖检查全部通过
 - `npm run test:visual-smoke`：桌面/移动端菜单、角色选择、局内 canvas、奖励选择页、Boss 前营火、第 5 波 Boss 进入、桌面/移动端活跃 Boss 战读招画面，以及固定第 20 波高压桌面样本渲染通过；移动端摇杆与闪避按钮可见；奖励页首选卡、决策标签和风险代价可见；截图已输出到 `output/visual-smoke/`
@@ -76,7 +79,7 @@
 - Playwright MCP：`开始远征 -> 开始战斗 · 标准 -> 局内 HUD/canvas` 交互通过，canvas 非空采样 `1031`，无水平溢出；PWA 安装横幅仅产生 info 级浏览器提示
 - `npm run build:android:debug`：Android debug APK 构建和 APK Web payload 校验通过
 - `npm run verify:android:smoke`：自动启动唯一 AVD `NightRunner35`，模拟器安装/启动通过，焦点窗口属于 `com.ember.roguelike`，点击流已到局内战斗，`output/android-smoke/app-launch.png` / `character-select.png` / `gameplay.png` 已保存，logcat fatal-error scan 通过，验证后自动关闭模拟器
-- 当前验证 APK SHA256：`61FEDFD055AE46EDFC81FAAC1A96AD1CFB8488A30492F4865F2ABA0844CE337F`
+- 当前验证 APK SHA256：`997CE343CCEC06B8D82634E213AD972625F6AFC5AD439464D5932238C573BA79`
 - 难度抽样：`steady avgWave 19.00 / standard 18.20 / trial 16.90`
 - 浏览器验证：锻造选择后可进入第 4 波，不再卡在锻造层
 - 浏览器验证：菜单首屏按钮、角色选择页 AI 头像、局内 AI 玩家模型和敌人 spritesheet 已确认渲染
@@ -95,7 +98,7 @@
 ### 前端
 
 - 奖励页已有首选/豪赌层级，但还可以继续强化稀有卡、协同触发和高风险高回报的动画反馈
-- HUD 的信息可读性已改善，但视觉完成度还未到真正成品级
+- HUD 的信息可读性和职业辨识度又提升了一截，但整体视觉完成度还没到真正成品级
 - 背景危险感和第 5 波 Boss 读招可见性已增强，但中后期 Boss 多阶段压迫还需要继续做更强的阶段特效
 - 敌人 / Boss 已有静态图集、状态环、阶段压力环、形状预览和核心粒子反馈，也有固定的第 20 波高压样本，但还缺更完整的多帧攻击、受击、死亡动画，以及更高波次或更多阶段的固定视觉样本
 

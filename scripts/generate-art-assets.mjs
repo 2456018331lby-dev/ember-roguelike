@@ -412,78 +412,114 @@ function drawEnemySprite(sheet, ox, oy, kind) {
   }[kind] || rgba('#ef4444', 0.22);
   sheet.radialGlow(cx, cy, kind === 'demon' || kind === 'dragon' ? 58 : 43, aura, 2.1);
 
-  switch (kind) {
-    case 'slime':
-      sheet.fillEllipse(cx, cy + 10, 33, 25, rgba('#14532d', 0.92));
-      sheet.fillEllipse(cx, cy + 3, 29, 24, rgba('#22c55e', 0.92));
-      sheet.fillEllipse(cx - 10, cy - 2, 5, 7, rgba('#dcfce7'));
-      sheet.fillEllipse(cx + 10, cy - 2, 5, 7, rgba('#dcfce7'));
-      sheet.fillEllipse(cx - 10, cy - 2, 2, 3, rgba('#052e16'));
-      sheet.fillEllipse(cx + 10, cy - 2, 2, 3, rgba('#052e16'));
-      sheet.drawLine(cx - 12, cy + 13, cx + 12, cy + 13, 3, rgba('#064e3b', 0.75));
-      break;
-    case 'bat':
-      sheet.fillPolygon([[cx - 6, cy - 4], [cx - 49, cy - 22], [cx - 34, cy + 5], [cx - 51, cy + 18], [cx - 14, cy + 16]], rgba('#5b21b6'));
-      sheet.fillPolygon([[cx + 6, cy - 4], [cx + 49, cy - 22], [cx + 34, cy + 5], [cx + 51, cy + 18], [cx + 14, cy + 16]], rgba('#5b21b6'));
-      sheet.fillEllipse(cx, cy + 1, 18, 24, rgba('#2e1065'));
-      sheet.fillEllipse(cx - 7, cy - 5, 3, 4, rgba('#fde68a'));
-      sheet.fillEllipse(cx + 7, cy - 5, 3, 4, rgba('#fde68a'));
-      sheet.fillPolygon([[cx - 9, cy - 17], [cx - 3, cy - 30], [cx + 1, cy - 16]], rgba('#7c3aed'));
-      sheet.fillPolygon([[cx + 9, cy - 17], [cx + 3, cy - 30], [cx - 1, cy - 16]], rgba('#7c3aed'));
-      break;
-    case 'skeleton':
-      sheet.fillEllipse(cx, cy - 13, 23, 21, rgba('#e5e7eb'));
-      sheet.fillEllipse(cx - 8, cy - 14, 5, 6, rgba('#111827'));
-      sheet.fillEllipse(cx + 8, cy - 14, 5, 6, rgba('#111827'));
-      sheet.fillRect(cx - 4, cy - 4, 8, 5, rgba('#94a3b8'));
-      sheet.fillEllipse(cx, cy + 20, 20, 22, rgba('#cbd5e1'));
-      sheet.drawLine(cx - 26, cy + 14, cx + 26, cy + 34, 5, rgba('#e5e7eb'));
-      sheet.drawLine(cx + 26, cy + 14, cx - 26, cy + 34, 5, rgba('#e5e7eb'));
-      sheet.strokeEllipse(cx, cy - 13, 24, 22, 2, rgba('#f8fafc', 0.32));
-      break;
-    case 'golem':
-      sheet.fillPolygon([[cx - 33, cy - 16], [cx - 12, cy - 36], [cx + 24, cy - 30], [cx + 37, cy - 4], [cx + 29, cy + 32], [cx - 26, cy + 37], [cx - 39, cy + 8]], rgba('#57534e'));
-      sheet.fillPolygon([[cx - 21, cy - 18], [cx + 21, cy - 20], [cx + 25, cy + 14], [cx - 18, cy + 17]], rgba('#78716c'));
-      sheet.fillEllipse(cx - 12, cy - 4, 4, 4, rgba('#fef3c7'));
-      sheet.fillEllipse(cx + 12, cy - 5, 4, 4, rgba('#fef3c7'));
-      sheet.drawLine(cx - 19, cy + 14, cx + 17, cy + 10, 4, rgba('#292524'));
-      sheet.drawLine(cx - 30, cy + 29, cx - 44, cy + 42, 7, rgba('#44403c'));
-      sheet.drawLine(cx + 28, cy + 27, cx + 43, cy + 42, 7, rgba('#44403c'));
-      break;
-    case 'archer':
-      sheet.fillEllipse(cx, cy + 3, 24, 30, rgba('#431407'));
-      sheet.fillPolygon([[cx - 25, cy - 18], [cx, cy - 40], [cx + 25, cy - 18], [cx + 17, cy + 25], [cx - 17, cy + 25]], rgba('#fb923c'));
-      sheet.fillEllipse(cx - 8, cy - 11, 3, 3, rgba('#fff7ed'));
-      sheet.fillEllipse(cx + 8, cy - 11, 3, 3, rgba('#fff7ed'));
-      sheet.drawLine(cx + 25, cy - 24, cx + 37, cy + 36, 4, rgba('#fed7aa'));
-      sheet.drawLine(cx + 35, cy - 20, cx + 35, cy + 31, 1.8, rgba('#451a03'));
-      sheet.drawLine(cx - 18, cy + 8, cx + 35, cy + 5, 3, rgba('#f8fafc'));
-      break;
-    case 'fire_mage':
-      sheet.fillPolygon([[cx - 26, cy + 34], [cx - 16, cy - 18], [cx, cy - 42], [cx + 17, cy - 18], [cx + 27, cy + 34]], rgba('#7f1d1d'));
-      sheet.fillEllipse(cx, cy - 9, 17, 18, rgba('#1f0a0a'));
-      sheet.fillEllipse(cx - 7, cy - 10, 3, 3, rgba('#fed7aa'));
-      sheet.fillEllipse(cx + 7, cy - 10, 3, 3, rgba('#fed7aa'));
-      sheet.fillPolygon([[cx + 20, cy - 6], [cx + 43, cy - 24], [cx + 35, cy - 4], [cx + 47, cy + 8], [cx + 25, cy + 13]], rgba('#f97316', 0.88));
-      sheet.radialGlow(cx + 35, cy - 5, 26, rgba('#f97316', 0.5), 1.5);
-      sheet.drawLine(cx - 24, cy + 18, cx - 38, cy + 34, 5, rgba('#450a0a'));
-      break;
-    case 'healer':
-      sheet.fillEllipse(cx, cy + 2, 25, 30, rgba('#831843'));
-      sheet.fillPolygon([[cx - 22, cy + 28], [cx - 11, cy - 25], [cx, cy - 37], [cx + 12, cy - 25], [cx + 23, cy + 28]], rgba('#ec4899'));
-      sheet.fillRect(cx - 5, cy - 18, 10, 32, rgba('#fff1f2'));
-      sheet.fillRect(cx - 16, cy - 7, 32, 10, rgba('#fff1f2'));
-      sheet.radialGlow(cx, cy - 3, 34, rgba('#f9a8d4', 0.42), 1.8);
-      break;
-    case 'summoner':
-      sheet.fillPolygon([[cx - 27, cy + 36], [cx - 20, cy - 10], [cx, cy - 42], [cx + 20, cy - 10], [cx + 28, cy + 36]], rgba('#312e81'));
-      sheet.fillEllipse(cx, cy - 6, 18, 18, rgba('#111827'));
-      sheet.fillEllipse(cx - 7, cy - 6, 3, 3, rgba('#c4b5fd'));
-      sheet.fillEllipse(cx + 7, cy - 6, 3, 3, rgba('#c4b5fd'));
-      sheet.strokeEllipse(cx, cy + 22, 28, 12, 3, rgba('#a78bfa', 0.8));
-      sheet.strokeEllipse(cx, cy + 22, 18, 8, 2, rgba('#ddd6fe', 0.75));
-      sheet.radialGlow(cx, cy + 21, 31, rgba('#7c3aed', 0.44), 1.6);
-      break;
+    switch (kind) {
+      case 'slime':
+        sheet.fillEllipse(cx, cy + 12, 34, 26, rgba('#14532d', 0.96));
+        sheet.fillEllipse(cx, cy + 3, 31, 25, rgba('#16a34a', 0.96));
+        sheet.fillEllipse(cx, cy - 6, 18, 10, rgba('#bbf7d0', 0.42));
+        sheet.fillEllipse(cx, cy + 11, 12, 10, rgba('#065f46', 0.58));
+        sheet.fillEllipse(cx - 11, cy - 1, 5, 7, rgba('#dcfce7'));
+        sheet.fillEllipse(cx + 11, cy - 1, 5, 7, rgba('#dcfce7'));
+        sheet.fillEllipse(cx - 11, cy - 1, 2, 3, rgba('#052e16'));
+        sheet.fillEllipse(cx + 11, cy - 1, 2, 3, rgba('#052e16'));
+        sheet.drawLine(cx - 14, cy + 12, cx + 14, cy + 12, 3.5, rgba('#064e3b', 0.86));
+        sheet.drawLine(cx - 5, cy + 12, cx - 2, cy + 17, 2, rgba('#dcfce7', 0.78));
+        sheet.drawLine(cx + 5, cy + 12, cx + 2, cy + 17, 2, rgba('#dcfce7', 0.78));
+        sheet.fillCircle(cx - 20, cy + 20, 4, rgba('#22c55e', 0.82));
+        sheet.fillCircle(cx + 17, cy + 23, 3.6, rgba('#15803d', 0.86));
+        break;
+      case 'bat':
+        sheet.fillPolygon([[cx - 4, cy - 8], [cx - 54, cy - 30], [cx - 37, cy - 4], [cx - 53, cy + 16], [cx - 18, cy + 19]], rgba('#2e1065'));
+        sheet.fillPolygon([[cx + 4, cy - 8], [cx + 54, cy - 30], [cx + 37, cy - 4], [cx + 53, cy + 16], [cx + 18, cy + 19]], rgba('#2e1065'));
+        sheet.fillPolygon([[cx - 3, cy - 4], [cx - 45, cy - 18], [cx - 27, cy + 8], [cx - 42, cy + 13], [cx - 11, cy + 14]], rgba('#7c3aed'));
+        sheet.fillPolygon([[cx + 3, cy - 4], [cx + 45, cy - 18], [cx + 27, cy + 8], [cx + 42, cy + 13], [cx + 11, cy + 14]], rgba('#7c3aed'));
+        sheet.fillEllipse(cx, cy + 2, 17, 24, rgba('#1e1b4b'));
+        sheet.fillEllipse(cx, cy - 9, 12, 11, rgba('#312e81'));
+        sheet.fillEllipse(cx - 7, cy - 4, 3, 4, rgba('#fde68a'));
+        sheet.fillEllipse(cx + 7, cy - 4, 3, 4, rgba('#fde68a'));
+        sheet.fillPolygon([[cx - 10, cy - 19], [cx - 4, cy - 33], [cx + 1, cy - 17]], rgba('#8b5cf6'));
+        sheet.fillPolygon([[cx + 10, cy - 19], [cx + 4, cy - 33], [cx - 1, cy - 17]], rgba('#8b5cf6'));
+        sheet.drawLine(cx - 4, cy + 15, cx - 1, cy + 21, 2, rgba('#fde68a', 0.75));
+        sheet.drawLine(cx + 4, cy + 15, cx + 1, cy + 21, 2, rgba('#fde68a', 0.75));
+        break;
+      case 'skeleton':
+        sheet.fillEllipse(cx, cy - 14, 24, 22, rgba('#e5e7eb'));
+        sheet.fillEllipse(cx, cy - 18, 18, 14, rgba('#f8fafc', 0.32));
+        sheet.fillEllipse(cx - 8, cy - 15, 5, 6, rgba('#0f172a'));
+        sheet.fillEllipse(cx + 8, cy - 15, 5, 6, rgba('#0f172a'));
+        sheet.fillPolygon([[cx, cy - 9], [cx - 4, cy - 2], [cx + 4, cy - 2]], rgba('#475569'));
+        sheet.fillRect(cx - 6, cy - 3, 12, 6, rgba('#94a3b8'));
+        sheet.drawLine(cx - 4, cy + 1, cx - 4, cy + 5, 1.5, rgba('#e2e8f0'));
+        sheet.drawLine(cx, cy + 1, cx, cy + 5, 1.5, rgba('#e2e8f0'));
+        sheet.drawLine(cx + 4, cy + 1, cx + 4, cy + 5, 1.5, rgba('#e2e8f0'));
+        sheet.fillEllipse(cx, cy + 20, 19, 22, rgba('#cbd5e1'));
+        sheet.drawLine(cx - 15, cy + 10, cx + 15, cy + 10, 4, rgba('#f8fafc', 0.72));
+        sheet.drawLine(cx - 12, cy + 20, cx + 12, cy + 20, 3.4, rgba('#f8fafc', 0.68));
+        sheet.drawLine(cx - 25, cy + 13, cx + 25, cy + 35, 5.4, rgba('#e5e7eb'));
+        sheet.drawLine(cx + 25, cy + 13, cx - 25, cy + 35, 5.4, rgba('#cbd5e1'));
+        sheet.drawLine(cx + 18, cy + 6, cx + 36, cy - 8, 4, rgba('#e5e7eb', 0.82));
+        sheet.drawLine(cx + 35, cy - 9, cx + 47, cy - 3, 2.4, rgba('#cbd5e1', 0.82));
+        break;
+      case 'golem':
+        sheet.fillPolygon([[cx - 35, cy - 17], [cx - 14, cy - 39], [cx + 23, cy - 33], [cx + 39, cy - 3], [cx + 31, cy + 34], [cx - 27, cy + 39], [cx - 40, cy + 7]], rgba('#44403c'));
+        sheet.fillPolygon([[cx - 23, cy - 16], [cx + 22, cy - 18], [cx + 27, cy + 16], [cx - 18, cy + 20]], rgba('#78716c'));
+        sheet.fillPolygon([[cx - 17, cy - 9], [cx + 17, cy - 10], [cx + 13, cy + 8], [cx - 14, cy + 9]], rgba('#57534e'));
+        sheet.fillEllipse(cx - 12, cy - 3, 4, 4, rgba('#fef3c7'));
+        sheet.fillEllipse(cx + 12, cy - 4, 4, 4, rgba('#fef3c7'));
+        sheet.fillCircle(cx, cy + 7, 7, rgba('#f59e0b', 0.64));
+        sheet.radialGlow(cx, cy + 7, 18, rgba('#fde68a', 0.34), 1.7);
+        sheet.drawLine(cx - 18, cy + 15, cx + 18, cy + 12, 4.2, rgba('#292524'));
+        sheet.drawLine(cx - 11, cy - 20, cx - 3, cy + 1, 2, rgba('#a8a29e', 0.48));
+        sheet.drawLine(cx + 8, cy - 15, cx + 14, cy + 8, 2, rgba('#a8a29e', 0.42));
+        sheet.drawLine(cx - 31, cy + 28, cx - 46, cy + 44, 8, rgba('#57534e'));
+        sheet.drawLine(cx + 29, cy + 26, cx + 45, cy + 42, 8, rgba('#57534e'));
+        break;
+      case 'archer':
+        sheet.fillEllipse(cx, cy + 4, 24, 30, rgba('#431407'));
+        sheet.fillPolygon([[cx - 27, cy - 18], [cx, cy - 42], [cx + 27, cy - 18], [cx + 18, cy + 27], [cx - 18, cy + 27]], rgba('#fb923c'));
+        sheet.fillEllipse(cx, cy - 11, 13, 11, rgba('#1c0f0a'));
+        sheet.fillEllipse(cx - 8, cy - 11, 3, 3, rgba('#fff7ed'));
+        sheet.fillEllipse(cx + 8, cy - 11, 3, 3, rgba('#fff7ed'));
+        sheet.drawLine(cx + 24, cy - 25, cx + 39, cy + 34, 4.2, rgba('#fed7aa'));
+        sheet.drawLine(cx + 36, cy - 18, cx + 35, cy + 29, 1.9, rgba('#451a03'));
+        sheet.drawLine(cx - 22, cy + 10, cx + 34, cy + 6, 3.2, rgba('#f8fafc'));
+        sheet.drawLine(cx + 13, cy + 7, cx + 31, cy - 2, 2.4, rgba('#f59e0b'));
+        sheet.drawLine(cx - 24, cy - 12, cx - 34, cy + 26, 4.4, rgba('#78350f'));
+        break;
+      case 'fire_mage':
+        sheet.fillPolygon([[cx - 27, cy + 35], [cx - 16, cy - 20], [cx, cy - 45], [cx + 17, cy - 20], [cx + 28, cy + 35]], rgba('#7f1d1d'));
+        sheet.fillPolygon([[cx - 16, cy + 29], [cx - 7, cy - 8], [cx, cy - 31], [cx + 8, cy - 8], [cx + 18, cy + 29]], rgba('#b91c1c'));
+        sheet.fillEllipse(cx, cy - 10, 16, 18, rgba('#1f0a0a'));
+        sheet.fillEllipse(cx - 7, cy - 11, 3, 3, rgba('#fed7aa'));
+        sheet.fillEllipse(cx + 7, cy - 11, 3, 3, rgba('#fed7aa'));
+        sheet.fillPolygon([[cx + 22, cy - 8], [cx + 46, cy - 26], [cx + 37, cy - 5], [cx + 50, cy + 8], [cx + 26, cy + 14]], rgba('#f97316', 0.9));
+        sheet.radialGlow(cx + 37, cy - 5, 28, rgba('#f97316', 0.52), 1.5);
+        sheet.fillPolygon([[cx - 9, cy - 37], [cx, cy - 58], [cx + 8, cy - 37]], rgba('#fb7185', 0.82));
+        sheet.drawLine(cx - 24, cy + 18, cx - 39, cy + 34, 5.4, rgba('#450a0a'));
+        break;
+      case 'healer':
+        sheet.fillEllipse(cx, cy + 3, 25, 31, rgba('#831843'));
+        sheet.fillPolygon([[cx - 23, cy + 29], [cx - 11, cy - 26], [cx, cy - 38], [cx + 12, cy - 26], [cx + 24, cy + 29]], rgba('#ec4899'));
+        sheet.fillEllipse(cx, cy - 13, 13, 11, rgba('#4a1029'));
+        sheet.strokeEllipse(cx, cy - 6, 22, 24, 2.5, rgba('#fbcfe8', 0.64));
+        sheet.fillRect(cx - 5, cy - 18, 10, 32, rgba('#fff1f2'));
+        sheet.fillRect(cx - 16, cy - 7, 32, 10, rgba('#fff1f2'));
+        sheet.drawLine(cx + 18, cy + 6, cx + 36, cy - 26, 4, rgba('#fbcfe8', 0.78));
+        sheet.fillCircle(cx + 37, cy - 29, 6, rgba('#fff1f2', 0.9));
+        sheet.radialGlow(cx, cy - 3, 36, rgba('#f9a8d4', 0.46), 1.8);
+        break;
+      case 'summoner':
+        sheet.fillPolygon([[cx - 28, cy + 37], [cx - 20, cy - 11], [cx, cy - 44], [cx + 20, cy - 11], [cx + 29, cy + 37]], rgba('#312e81'));
+        sheet.fillEllipse(cx, cy - 7, 18, 18, rgba('#111827'));
+        sheet.fillEllipse(cx - 7, cy - 7, 3, 3, rgba('#c4b5fd'));
+        sheet.fillEllipse(cx + 7, cy - 7, 3, 3, rgba('#c4b5fd'));
+        sheet.drawLine(cx - 18, cy + 6, cx - 34, cy - 8, 4, rgba('#312e81'));
+        sheet.drawLine(cx + 18, cy + 6, cx + 34, cy - 8, 4, rgba('#312e81'));
+        sheet.strokeEllipse(cx, cy + 23, 28, 12, 3, rgba('#a78bfa', 0.84));
+        sheet.strokeEllipse(cx, cy + 23, 18, 8, 2, rgba('#ddd6fe', 0.78));
+        sheet.fillPolygon([[cx, cy - 47], [cx + 8, cy - 34], [cx, cy - 22], [cx - 8, cy - 34]], rgba('#c4b5fd', 0.86));
+        sheet.radialGlow(cx, cy + 22, 33, rgba('#7c3aed', 0.46), 1.6);
+        break;
     case 'charger':
       sheet.fillEllipse(cx, cy + 4, 30, 32, rgba('#7c2d12'));
       sheet.fillPolygon([[cx - 26, cy - 19], [cx - 48, cy - 38], [cx - 38, cy - 11]], rgba('#fed7aa'));

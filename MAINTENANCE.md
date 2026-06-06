@@ -1,6 +1,6 @@
 # 余烬 Ember - 维护与接手文档
 
-最后更新：2026-06-06（本轮维护记录：`烟幕疾行` 现在除了高波极端 safety 缺口，也会在第 20 波以后机动性短板明显时出现；`末日` / `衰败` 在中后期 Boss 与 survival 场景会被更明显地下调推荐权重，减少高风险路线压过安全网牌；checkpoint smart 策略也已改成按 `fitScore` 选择营火，避免测试低估战前推荐体系。对应新增 core 回归测试、重新跑过 Boss checkpoint 模拟、Web smoke、视觉回归、Android debug APK 构建与 `verify:android:smoke`；smart `avgWave` 从 `20.40` 提升到 `21.52`，第 25 波从到达 `25/60`、通关 `17/60` 提升到到达 `33/60`、通关 `27/60`；最新 debug APK SHA256 为 `61FEDFD055AE46EDFC81FAAC1A96AD1CFB8488A30492F4865F2ABA0844CE337F`。同日上一轮内容仍保留：第 20 / 25 波恶魔领主第三阶段的 `aimed_burst` 现在会先给真实预警，再延迟释放；恶魔三阶段连射间隔也从 `1.4s` 拉到 `1.5s`，减少“预警即命中”的硬判定；第 19 波事件锻造在下一波是 Boss 时会转入战前营火，`verify-android-debug.ps1` 也会在 emulator boot-complete 后额外稳定等待，避免 AVD 刚启动就误报 ANR。前序记录包含 Boss 战阶段压力环、弹幕形状预览、`boss-fight-desktop.png` / `boss-fight-mobile.png` / `boss-fight-highwave-desktop.png` 活跃首领截图回归、竖屏竞技场上移、顶部生命 HUD 压缩、护符 HUD 与局内环、Android smoke 自动 AVD 点击流、`余烬护符`、`末日` 从拿牌时倒计时、中后期压力目标成长、奖励/死亡复盘缺口、关键选择记录、视觉像素回归、覆盖层状态路由集中化、核心状态机无出口回归测试、奖励页决策层级强化、核心战斗粒子绘制补全、参考图风格竞技场背景、沉浸式 Android 外壳、首个 Boss 奖励推荐再平衡、移动端首屏修复、Web smoke 与 APK 内容校验）
+最后更新：2026-06-06（本轮把“职业身份、早期敌压、界面完成度、Android 自动验证”一起推进了一步：四个角色现在有明确自动战斗身份，战士改成近战突进追击，不再像远程职业那样站桩白打；史莱姆 / 蝙蝠 / 骷髅 / 石像鬼等早中期敌人加入 skirmish / hybrid / lobber 弹幕压力；Boss 补了场内边界约束，避免被近战拖出可战斗区域；角色选择页、HUD 战术读板和敌人 spritesheet 再做了一轮质量提升；Android `verify-android-debug.ps1` 也改成更抗布局变化的多候选点击 smoke。对应重新跑过 core 回归、Boss checkpoint、Web smoke、视觉 smoke、视觉回归、Android debug APK 构建与 `verify:android:smoke`；当前 `boss-checkpoints` 最新结果为 `baseline avgWave 17.83`、`smart avgWave 21.87`，其中 smart 第 5 波 `60/60` 通过、第 25 波到达 `37/60`、通关 `34/60`；最新 debug APK SHA256 为 `997CE343CCEC06B8D82634E213AD972625F6AFC5AD439464D5932238C573BA79`。前序记录中的阶段压力环、延迟 `aimed_burst`、Boss 前营火链路、护符 HUD、视觉像素回归、参考图竞技场背景、沉浸式 Android 外壳与 Web smoke / APK 内容校验仍继续成立）
 
 本文件给下一个继续维护的人或 AI，用来快速判断三件事：
 
@@ -79,12 +79,16 @@ roguelike-game/
 - 非 Boss 波次已经有更多层次：`hunt / recovery / onslaught / elite / siege`
 - 波次 3 与之后每 8 波会出现“余烬锻造”事件波
 - 已加入 `稳健 / 标准 / 试炼` 三档难度；标准保持当前模拟基线，稳健降低敌压并提高角色容错，试炼提高压迫感和分数回报
+- 角色自动攻击已按职业拆开：战士 `melee_lunge`、法师 `arcane_orb`、游侠 `knife_fan`、死灵 `soul_bolt`
+- 早中期部分小怪已从纯贴脸改成 `skirmish / hybrid / lobber` 行为，能在保留近战威胁的同时给出远程弹幕压力
 - 首个 Boss 前奖励推荐已从“只补生存”调整为“同时检查单体输出缺口和生存缺口”
 - 早期高风险自毁牌（例如 `末日`、首个 Boss 前的 `玻璃炮`）不再被自动推荐为最优解，仍保留为玩家主动豪赌选项
 - `末日` 诅咒的倒计时现在从拿牌时开始，避免中后期拿到后因为整局 `gameTime` 已超过 45 秒而立刻死亡
 - 波中“诅咒商人”事件奖励已改为走统一奖励筛选，并明确给无献祭代价的事件奖励，避免隐藏代价和状态不同步
 - `tests/game_core.test.mjs` 已加入核心状态机无出口回归检查，覆盖所有难度、seed 1..30、至少推进到第 10 波；奖励、锻造、商店、营火等决策状态必须有可点击/可选择出口
 - `simulateAutoRun()` 不再静默跳过空的锻造、商店、营火或奖励选择；如果决策状态没有选择项，测试会直接失败，避免同类卡死被自动模拟掩盖
+- 默认战士已补上中距离追击能力，首个 Boss 不再因为“接敌判定断层”长时间罚站
+- Boss 当前位置现在会被限制在场内，避免站桩近战把首领拖出可战斗区域造成无伤拉扯
 
 ### Boss 前流程
 
@@ -117,7 +121,9 @@ roguelike-game/
 - 主菜单、角色选择页、结算页已有更明确的视觉层次
 - 移动端主菜单首屏已压缩信息密度，`开始远征` 按钮在 390x844 视口下无需滚动即可点击
 - 角色选择页和战斗内玩家模型已改用 AI 生成的 4 角色 x 2 动作帧 spritesheet，不再使用圆形/豆形占位角色
-- 战斗内敌人与 Boss 已接入本地生成的 4x4 spritesheet，普通敌人、远程/支援敌人和三种 Boss 都有独立轮廓
+- 角色选择页现在会直接展示职业职责、武器、战斗备注和起手流派，锁定职业不再被压到几乎不可读
+- HUD 右上角已从单块文本墙整理成分区式“战术读板”，生命条、波次、构筑倾向和危险提示更容易扫读
+- 战斗内敌人与 Boss 已接入本地生成的 4x4 spritesheet，普通敌人、远程/支援敌人和三种 Boss 都有独立轮廓；本轮继续加强了 slime / bat / skeleton / golem / archer / fire_mage / healer / summoner 的 silhouette 和细节
 - 敌人即将近战、远程射击、支援/召唤和 Boss 蓄力时已有画面提示；核心逻辑发出的链击、爆炸、子弹命中、护盾吸收、自伤、冲刺残影、复活和死亡爆裂等粒子也已接入绘制
 - Boss 战已增加根据当前阶段 `pattern` 绘制的危险可见性：竞技场压力环、边界压迫、瞄准 / 环形 / 螺旋 / 十字 / 随机弹雨预览，以及 Boss 血条阶段阈值刻度
 - 顶部生命 HUD 改为紧凑版，减少对第 5 波 Boss 上半身和读招环的遮挡
@@ -171,15 +177,15 @@ npm run serve
 ### 当前验证结果
 
 - `baseline_sim`：
-  - `avgWave = 18.83`
+  - `avgWave = 17.83`
   - `wave5failSeeds = 0 / 60`
   - 最差停在第 9 波，首个 Boss 不再是标准档站桩基线的早期硬断点
 - `smart_sim`：
-  - `avgWave = 21.52`
+  - `avgWave = 21.87`
   - `wave5failSeeds = 0 / 60`
 - `npm run test:boss-checkpoints`：
-  - baseline：第 5 波 `60/60` 通过；第 10/15/20 波 Boss 死亡分别为 `2 / 5 / 23`
-  - smart：第 5 波 `60/60` 通过；第 10/15/20/25 波 Boss 死亡分别为 `4 / 3 / 13 / 6`，第 25 波到达 `33/60`，通关 `27/60`
+  - baseline：第 5 波 `59/60` 通过；第 10/15/20 波 Boss 死亡分别为 `1 / 3 / 6`
+  - smart：第 5 波 `60/60` 通过；第 10/15/20/25 波 Boss 死亡分别为 `3 / 2 / 8 / 3`，第 25 波到达 `37/60`，通关 `34/60`
   - `末日计时耗尽` 在 smart checkpoint 里已从 16 次降到 1 次，说明高风险诅咒推荐权重修正已经生效
   - 当前最集中的短板标签仍是 `safety`；第 20 波恶魔已明显更可读，下一轮仍应优先盯第 25 波恶魔和晚期 safety / mobility 双缺口，而不是回头只压第 5 波
 - `npm test`：
@@ -244,7 +250,7 @@ npm run serve
 - Android 构建：
   - `npm run build:android:debug` 当前返回成功
   - APK 路径：`android/app/build/outputs/apk/debug/app-debug.apk`
-  - 当前 APK SHA256：`61FEDFD055AE46EDFC81FAAC1A96AD1CFB8488A30492F4865F2ABA0844CE337F`
+  - 当前 APK SHA256：`997CE343CCEC06B8D82634E213AD972625F6AFC5AD439464D5932238C573BA79`
   - 构建脚本会自动验证 APK 内容，避免 Web 修复没有同步进 Android 包
   - 已验证 APK 内包含当前 Web 资源关键标记：
     - `assets/public/index.html` 含 `Arena Roguelike`
@@ -257,7 +263,7 @@ npm run serve
     - `assets/public/assets/ember-enemies-spritesheet.png` 存在
 - Android 模拟器安装 / 启动 / 点击流：
   - 命令：`npm run verify:android:smoke`
-  - 当前验证 APK SHA256：`61FEDFD055AE46EDFC81FAAC1A96AD1CFB8488A30492F4865F2ABA0844CE337F`
+  - 当前验证 APK SHA256：`997CE343CCEC06B8D82634E213AD972625F6AFC5AD439464D5932238C573BA79`
   - 结果：APK 安装成功，`com.ember.roguelike/.MainActivity` 冷启动成功
   - 没有在线设备时，脚本已自动发现唯一 AVD `NightRunner35` 并启动，验证后自动关闭
   - emulator `sys.boot_completed` 后会额外等待 8 秒再启动验证，减少冷启动期误报 `ActivityManager` ANR

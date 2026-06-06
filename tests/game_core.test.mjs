@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
 import { applyShopChoice, applyRestChoice,
   createRun, applyCardChoice, applyForgeChoice, rollCardChoices, rerollRewardChoices, enrichRewardChoices, getPlayerStats,
-  resolveAutoAttack, updateRun, dash, updateWaveState, getDifficultyPresets, generateRestChoices,
+  resolveAutoAttack, updateRun, dash, updateWaveState, getDifficultyPresets, generateRestChoices, createDebugBossFight,
 } from '../web/src/game_core.mjs';
 import { buildRunPresentation } from '../web/src/presentation.mjs';
+import { getCharacter } from '../web/src/characters.mjs';
 
 function test(name, fn) {
   try { fn(); console.log(`✓ ${name}`); }
@@ -291,6 +292,44 @@ test('自动攻击伤害近距离敌人', () => {
   }
 });
 
+test('战士应能突进追击中距离目标，而不是停在原地罚站', () => {
+  const run = createRun(790, getCharacter('warrior'));
+  run.enemies = [{
+    id: 'dummy_mid_boss',
+    x: run.player.x,
+    y: run.player.y - 320,
+    hp: 999,
+    maxHp: 999,
+    radius: 28,
+    armorPierce: 0,
+  }];
+
+  resolveAutoAttack(run, 999);
+
+  assert.ok(run.player.y < 320, `战士应向目标突进，当前 y=${run.player.y}`);
+  assert.equal(run.playerProjectiles.length, 0, '战士不应生成远程弹体');
+});
+
+test('法师自动攻击应生成玩家弹幕，而不是使用近战突进', () => {
+  const run = createRun(791, getCharacter('mage'));
+  run.enemies = [{
+    id: 'dummy_caster_target',
+    x: run.player.x,
+    y: run.player.y - 260,
+    hp: 999,
+    maxHp: 999,
+    radius: 20,
+    armorPierce: 0,
+  }];
+  const playerBefore = { x: run.player.x, y: run.player.y };
+
+  resolveAutoAttack(run, 999);
+
+  assert.ok(run.playerProjectiles.length > 0, '法师应生成玩家弹幕');
+  assert.equal(run.player.x, playerBefore.x, '法师不应触发战士式位移');
+  assert.equal(run.player.y, playerBefore.y, '法师不应触发战士式位移');
+});
+
 test('冲刺消耗冷却并提供无敌帧', () => {
   const run = createRun(100);
   fastForward(run, 1);
@@ -421,6 +460,23 @@ test('弹幕系统 - Boss 生成弹幕', () => {
     updateRun(run, { x: 0, y: 0 }, 0.05);
   }
   assert.ok(run.projectiles.length > 0, 'Boss 应该发射了弹幕');
+});
+
+test('Boss 在压场时不应被逼出可战斗区域', () => {
+  const run = createDebugBossFight(2050, { wave: 5 });
+  run.player.x = 40;
+  run.player.y = 50;
+  const boss = run.enemies.find(enemy => enemy.isBoss);
+  assert.ok(boss, '调试 Boss 场景应生成首领');
+  boss.x = 120;
+  boss.y = 110;
+
+  for (let i = 0; i < 240; i++) {
+    updateRun(run, { x: 0, y: 0 }, 0.05);
+  }
+
+  assert.ok(boss.x >= 40, `Boss 不应离开左边界，当前 x=${boss.x}`);
+  assert.ok(boss.y >= 50, `Boss 不应离开上边界，当前 y=${boss.y}`);
 });
 
 test('敌人有攻击冷却和攻击行为', () => {

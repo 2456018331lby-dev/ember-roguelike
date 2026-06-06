@@ -68,31 +68,35 @@ const CARD_POOL = [
 const ENEMY_TYPES = {
   slime: {
     name: '史莱姆', color: '#4CAF50', radius: 14, hpMult: 1, dmgMult: 1, spdMult: 0.9,
-    behavior: 'chase', attackType: 'melee', attackCooldown: 1.0, attackRange: 35,
+    behavior: 'hybrid', attackType: 'projectile', attackCooldown: 1.5, attackRange: 190, meleeRange: 38, preferredDist: 115,
+    projectileSpeed: 220, projectileRadius: 6, projectileColor: '#22c55e', projectileLife: 2.4,
   },
   bat: {
     name: '蝙蝠', color: '#9C27B0', radius: 9, hpMult: 0.5, dmgMult: 0.7, spdMult: 2.0,
-    behavior: 'zigzag', attackType: 'melee', attackCooldown: 0.6, attackRange: 25,
+    behavior: 'skirmish', attackType: 'projectile', attackCooldown: 1.05, attackRange: 235, preferredDist: 126,
+    projectileSpeed: 290, projectileRadius: 5, projectileColor: '#a78bfa', projectileLife: 2.2,
   },
   skeleton: {
     name: '骷髅', color: '#E0E0E0', radius: 15, hpMult: 1.3, dmgMult: 1.2, spdMult: 0.85,
-    behavior: 'chase', attackType: 'melee', attackCooldown: 1.2, attackRange: 38,
+    behavior: 'hybrid', attackType: 'projectile', attackCooldown: 1.35, attackRange: 255, meleeRange: 42, preferredDist: 148,
+    projectileSpeed: 265, projectileRadius: 6, projectileColor: '#e2e8f0', projectileLife: 2.7,
   },
   golem: {
     name: '石像鬼', color: '#795548', radius: 24, hpMult: 4, dmgMult: 2.5, spdMult: 0.35,
-    behavior: 'slow_chase', attackType: 'melee', attackCooldown: 2.0, attackRange: 45,
+    behavior: 'lobber', attackType: 'projectile', attackCooldown: 2.5, attackRange: 280, meleeRange: 52, preferredDist: 176,
+    projectileSpeed: 210, projectileRadius: 9, projectileColor: '#d6d3d1', projectileLife: 3.1,
   },
   archer: {
     name: '弓箭手', color: '#FF9800', radius: 12, hpMult: 0.7, dmgMult: 1.0, spdMult: 0.65,
     behavior: 'ranged', attackType: 'projectile',
     attackCooldown: 2.0, attackRange: 350, preferredDist: 200,
-    projectileSpeed: 320, projectileRadius: 5, projectileColor: '#FFB74D',
+    projectileSpeed: 320, projectileRadius: 5, projectileColor: '#FFB74D', projectileLife: 3.5,
   },
   fire_mage: {
     name: '火焰法师', color: '#F44336', radius: 13, hpMult: 0.8, dmgMult: 1.5, spdMult: 0.55,
     behavior: 'ranged', attackType: 'spread',
     attackCooldown: 2.5, attackRange: 300, preferredDist: 180,
-    projectileSpeed: 250, projectileRadius: 6, projectileColor: '#FF5722',
+    projectileSpeed: 250, projectileRadius: 6, projectileColor: '#FF5722', projectileLife: 3.4,
     spreadCount: 3, spreadAngle: 0.3,
   },
   healer: {
@@ -107,11 +111,13 @@ const ENEMY_TYPES = {
   },
   charger: {
     name: '冲锋者', color: '#FF5722', radius: 16, hpMult: 1.5, dmgMult: 2.0, spdMult: 1.4,
-    behavior: 'chase', attackType: 'melee', attackCooldown: 1.8, attackRange: 40,
+    behavior: 'skirmish', attackType: 'projectile', attackCooldown: 1.65, attackRange: 220, meleeRange: 42, preferredDist: 110,
+    projectileSpeed: 335, projectileRadius: 6, projectileColor: '#fb923c', projectileLife: 2.1,
   },
   bomber: {
     name: '自爆者', color: '#FFC107', radius: 12, hpMult: 0.4, dmgMult: 4.0, spdMult: 1.6,
-    behavior: 'chase', attackType: 'melee', attackCooldown: 0.5, attackRange: 50,
+    behavior: 'hybrid', attackType: 'projectile', attackCooldown: 1.45, attackRange: 205, meleeRange: 54, preferredDist: 108,
+    projectileSpeed: 250, projectileRadius: 8, projectileColor: '#facc15', projectileLife: 2.1,
   },
 };
 
@@ -300,6 +306,16 @@ export function createRun(seed = Date.now(), character = null, difficultyKey = '
   const difficulty = resolveDifficulty(difficultyKey);
   const ch = character || {
     baseHp: 100, baseSpeed: 250, baseAttack: 15, baseAttackCooldown: 0.5,
+    attackProfile: {
+      mode: 'melee_lunge',
+      label: '重甲突进',
+      baseRange: 116,
+      engageRange: 360,
+      lungeDistance: 168,
+      color: '#7dd3fc',
+      trailColor: '#bfdbfe',
+      impactFx: 'slash',
+    },
     startCards: [
       { id: 'starter_blade', name: '旧剑', type: 'attack', rarity: 'common', damage: 8, desc: '基础伤害 +8' },
       { id: 'starter_guard', name: '护身符', type: 'defense', rarity: 'common', armorBonus: 2, desc: '护甲 +2' },
@@ -346,6 +362,16 @@ export function createRun(seed = Date.now(), character = null, difficultyKey = '
       x: 640, y: 360, radius: 16,
       hp: baseHp, maxHp: baseHp, baseMaxHp: baseHp,
       baseSpeed: ch.baseSpeed + meta.speedBoost, baseAttack, baseAttackCooldown: ch.baseAttackCooldown,
+      attackProfile: clone(ch.attackProfile || {
+        mode: 'melee_lunge',
+        label: '重甲突进',
+        baseRange: 116,
+        engageRange: 360,
+        lungeDistance: 168,
+        color: '#7dd3fc',
+        trailColor: '#bfdbfe',
+        impactFx: 'slash',
+      }),
       attackTimer: 0,
       invuln: 0,
       barrier: difficulty.startBarrier || 0,
@@ -893,10 +919,12 @@ function spawnEnemy(run, typeKey, isBoss, isElite = false) {
     attackCooldown: type.attackCooldown || 1.0,
     attackTimer: type.attackCooldown || 1.0,
     attackRange: type.attackRange || 35,
+    meleeRange: type.meleeRange || type.attackRange || 35,
     preferredDist: type.preferredDist || (isBoss ? (run.wave === 5 ? 235 : 210) : 0),
     projectileSpeed: type.projectileSpeed || 0,
     projectileRadius: type.projectileRadius || 5,
     projectileColor: type.projectileColor || '#ff0',
+    projectileLife: type.projectileLife || 3.5,
     spreadCount: type.spreadCount || 1,
     spreadAngle: type.spreadAngle || 0,
     healAmount: type.healAmount || 0,
@@ -2116,6 +2144,7 @@ function describeCardFit(card, analysis, waveProfile = null) {
 export function getPlayerStats(run) {
   const p = run.player;
   const s = run.sacrifices;
+  const attackProfile = p.attackProfile || {};
 
   // 基础属性 × (1 - 牺牲比例)
   let maxHp = (p.baseMaxHp ?? p.maxHp) * Math.max(0.15, 1 - s.health.amount);
@@ -2192,6 +2221,18 @@ export function getPlayerStats(run) {
     waveStartSlowAmount = Math.min(waveStartSlowAmount, p.tempWaveStartSlowAmount ?? 0.45);
   }
 
+  const attackRange = Math.max(72, (attackProfile.baseRange ?? 220) + rangeBonus);
+  const attackEngageRange = Math.max(attackRange, (attackProfile.engageRange ?? attackRange) + Math.floor(rangeBonus * 0.35));
+  const projectileCount = Math.max(1, Math.round(attackProfile.projectileCount ?? 1));
+  const projectileSpread = Number(attackProfile.projectileSpread ?? 0);
+  const projectileSpeed = Number(attackProfile.projectileSpeed ?? 0);
+  const projectileLife = Number(attackProfile.projectileLife ?? 0.8);
+  const projectileRadius = Number(attackProfile.projectileRadius ?? 6);
+  const projectilePierce = Math.max(0, Math.round(attackProfile.projectilePierce ?? 0));
+  const splashRadius = Math.max(0, Number(attackProfile.splashRadius ?? 0));
+  const lungeDistance = Math.max(0, Number(attackProfile.lungeDistance ?? 0));
+  const bonusDot = Math.max(0, Number(attackProfile.bonusDot ?? 0));
+
   // 玻璃炮：最大生命 -40%
   if (run.jokers.some(j => j.id === 'glass_cannon')) maxHp *= 0.6;
 
@@ -2253,6 +2294,22 @@ export function getPlayerStats(run) {
     regen, barrier, armorPierce,
     onKillExplosion, healOnKill, perCardDamage: perCardDamage * p.deck.length,
     waveStartSlow, waveStartSlowAmount: waveStartSlow > 0 ? waveStartSlowAmount : 1, sacrificeReduce, rewardDoubleChance,
+    attackMode: attackProfile.mode || 'melee_lunge',
+    attackStyleLabel: attackProfile.label || '自动攻击',
+    attackRange,
+    attackEngageRange,
+    lungeDistance,
+    projectileCount,
+    projectileSpread,
+    projectileSpeed,
+    projectileLife,
+    projectileRadius,
+    projectilePierce,
+    splashRadius,
+    projectileColor: attackProfile.color || '#f59e0b',
+    projectileTrailColor: attackProfile.trailColor || attackProfile.color || '#f59e0b',
+    impactFx: attackProfile.impactFx || 'slash',
+    bonusDot,
   };
 }
 
@@ -2323,6 +2380,7 @@ export function updateRun(run, input, dt) {
   updateScheduledActions(run, dt);
   updateEnemies(run, dt, stats);
   resolveAutoAttack(run, dt);
+  updatePlayerProjectiles(run, dt);
   updateProjectiles(run, dt, stats);
   updateParticles(run, dt);
   updatePickups(run, dt);
@@ -2411,6 +2469,77 @@ function updateEnemies(run, dt, stats) {
         if (dist < e.attackRange && e.attackTimer <= 0 && (e.meleePendingDamage ?? 0) <= 0) {
           e.attackTimer = e.attackCooldown;
           startMeleeAttack(run, e, stats);
+        }
+        break;
+      }
+      case 'skirmish': {
+        const preferred = e.preferredDist || 120;
+        if (dist < preferred - 18) {
+          e.x -= dirX * e.speed * spdMult * dt;
+          e.y -= dirY * e.speed * spdMult * dt;
+        } else if (dist > preferred + 54) {
+          e.x += dirX * e.speed * spdMult * dt * 0.8;
+          e.y += dirY * e.speed * spdMult * dt * 0.8;
+        } else {
+          e.x += (-dirY) * e.speed * 0.62 * spdMult * dt;
+          e.y += dirX * e.speed * 0.62 * spdMult * dt;
+        }
+        e.attackTimer -= dt;
+        if (dist < (e.meleeRange || 34) && e.attackTimer <= 0 && (e.meleePendingDamage ?? 0) <= 0) {
+          e.attackTimer = e.attackCooldown;
+          startMeleeAttack(run, e, stats);
+        } else if (e.attackTimer <= 0 && dist < e.attackRange) {
+          e.attackTimer = e.attackCooldown;
+          performRangedAttack(run, e);
+        }
+        break;
+      }
+      case 'hybrid': {
+        const meleeRange = e.meleeRange || Math.max(32, e.radius * 2.2);
+        const preferred = e.preferredDist || 138;
+        if (dist < meleeRange + 6) {
+          e.x += dirX * e.speed * spdMult * dt * 0.9;
+          e.y += dirY * e.speed * spdMult * dt * 0.9;
+          e.attackTimer -= dt;
+          if (e.attackTimer <= 0 && (e.meleePendingDamage ?? 0) <= 0) {
+            e.attackTimer = e.attackCooldown;
+            startMeleeAttack(run, e, stats);
+          }
+        } else {
+          if (dist < preferred - 22) {
+            e.x -= dirX * e.speed * spdMult * dt * 0.55;
+            e.y -= dirY * e.speed * spdMult * dt * 0.55;
+          } else if (dist > preferred + 56) {
+            e.x += dirX * e.speed * spdMult * dt * 0.7;
+            e.y += dirY * e.speed * spdMult * dt * 0.7;
+          } else {
+            e.x += (-dirY) * e.speed * 0.4 * spdMult * dt;
+            e.y += dirX * e.speed * 0.4 * spdMult * dt;
+          }
+          e.attackTimer -= dt;
+          if (e.attackTimer <= 0 && dist < e.attackRange) {
+            e.attackTimer = e.attackCooldown;
+            performRangedAttack(run, e);
+          }
+        }
+        break;
+      }
+      case 'lobber': {
+        const preferred = e.preferredDist || 176;
+        if (dist > preferred + 68) {
+          e.x += dirX * e.speed * spdMult * dt * 0.78;
+          e.y += dirY * e.speed * spdMult * dt * 0.78;
+        } else if (dist < preferred - 32) {
+          e.x -= dirX * e.speed * spdMult * dt * 0.42;
+          e.y -= dirY * e.speed * spdMult * dt * 0.42;
+        }
+        e.attackTimer -= dt;
+        if (dist < (e.meleeRange || 44) && e.attackTimer <= 0 && (e.meleePendingDamage ?? 0) <= 0) {
+          e.attackTimer = e.attackCooldown;
+          startMeleeAttack(run, e, stats);
+        } else if (e.attackTimer <= 0 && dist < e.attackRange) {
+          e.attackTimer = e.attackCooldown;
+          performRangedAttack(run, e);
         }
         break;
       }
@@ -2512,12 +2641,16 @@ function updateEnemies(run, dt, stats) {
     }
 
     updateEnemyAttackResolution(run, e, dt, stats);
+    if (e.isBoss) {
+      e.x = clamp(e.x, 40 + e.radius, 1240 - e.radius);
+      e.y = clamp(e.y, 50 + e.radius, 670 - e.radius);
+    }
   }
   run.enemies = run.enemies.filter(e => e.hp > 0);
 }
 
 function updateEnemyAttackResolution(run, e, dt, stats) {
-  if (e.attackType === 'melee') {
+  if ((e.meleePendingDamage || 0) > 0 || e.attackType === 'melee') {
     e.meleeSwingTimer = Math.max(0, (e.meleeSwingTimer ?? 0) - dt);
     if (e.meleePendingDamage > 0 && e.meleeSwingTimer <= 0) {
       resolveMeleeAttack(run, e, stats);
@@ -2530,14 +2663,14 @@ function updateEnemyAttackResolution(run, e, dt, stats) {
 function startMeleeAttack(run, e, stats) {
   // 显示攻击预警
   run.telegraphs.push({
-    x: e.x, y: e.y, radius: e.attackRange, angle: 0,
+    x: e.x, y: e.y, radius: e.meleeRange || e.attackRange, angle: 0,
     life: 0.25, maxLife: 0.25, color: 'rgba(255,80,80,0.25)',
     type: 'circle', owner: e.id,
   });
   e.meleeSwingTimer = 0.25;
   e.meleePendingDamage = e.baseDamage;
-  e.meleePendingRange = e.attackRange;
-  run.particles.push({ type: 'melee_slash', x: e.x, y: e.y, life: 0.3, maxLife: 0.3, angle: Math.atan2(run.player.y - e.y, run.player.x - e.x), radius: e.attackRange });
+  e.meleePendingRange = e.meleeRange || e.attackRange;
+  run.particles.push({ type: 'melee_slash', x: e.x, y: e.y, life: 0.3, maxLife: 0.3, angle: Math.atan2(run.player.y - e.y, run.player.x - e.x), radius: e.meleeRange || e.attackRange });
 }
 
 function resolveMeleeAttack(run, e, stats) {
@@ -2576,9 +2709,9 @@ function performRangedAttack(run, e) {
         y: e.y + Math.sin(angle) * (e.radius + 5),
         vx: Math.cos(angle) * e.projectileSpeed,
         vy: Math.sin(angle) * e.projectileSpeed,
-        damage: e.baseDamage, life: 3.5,
+        damage: e.baseDamage, life: e.projectileLife || 3.5,
         radius: e.projectileRadius, color: e.projectileColor,
-        fromEnemy: true,
+        fromEnemy: true, sourceType: e.typeKey,
       });
     }
   } else {
@@ -2588,14 +2721,15 @@ function performRangedAttack(run, e) {
       y: e.y + dirY * (e.radius + 5),
       vx: dirX * e.projectileSpeed,
       vy: dirY * e.projectileSpeed,
-      damage: e.baseDamage, life: 3.5,
+      damage: e.baseDamage, life: e.projectileLife || 3.5,
       radius: e.projectileRadius, color: e.projectileColor,
-      fromEnemy: true,
+      fromEnemy: true, sourceType: e.typeKey,
     });
   }
   if (e.typeKey === 'archer') pushMessage(run, '⚠ 弓箭手拉弓，准备侧移。');
   if (e.typeKey === 'fire_mage') pushMessage(run, '⚠ 火焰法师准备扇形弹幕。');
-  run.particles.push({ type: 'shoot_flash', x: e.x + dirX * e.radius, y: e.y + dirY * e.radius, life: 0.15, maxLife: 0.15 });
+  if (e.typeKey === 'golem') pushMessage(run, '⚠ 石像鬼抬臂掷石，别直线回退。');
+  run.particles.push({ type: 'shoot_flash', x: e.x + dirX * e.radius, y: e.y + dirY * e.radius, life: 0.15, maxLife: 0.15, color: e.projectileColor });
   run.events.push('bullet_shot');
 }
 
@@ -2736,75 +2870,237 @@ function performBossAttack(run, boss, phase, dirX, dirY, dist) {
 // ============================================================
 // 自动攻击
 // ============================================================
-export function resolveAutoAttack(run, dt) {
-  const stats = getPlayerStats(run);
-  run.player.attackTimer -= dt;
-  if (run.player.attackTimer > 0 || run.enemies.length === 0) return;
-
-  let nearest = null, best = Infinity;
-  for (const e of run.enemies) {
-    const d = Math.hypot(e.x - run.player.x, e.y - run.player.y);
-    if (d < best) { best = d; nearest = e; }
-  }
-  if (!nearest || best > 280 + stats.rangeBonus) return;
-
+function buildPlayerAttackPacket(run, stats) {
   let damage = Math.round((stats.attack + run.wave * 0.75) * stats.damageMultiplier);
   let isCrit = false;
   if (run.rand() < stats.critChance) {
     damage = Math.round(damage * (1 + stats.critDamageBonus));
     isCrit = true;
   }
+  return { damage, isCrit, stats };
+}
 
-  // 自伤检测
-  if (stats.selfDamageChance > 0 && run.rand() < stats.selfDamageChance) {
-    const selfDmg = Math.floor(damage * 0.2);
-    takeDamage(run, selfDmg);
-    run.particles.push({ type: 'self_damage', x: run.player.x, y: run.player.y - 25, life: 0.5, maxLife: 0.5, value: selfDmg });
+function applyPlayerSelfRisk(run, packet) {
+  const stats = packet.stats;
+  if (stats.selfDamageChance <= 0 || run.rand() >= stats.selfDamageChance) return;
+  const selfDmg = Math.floor(packet.damage * 0.2);
+  takeDamage(run, selfDmg);
+  run.particles.push({ type: 'self_damage', x: run.player.x, y: run.player.y - 25, life: 0.5, maxLife: 0.5, value: selfDmg });
+}
+
+function applyPlayerAilments(enemy, stats) {
+  if (!enemy || enemy.hp <= 0) return;
+  if (stats.slow > 0) {
+    enemy.slowTimer = Math.max(enemy.slowTimer || 0, 2);
+    enemy.slowAmount = Math.min(enemy.slowAmount || 1, 1 - stats.slow);
   }
+  const totalDot = (stats.dot || 0) + (stats.bonusDot || 0);
+  if (totalDot > 0) {
+    enemy.dotDamage = Math.max(enemy.dotDamage || 0, totalDot);
+    enemy.dotTimer = 1;
+  }
+  if (stats.bleed > 0) {
+    enemy.dotDamage = (enemy.dotDamage || 0) + stats.bleed;
+    enemy.dotTimer = 1;
+  }
+}
 
-  damageEnemy(run, nearest, damage, stats, isCrit);
-  run.player.facingAngle = Math.atan2(nearest.y - run.player.y, nearest.x - run.player.x);
+function applyPlayerLifesteal(run, stats, damage) {
+  if (stats.lifesteal <= 0 || damage <= 0) return;
+  const heal = Math.max(1, Math.floor(damage * stats.lifesteal));
+  run.player.hp = Math.min(stats.maxHp, run.player.hp + heal);
+  run.particles.push({ type: 'lifesteal', x: run.player.x, y: run.player.y - 25, life: 0.5, maxLife: 0.5, value: heal });
+}
 
-  // 链式攻击
-  if (stats.chain > 0) {
-    let targets = [nearest];
-    for (let i = 0; i < stats.chain; i++) {
-      let next = null, nextBest = Infinity;
-      for (const e of run.enemies) {
-        if (targets.includes(e)) continue;
-        const d = Math.hypot(e.x - targets[targets.length - 1].x, e.y - targets[targets.length - 1].y);
-        if (d < nextBest && d < 200) { nextBest = d; next = e; }
-      }
-      if (next) {
-        targets.push(next);
-        damageEnemy(run, next, Math.floor(damage * 0.65), stats, false);
-        run.particles.push({ type: 'chain', x: next.x, y: next.y, life: 0.2, maxLife: 0.2, fromX: targets[targets.length - 2].x, fromY: targets[targets.length - 2].y });
+function pushPlayerImpactParticle(run, enemy, packet, style = packet.stats.impactFx) {
+  if (!enemy) return;
+  if (style === 'slash') {
+    run.particles.push({
+      type: 'slash', x: enemy.x, y: enemy.y,
+      life: 0.2, maxLife: 0.2, damage: packet.damage, isCrit: packet.isCrit,
+      angle: Math.atan2(enemy.y - run.player.y, enemy.x - run.player.x),
+    });
+    return;
+  }
+  run.particles.push({ type: 'bullet_hit', x: enemy.x, y: enemy.y, life: 0.22, maxLife: 0.22, color: packet.stats.projectileColor });
+}
+
+function applyPlayerChain(run, origin, packet) {
+  if ((packet.stats.chain || 0) <= 0) return;
+  const targets = [origin];
+  for (let i = 0; i < packet.stats.chain; i++) {
+    let next = null;
+    let nextBest = Infinity;
+    const anchor = targets[targets.length - 1];
+    for (const enemy of run.enemies) {
+      if (enemy.hp <= 0 || targets.includes(enemy)) continue;
+      const d = Math.hypot(enemy.x - anchor.x, enemy.y - anchor.y);
+      if (d < nextBest && d < 200) {
+        nextBest = d;
+        next = enemy;
       }
     }
+    if (!next) break;
+    targets.push(next);
+    damageEnemy(run, next, Math.max(1, Math.floor(packet.damage * 0.65)), packet.stats, false);
+    applyPlayerAilments(next, packet.stats);
+    run.particles.push({ type: 'chain', x: next.x, y: next.y, life: 0.2, maxLife: 0.2, fromX: anchor.x, fromY: anchor.y });
   }
+}
 
-  // 减速 / 中毒 / 流血
-  if (stats.slow > 0) { nearest.slowTimer = 2; nearest.slowAmount = 1 - stats.slow; }
-  if (stats.dot > 0) { nearest.dotDamage = stats.dot; nearest.dotTimer = 1; }
-  if (stats.bleed > 0) { nearest.dotDamage += stats.bleed; }
-
-  // 吸血
-  if (stats.lifesteal > 0) {
-    const heal = Math.max(1, Math.floor(damage * stats.lifesteal));
-    run.player.hp = Math.min(stats.maxHp, run.player.hp + heal);
-    run.particles.push({ type: 'lifesteal', x: run.player.x, y: run.player.y - 25, life: 0.5, maxLife: 0.5, value: heal });
-  }
-
+function applyPlayerHit(run, enemy, packet, options = {}) {
+  if (!enemy || enemy.hp <= 0) return false;
+  const damageScale = options.damageScale ?? 1;
+  const hitDamage = Math.max(1, Math.floor(packet.damage * damageScale));
+  damageEnemy(run, enemy, hitDamage, packet.stats, options.allowCrit ?? packet.isCrit);
+  applyPlayerAilments(enemy, packet.stats);
+  if (!options.skipLifesteal) applyPlayerLifesteal(run, packet.stats, hitDamage);
+  if (!options.skipChain) applyPlayerChain(run, enemy, { ...packet, damage: hitDamage });
+  if (!options.skipImpactParticle) pushPlayerImpactParticle(run, enemy, { ...packet, damage: hitDamage }, options.impactFx);
   run.enemies = run.enemies.filter(e => e.hp > 0);
+  return true;
+}
+
+function performWarriorLunge(run, target, distance, packet) {
+  const stats = packet.stats;
+  const angle = Math.atan2(target.y - run.player.y, target.x - run.player.x);
+  if (distance > stats.attackRange * 0.82) {
+    const lunge = Math.min(stats.lungeDistance || 0, Math.max(0, distance - stats.attackRange * 0.78));
+    if (lunge > 0) {
+      run.particles.push({ type: 'dash_trail', x: run.player.x, y: run.player.y, life: 0.24, maxLife: 0.24 });
+      run.player.x = clamp(run.player.x + Math.cos(angle) * lunge, 40, 1240);
+      run.player.y = clamp(run.player.y + Math.sin(angle) * lunge, 50, 670);
+      run.player.invuln = Math.max(run.player.invuln, 0.08);
+    }
+  }
+  const newDist = Math.hypot(target.x - run.player.x, target.y - run.player.y);
+  if (newDist > stats.attackRange + 20) return false;
+  return applyPlayerHit(run, target, packet, { impactFx: 'slash' });
+}
+
+function spawnPlayerProjectiles(run, target, packet) {
+  const stats = packet.stats;
+  const baseAngle = Math.atan2(target.y - run.player.y, target.x - run.player.x);
+  const count = stats.projectileCount || 1;
+  const spread = stats.projectileSpread || 0;
+  for (let i = 0; i < count; i++) {
+    const offset = count === 1 ? 0 : (i - (count - 1) / 2) * spread;
+    const angle = baseAngle + offset;
+    const damageScale = count === 1 ? 1 : (i === Math.floor(count / 2) ? 1 : 0.82);
+    run.playerProjectiles.push({
+      x: run.player.x + Math.cos(angle) * 22,
+      y: run.player.y + Math.sin(angle) * 22,
+      vx: Math.cos(angle) * stats.projectileSpeed,
+      vy: Math.sin(angle) * stats.projectileSpeed,
+      life: stats.projectileLife,
+      radius: stats.projectileRadius,
+      color: stats.projectileColor,
+      trailColor: stats.projectileTrailColor,
+      impactFx: stats.impactFx,
+      splashRadius: stats.splashRadius,
+      pierceRemaining: stats.projectilePierce,
+      stats: { ...stats },
+      damage: packet.damage,
+      isCrit: packet.isCrit,
+      damageScale,
+      hitIds: [],
+    });
+  }
   run.particles.push({
-    type: 'slash', x: nearest.x, y: nearest.y,
-    life: 0.2, maxLife: 0.2, damage, isCrit,
-    angle: Math.atan2(nearest.y - run.player.y, nearest.x - run.player.x),
+    type: 'shoot_flash',
+    x: run.player.x + Math.cos(baseAngle) * 18,
+    y: run.player.y + Math.sin(baseAngle) * 18,
+    life: 0.18,
+    maxLife: 0.18,
+    color: stats.projectileColor,
   });
+}
+
+function updatePlayerProjectiles(run, dt) {
+  for (const projectile of run.playerProjectiles) {
+    projectile.x += projectile.vx * dt;
+    projectile.y += projectile.vy * dt;
+    projectile.life -= dt;
+    if (projectile.life <= 0) continue;
+
+    for (const enemy of run.enemies) {
+      if (enemy.hp <= 0 || projectile.hitIds.includes(enemy.id)) continue;
+      const dist = Math.hypot(enemy.x - projectile.x, enemy.y - projectile.y);
+      if (dist > enemy.radius + projectile.radius) continue;
+
+      projectile.hitIds.push(enemy.id);
+      const packet = {
+        damage: projectile.damage,
+        isCrit: projectile.isCrit,
+        stats: projectile.stats,
+      };
+      applyPlayerHit(run, enemy, packet, { damageScale: projectile.damageScale, impactFx: projectile.impactFx });
+
+      if ((projectile.splashRadius || 0) > 0) {
+        for (const other of run.enemies) {
+          if (other === enemy || other.hp <= 0) continue;
+          const splashDist = Math.hypot(other.x - enemy.x, other.y - enemy.y);
+          if (splashDist <= projectile.splashRadius) {
+            applyPlayerHit(run, other, packet, {
+              damageScale: projectile.damageScale * 0.62,
+              allowCrit: false,
+              skipChain: true,
+              skipLifesteal: true,
+              skipImpactParticle: true,
+            });
+          }
+        }
+      }
+
+      run.particles.push({ type: 'bullet_hit', x: enemy.x, y: enemy.y, life: 0.22, maxLife: 0.22, color: projectile.color });
+      if ((projectile.pierceRemaining || 0) > 0) {
+        projectile.pierceRemaining -= 1;
+      } else {
+        projectile.life = 0;
+      }
+      break;
+    }
+  }
+  run.playerProjectiles = run.playerProjectiles.filter(projectile => (
+    projectile.life > 0 &&
+    projectile.x >= -80 && projectile.x <= 1360 &&
+    projectile.y >= -80 && projectile.y <= 800
+  ));
+}
+
+export function resolveAutoAttack(run, dt) {
+  const stats = getPlayerStats(run);
+  run.player.attackTimer -= dt;
+  if (run.player.attackTimer > 0 || run.enemies.length === 0) return;
+
+  let nearest = null;
+  let best = Infinity;
+  for (const enemy of run.enemies) {
+    const d = Math.hypot(enemy.x - run.player.x, enemy.y - run.player.y);
+    if (d < best) {
+      best = d;
+      nearest = enemy;
+    }
+  }
+  if (!nearest || best > stats.attackEngageRange) return;
+
+  run.player.facingAngle = Math.atan2(nearest.y - run.player.y, nearest.x - run.player.x);
+  const packet = buildPlayerAttackPacket(run, stats);
+  applyPlayerSelfRisk(run, packet);
+
+  let launched = false;
+  if (stats.attackMode === 'melee_lunge') {
+    launched = performWarriorLunge(run, nearest, best, packet);
+  } else {
+    spawnPlayerProjectiles(run, nearest, packet);
+    launched = true;
+  }
+
   run.player.attackTimer = stats.attackCooldown;
-  run.screenShake = Math.max(run.screenShake, isCrit ? 0.5 : 0.12);
-  if (isCrit) run.screenFlash = 0.15;
-  run.events.push(isCrit ? 'crit' : 'attack');
+  if (!launched) return;
+  run.screenShake = Math.max(run.screenShake, packet.isCrit ? 0.5 : stats.attackMode === 'melee_lunge' ? 0.18 : 0.1);
+  if (packet.isCrit) run.screenFlash = 0.15;
+  run.events.push(packet.isCrit ? 'crit' : 'attack');
 }
 
 // ============================================================

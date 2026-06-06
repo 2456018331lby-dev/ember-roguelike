@@ -148,13 +148,14 @@ function showCharacterSelect() {
           const unlocked = save.unlockedCharacters.includes(ch.id);
           const selected = ch.id === selectedCharId;
           const badges = [
-            ch.baseHp >= 100 ? '高血量' : '脆皮高压',
-            ch.baseSpeed >= 260 ? '机动' : '站场',
-            ch.baseAttackCooldown <= 0.45 ? '高速出手' : '重击节奏',
+            ch.role || (ch.baseHp >= 100 ? '高血量' : '脆皮高压'),
+            ch.weapon || (ch.baseSpeed >= 260 ? '机动' : '站场'),
+            ch.attackProfile?.label || (ch.baseAttackCooldown <= 0.45 ? '高速出手' : '重击节奏'),
           ];
           const spriteCol = ch.sprite?.col ?? 0;
+          const loadout = (ch.startCards || []).slice(0, 3).map(card => card.name).join(' · ');
           return `
-            <div class="char-card ${selected ? 'char-selected' : ''} ${unlocked ? '' : 'char-locked'}" data-id="${ch.id}" ${unlocked ? '' : 'style="opacity:.45;pointer-events:none"'}>
+            <div class="char-card ${selected ? 'char-selected' : ''} ${unlocked ? '' : 'char-locked'}" data-id="${ch.id}" style="--char-color:${ch.color};--char-accent:${ch.accentColor || ch.color}">
               <div class="char-portrait" style="--sprite-col:${spriteCol};--char-color:${ch.color}">
                 ${unlocked ? '' : '<span class="char-lockmark">锁</span>'}
               </div>
@@ -164,14 +165,20 @@ function showCharacterSelect() {
                   <div class="char-unlock-badge">${unlocked ? '已解锁' : '待解锁'}</div>
                 </div>
                 <div class="char-sub">${ch.subtitle}</div>
+                <div class="char-roleline">
+                  <span class="char-role-chip">${escapeHtml(ch.role || '战术身份')}</span>
+                  <span class="char-weapon-chip">${escapeHtml(ch.weapon || '默认武器')}</span>
+                </div>
                 <div class="char-desc">${ch.desc}</div>
                 <div class="char-badges">${badges.map(tag => `<span class="char-badge">${tag}</span>`).join('')}</div>
+                <div class="char-combat-note">${ch.combatNote || ''}</div>
                 <div class="char-stats-grid">
                   <span class="char-stat">❤ ${ch.baseHp}</span>
                   <span class="char-stat">⚡ ${ch.baseSpeed}</span>
                   <span class="char-stat">攻 ${ch.baseAttack}</span>
                   <span class="char-stat">⏱ ${ch.baseAttackCooldown}s</span>
                 </div>
+                <div class="char-loadout"><strong>起手铭牌</strong><span>${loadout}</span></div>
                 ${unlocked ? '' : `<div class="char-unlock">${ch.unlockDesc}</div>`}
               </div>
             </div>`;
@@ -303,10 +310,13 @@ function escapeHtml(value) {
 
 function renderStatPills(stats, synergies = [], activeRun = null) {
   const pills = [
+    `${stats.attackStyleLabel || '自动攻击'}`,
     `攻击 ${Math.round(stats.attack * stats.damageMultiplier)}`,
     `攻速 ${(1 / stats.attackCooldown).toFixed(1)}`,
     `护甲 ${stats.armor}`,
   ];
+  if (stats.attackMode === 'melee_lunge') pills.push(`接敌 ${Math.round(stats.attackEngageRange)}`);
+  else pills.push(`射程 ${Math.round(stats.attackRange)}`);
   if ((activeRun?.player?.tempDeathWard || 0) > 0) pills.push(`护符 ${activeRun.player.tempDeathWard}`);
   if (stats.critChance > 0) pills.push(`暴击 ${Math.round(stats.critChance * 100)}%`);
   if (stats.dodgeChance > 0) pills.push(`闪避 ${Math.round(stats.dodgeChance * 100)}%`);
@@ -315,6 +325,7 @@ function renderStatPills(stats, synergies = [], activeRun = null) {
 }
 
 function renderBuildSummary(run, presentation) {
+  const character = getCharacter(run.characterId || 'warrior');
   const descriptors = run.buildAnalysis?.descriptors || [];
   const weaknesses = run.buildAnalysis?.weaknesses || {};
   const focusMarkup = descriptors.length
@@ -329,6 +340,14 @@ function renderBuildSummary(run, presentation) {
     ? weaknessLabels.map(label => `<span class="focus-chip chip-danger">${escapeHtml(label)}</span>`).join('')
     : '<span class="focus-chip chip-neutral">暂无明显短板</span>';
   return `
+    <div class="build-cluster build-cluster-hero">
+      <div class="cluster-label">战术身份</div>
+      <div class="chip-row">
+        <span class="focus-chip chip-accent">${escapeHtml(character.role || character.name)}</span>
+        <span class="focus-chip chip-neutral">${escapeHtml(character.attackProfile?.label || '自动攻击')}</span>
+      </div>
+      <div class="build-panel-copy">${escapeHtml(character.combatNote || character.desc || '')}</div>
+    </div>
     <div class="build-cluster">
       <div class="cluster-label">构筑倾向</div>
       <div class="chip-row">${focusMarkup}</div>
@@ -768,7 +787,11 @@ function updateHud() {
     return `<div class="msg-${tone}">${m}</div>`;
   }).join('');
   if (buildFocusText) buildFocusText.innerHTML = renderBuildSummary(run, presentation);
-  if (buildRiskText) buildRiskText.innerHTML = `<span class="cluster-label">危险提示</span><span class="risk-copy">${escapeHtml(presentation.waveRiskLine || '保持走位，别让怪物叠到脸上。')}</span>`;
+  if (buildRiskText) buildRiskText.innerHTML = `
+    <span class="cluster-label">危险提示</span>
+    <span class="risk-title">${escapeHtml(run.waveProfile?.label || presentation.topLine || '战场读板')}</span>
+    <span class="risk-copy">${escapeHtml(presentation.waveRiskLine || '保持走位，别让怪物叠到脸上。')}</span>
+  `;
   if (waveSummaryText) waveSummaryText.textContent = presentation.waveSummary || '';
   if (stats.doomTimer > 0) {
     doomTimer.classList.remove('hidden');
@@ -1674,27 +1697,39 @@ function drawThreatIndicators() {
   }
 }
 
-function drawProjectiles() {
-  for (const p of run.projectiles) {
+function drawProjectileSet(projectiles, isPlayer = false) {
+  for (const p of projectiles) {
     ctx.save();
     ctx.translate(p.x, p.y);
-    ctx.globalAlpha = 0.25;
-    ctx.fillStyle = p.color || '#f59e0b';
+    ctx.globalAlpha = isPlayer ? 0.34 : 0.25;
+    ctx.fillStyle = p.trailColor || p.color || '#f59e0b';
     ctx.beginPath();
-    ctx.arc(-p.vx * 0.015, -p.vy * 0.015, p.radius * 1.8, 0, Math.PI * 2);
+    ctx.arc(-p.vx * 0.015, -p.vy * 0.015, p.radius * (isPlayer ? 2.1 : 1.8), 0, Math.PI * 2);
     ctx.fill();
-    ctx.globalAlpha = 0.18;
+    ctx.globalAlpha = isPlayer ? 0.26 : 0.18;
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
-    ctx.arc(0, 0, p.radius * 2.4, 0, Math.PI * 2);
+    ctx.arc(0, 0, p.radius * (isPlayer ? 2.9 : 2.4), 0, Math.PI * 2);
     ctx.fill();
     ctx.globalAlpha = 1;
     ctx.fillStyle = p.color || '#f59e0b';
     ctx.beginPath();
     ctx.arc(0, 0, p.radius, 0, Math.PI * 2);
     ctx.fill();
+    if (isPlayer) {
+      ctx.strokeStyle = hexToRgba(p.trailColor || '#ffffff', 0.72);
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.arc(0, 0, p.radius + 2, 0, Math.PI * 2);
+      ctx.stroke();
+    }
     ctx.restore();
   }
+}
+
+function drawProjectiles() {
+  drawProjectileSet(run.playerProjectiles || [], true);
+  drawProjectileSet(run.projectiles || [], false);
 }
 
 function drawPickups() {
@@ -1762,10 +1797,11 @@ function drawParticles() {
       }
       case 'shoot_flash': {
         const pulse = 1 - a;
+        const flashColor = p.color || '#fbbf24';
         const flash = ctx.createRadialGradient(p.x, p.y, 2, p.x, p.y, 30 + pulse * 18);
         flash.addColorStop(0, 'rgba(255,255,255,0.88)');
-        flash.addColorStop(0.32, 'rgba(251,191,36,0.5)');
-        flash.addColorStop(1, 'rgba(251,146,60,0)');
+        flash.addColorStop(0.32, hexToRgba(flashColor, 0.52));
+        flash.addColorStop(1, hexToRgba(flashColor, 0));
         ctx.fillStyle = flash;
         ctx.beginPath();
         ctx.arc(p.x, p.y, 30 + pulse * 18, 0, Math.PI * 2);
