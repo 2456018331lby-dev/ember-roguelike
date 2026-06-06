@@ -1,6 +1,6 @@
 # 余烬 Ember - 维护与接手文档
 
-最后更新：2026-06-06（本轮继续修首个 Boss 前推荐与战斗边界：普通远程敌人现在和 Boss 一样会在入场后被限制回可战斗区域，避免弓箭手退到场外导致近战战士无法收尾；首个 Boss 前若单体输出缺口极大，奖励池会保底两张可靠输出选择，同时保留必要生存位，减少前 4 波误堆纯防御后输出不足。对应重新跑过 core 回归、Boss checkpoint、Web smoke、视觉回归、Android debug APK 构建和 APK payload 校验；当前 `boss-checkpoints` 最新结果为 `baseline avgWave 18.45`、`smart avgWave 22.68`，其中 smart 第 5 波 `60/60` 通过、第 25 波到达 `39/60`、通关 `32/60`，且 smart 已无 max-tick 卡局；最新 debug APK SHA256 为 `909B142FD2608BF9E8A7B77B1421071B454D81D1E95E1FB3BC1A2478E3166E99`。前序记录中的职业身份、早期敌压、阶段压力环、延迟 `aimed_burst`、Boss 前营火链路、护符 HUD、竖屏布局、视觉像素回归、参考图竞技场背景、沉浸式 Android 外壳与 Web smoke / APK 内容校验仍继续成立）
+最后更新：2026-06-06（本轮继续修高波 Boss 前 safety 和可读性：极低最大生命的脆皮构筑现在会在压力模型中记录 `fragilityDebt`，第 25 波等高波 Boss 前选择 `烟幕疾行` 时可附带 1 次 `残影保命`；临时防死现在记录来源，护符仍显示金色 `护符 1`，烟幕残影显示蓝色 `残影 1`，触发文案也会区分“余烬护符碎裂”和“烟幕残影散尽”。对应已跑过 core 回归、Boss checkpoint、Web smoke、视觉回归、Android debug APK 构建和 APK payload 校验，并已同步 `web -> docs -> android`；当前 `boss-checkpoints` 最新结果为 `baseline avgWave 18.68`、`smart avgWave 23.75`，其中 smart 第 5 波 `60/60` 通过、第 25 波到达 `51/60`、通关 `48/60`，且 smart 已无 max-tick 卡局。最新 debug APK SHA256 为 `34BB211096BF2F963EB0ECD5EAA2FED0AC56FAEC87219C037C38A5FFCC7BC1FE`。前序记录中的职业身份、早期敌压、阶段压力环、延迟 `aimed_burst`、Boss 前营火链路、护符 HUD、竖屏布局、视觉像素回归、参考图竞技场背景、沉浸式 Android 外壳与 Web smoke / APK 内容校验仍继续成立）
 
 本文件给下一个继续维护的人或 AI，用来快速判断三件事：
 
@@ -107,9 +107,9 @@ roguelike-game/
   - 烟幕疾行
   - 豪赌
 - `余烬护符` 只在第 15 波以后 Boss 前且 safety 缺口明显时出现，给下一波临时护盾和一次致命伤保底；每次新波次开始会清理旧护符，避免永久堆叠
-- `烟幕疾行` 在第 20 波以后、Boss 前如果 safety 缺口极大，或机动性短板明显时都会出现，给下一波临时移速、闪避和 Boss 开场迟滞；它依赖波次开始时对新生成敌人补挂 slow，而不是只对当场已存在敌人生效
+- `烟幕疾行` 在第 20 波以后、Boss 前如果 safety 缺口极大，或机动性短板明显时都会出现，给下一波临时移速、闪避和 Boss 开场迟滞；第 25 波等高波脆皮构筑会额外给 1 次 `残影保命`，来源写入 `tempDeathWardSource = 'smoke'`
 - 战前营火选项现在也会带 `fitScore / fitHint / decisionLabel`，前端会直接把 `本轮首选 / 保命 / 高分豪赌` 等建议打到卡面上
-- 护符生效时 HUD 会显示 `护符 1`，玩家身上会出现金色护符环，避免玩家不知道自己还有一次防死
+- 护符生效时 HUD 会显示 `护符 1`，玩家身上会出现金色护符环；烟幕残影会显示 `残影 1` 和蓝色残影环，避免玩家把两种临时防死来源混淆
 - “豪赌”会在下一波开战前真实扣血，再给一张更契合下一波的高品质卡
 
 ### 构筑解释与前端信息层

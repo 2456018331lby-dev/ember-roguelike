@@ -317,7 +317,10 @@ function renderStatPills(stats, synergies = [], activeRun = null) {
   ];
   if (stats.attackMode === 'melee_lunge') pills.push(`接敌 ${Math.round(stats.attackEngageRange)}`);
   else pills.push(`射程 ${Math.round(stats.attackRange)}`);
-  if ((activeRun?.player?.tempDeathWard || 0) > 0) pills.push(`护符 ${activeRun.player.tempDeathWard}`);
+  if ((activeRun?.player?.tempDeathWard || 0) > 0) {
+    const wardLabel = activeRun.player.tempDeathWardSource === 'smoke' ? '残影' : '护符';
+    pills.push(`${wardLabel} ${activeRun.player.tempDeathWard}`);
+  }
   if (stats.critChance > 0) pills.push(`暴击 ${Math.round(stats.critChance * 100)}%`);
   if (stats.dodgeChance > 0) pills.push(`闪避 ${Math.round(stats.dodgeChance * 100)}%`);
   if (synergies?.length) pills.push(`协同 ${synergies.length} 项`);
@@ -1124,22 +1127,26 @@ function drawPlayer() {
   }
   if ((run.player.tempDeathWard || 0) > 0) {
     const wardPulse = 1 + Math.sin(gameTime * 5.4) * 0.08;
+    const isSmokeWard = run.player.tempDeathWardSource === 'smoke';
+    const wardStroke = isSmokeWard ? 'rgba(125,211,252,0.88)' : 'rgba(253,224,71,0.88)';
+    const wardFill = isSmokeWard ? 'rgba(186,230,253,0.86)' : 'rgba(253,224,71,0.82)';
+    const wardGlyph = isSmokeWard ? '影' : '护';
     ctx.save();
     ctx.translate(run.player.x, run.player.y);
     ctx.rotate(gameTime * 0.75);
     ctx.globalAlpha = 0.78;
-    ctx.strokeStyle = 'rgba(253,224,71,0.88)';
+    ctx.strokeStyle = wardStroke;
     ctx.lineWidth = 2.5;
     ctx.setLineDash([10, 8]);
     ctx.beginPath();
     ctx.arc(0, 0, 36 * wardPulse, 0, Math.PI * 2);
     ctx.stroke();
     ctx.setLineDash([]);
-    ctx.fillStyle = 'rgba(253,224,71,0.82)';
+    ctx.fillStyle = wardFill;
     ctx.font = 'bold 13px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('护', 0, -42 * wardPulse);
+    ctx.fillText(wardGlyph, 0, -42 * wardPulse);
     ctx.restore();
   }
 }

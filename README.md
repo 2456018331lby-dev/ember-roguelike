@@ -35,7 +35,7 @@ https://2456018331lby-dev.github.io/ember-roguelike/
 - `末日` 等高风险诅咒保留强爆发路线，但倒计时从拿牌时开始结算，不会因中途拿牌立刻判死
 - 结算页会记录最后几次关键选择，帮助判断是输出、清场、续航、安全网还是路线选择导致阵亡
 - 第 15 波以后的 Boss 前夜如果安全网缺口明显，会出现 `余烬护符`，为下一波提供临时护盾和一次致命伤保底
-- 第 20 波以后如果 safety 缺口极大，或机动性明显不足，还会出现 `烟幕疾行`，为下一波提供临时移速、闪避和开场控场
+- 第 20 波以后如果 safety 缺口极大，或机动性明显不足，还会出现 `烟幕疾行`，为下一波提供临时移速、闪避和开场控场；第 25 波这类高波脆皮构筑还会附带 `残影保命`，HUD 会用蓝色残影环和 `残影 1` 区分它与金色护符
 - 中后期 Boss / survival 场景下，`末日`、`衰败` 这类高风险诅咒会被更明显地下调推荐权重，减少它们压过安全网牌的误导性推荐
 - Boss 前奖励点击后会自动进入战前营火；第 19 波事件锻造在下一波是 Boss 时也会转入营火，再继续进入高波 Boss 链路
 - 战士不会再像远程职业那样站桩白打：现在会主动追击中距离目标；Boss 与普通远程敌人都已纳入可战斗区域约束，避免首领或弓箭手退到场外导致近战无法收尾
@@ -71,7 +71,7 @@ http://127.0.0.1:5173
 
 - `npm run serve` 现在使用仓库内的 Node 静态服务，`.mjs` MIME 正确，不再依赖 Python 的默认静态服务器行为。
 - `npm test` 会验证核心玩法和平衡回归；其中包含奖励 / 锻造 / 商店 / 营火等决策状态不能进入无出口卡死状态的状态机检查。
-- `npm run test:boss-checkpoints` 会跑 baseline / smart 两套 60 seed 模拟，输出第 5/10/15/20/25 波 Boss 检查点、死亡 seed、短板标签和少量死亡样本，方便继续调中后期节奏；当前最近一次结果为 `baseline avgWave 18.45`、`smart avgWave 22.68`，其中 smart 第 5 波 `60/60` 通过、第 25 波到达 `39/60`、通关 `32/60`，且没有 max-tick 卡局。
+- `npm run test:boss-checkpoints` 会跑 baseline / smart 两套 60 seed 模拟，输出第 5/10/15/20/25 波 Boss 检查点、死亡 seed、短板标签和少量死亡样本，方便继续调中后期节奏；当前最近一次结果为 `baseline avgWave 18.68`、`smart avgWave 23.75`，其中 smart 第 5 波 `60/60` 通过、第 25 波到达 `51/60`、通关 `48/60`，且没有 max-tick 卡局。
 - `npm run test:web-smoke` 会验证 spritesheet 尺寸/内容、service worker 预缓存清单、本地服务 MIME、UI 状态路由，以及核心逻辑发出的粒子类型是否都被前端绘制，不需要新增浏览器测试依赖。
 - `npm run test:visual-smoke` 会用本机 Chrome/Edge 做桌面和移动端视觉 smoke，覆盖菜单、角色选择、局内 canvas、奖励选择页、Boss 前营火、Boss 波进入、桌面/移动端活跃 Boss 战读招画面，以及固定的第 20 波高波 Boss 桌面场景，截图输出到 `output/visual-smoke/`，不需要新增 Playwright/Puppeteer 依赖。
 - `npm run test:visual-regression` 会先跑视觉 smoke，再读取 PNG 像素并和 `tests/visual-regression-baseline.json` 对比；角色选择等稳定界面使用严格 RGBA 哈希，动画界面使用像素亮度/色彩比例容差。
@@ -85,7 +85,7 @@ http://127.0.0.1:5173
 
 当前仓库已经验证过可在本机生成 debug APK，并在本机 `NightRunner35` Android 模拟器完成安装、冷启动、焦点窗口、点击进入角色选择、点击进入局内战斗、截图和 logcat 致命错误扫描。
 
-最近一次验证 APK SHA256：`909B142FD2608BF9E8A7B77B1421071B454D81D1E95E1FB3BC1A2478E3166E99`
+最近一次验证 APK SHA256：`34BB211096BF2F963EB0ECD5EAA2FED0AC56FAEC87219C037C38A5FFCC7BC1FE`
 
 ```bash
 npm run build:android:debug

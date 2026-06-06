@@ -1,6 +1,6 @@
 # Ember 下一阶段执行计划
 
-最后更新：2026-06-06（本轮继续推进“早期构筑推荐、战斗边界、移动端布局和 Android 包验证”：普通远程敌人现在会在入场后被限制回可战斗区域，避免弓箭手退到场外导致近战战士无法收尾；首个 Boss 前若单体输出缺口极大，奖励池会保底两张可靠输出选择；竖屏战斗画面继续上移和压缩底部控件空间；Android debug APK 已重新构建并校验 payload。对应 core 回归、Boss checkpoint、Web smoke、视觉回归、Android debug APK 构建已通过；smart `avgWave` 当前为 `22.68`，第 5 波 `60/60` 通过，第 25 波到达 `39/60`、通关 `32/60`，且无 max-tick 卡局；最新 debug APK SHA256 为 `909B142FD2608BF9E8A7B77B1421071B454D81D1E95E1FB3BC1A2478E3166E99`。前序记录中的职业区分、早期敌压、阶段压力环、弹幕形状预览、Boss 血条阶段刻度、护符可见反馈、`末日` 拿牌计时、奖励解释 / 死亡复盘、视觉像素回归、覆盖层状态路由集中化、核心状态机无出口检查、参考图竞技场背景、沉浸式 Android 外壳、移动端首屏修复和 Web smoke / APK 内容校验仍继续成立；下一步继续补中后期 Boss safety、更多高波阶段特效和真机复测）
+最后更新：2026-06-06（本轮继续推进“高波 Boss safety、脆皮构筑容错和防死反馈可读性”：极低最大生命的构筑会在压力模型里形成 `fragilityDebt`，第 25 波等高波 Boss 前选择 `烟幕疾行` 时可附带 1 次 `残影保命`；HUD 和角色身上的临时防死环现在按来源区分，护符是金色 `护符 1`，烟幕残影是蓝色 `残影 1`，触发文案也会分别说明。对应 core 回归、Boss checkpoint、Web smoke、视觉回归、Android debug APK 构建和 APK payload 校验已通过并已同步 `web -> docs -> android`；smart `avgWave` 当前为 `23.75`，第 5 波 `60/60` 通过，第 25 波到达 `51/60`、通关 `48/60`，且无 max-tick 卡局；本轮 Android debug APK SHA256 为 `34BB211096BF2F963EB0ECD5EAA2FED0AC56FAEC87219C037C38A5FFCC7BC1FE`。前序记录中的职业区分、早期敌压、战斗边界、阶段压力环、弹幕形状预览、Boss 血条阶段刻度、护符可见反馈、`末日` 拿牌计时、奖励解释 / 死亡复盘、视觉像素回归、覆盖层状态路由集中化、核心状态机无出口检查、参考图竞技场背景、沉浸式 Android 外壳、移动端首屏修复和 Web smoke / APK 内容校验仍继续成立；下一步继续补中后期 Boss 视觉特效、动态回归和真机复测）
 
 这个文件只回答一个问题：下一阶段最值得继续做什么。
 
@@ -14,8 +14,8 @@
 - 第 4/9/14/24 波奖励后会进入 Boss 前战前营火；第 19 波事件锻造若下一波是 Boss，也会转入营火
 - 战前营火已支持治疗、冥想、训练、余烬护符、烟幕疾行、豪赌
 - 第 15 波以后 Boss 前夜如果 safety 缺口明显，会额外提供 `余烬护符`，为下一波提供临时护盾和一次致命伤保底
-- 第 20 波以后如果 safety 缺口极大，或机动性短板明显，会额外提供 `烟幕疾行`，为下一波提供临时移速、闪避和 Boss 开场迟滞
-- 护符生效时 HUD 和玩家身上都有可见反馈，移动端 APK 点击流已重新通过
+- 第 20 波以后如果 safety 缺口极大，或机动性短板明显，会额外提供 `烟幕疾行`，为下一波提供临时移速、闪避和 Boss 开场迟滞；第 25 波等高波脆皮构筑还会附带 1 次 `残影保命`
+- 护符和烟幕残影生效时 HUD 与玩家身上都有来源明确的可见反馈，护符为金色 `护符 1`，残影为蓝色 `残影 1`
 - 豪赌会在开战前真实结算生命代价，并给更契合下一波的高品质卡
 - Boss 前奖励点击后会立刻渲染战前营火，不再因为前端覆盖层没跟随 `run.state = rest` 而卡住
 - 第 5 波 Boss 已不再是“几乎所有局都卡死”的唯一断点
@@ -29,6 +29,7 @@
 - 核心状态机已加无出口回归检查：奖励、锻造、商店、营火等决策状态在所有难度和 seed 1..30 下必须有选择项或离开项，并能继续推进到第 10 波以上
 - 自动模拟不再吞掉空的决策选择；空奖励、空锻造、空商店或空营火会直接让测试失败
 - 构筑压力目标会随波次成长，`singleTarget / aoe / sustain / safety` 都会记录当前强度、目标和缺口，避免第 15/20 波仍沿用开局阈值
+- 极低最大生命现在会形成 `fragilityDebt`，降低续航和 safety 评估，避免高闪避/护盾构筑掩盖高波被斩杀风险
 - 奖励、锻造、商店和 Boss 前营火选择已进入 `decisionLog`，死亡复盘会显示最后几次关键路线选择
 - 战前营火卡片现在也会显示基于压力模型的推荐标签与建议文案，方便玩家区分补输出、补容错和高风险豪赌
 
@@ -69,19 +70,19 @@
 
 ### 已验证数据
 
-- `node tests/baseline_sim.mjs`：`avgWave 18.45`
-- `node tests/smart_sim.mjs`：`avgWave 22.68`
+- `node tests/baseline_sim.mjs`：前序单脚本样本为 `avgWave 18.45`，本轮 checkpoint 口径为 `avgWave 18.68`
+- `node tests/smart_sim.mjs`：前序单脚本样本为 `avgWave 22.68`，本轮 checkpoint 口径为 `avgWave 23.75`
 - `smart_sim` 第 5 波失败样本：`0 / 60`
 - `baseline_sim` 第 5 波失败样本：`1 / 60`（seed 39，站桩 baseline 仅作保守压力参考）
-- `npm run test:boss-checkpoints`：baseline 第 5 波 `59/60` 通过，第 10/15/20 波 Boss 死亡 `1 / 3 / 11`；smart 第 5 波 `60/60` 通过，第 10/15/20/25 波 Boss 死亡 `1 / 1 / 12 / 7`，第 25 波到达 `39/60`，通关 `32/60`；smart 无 max-tick 卡局，短板标签仍以 `safety` 最集中
-- `npm test`：核心逻辑测试全部通过；已覆盖早期卡牌推荐回归、首个 Boss 极大单体缺口双输出保底、普通远程敌人场外卡局回归、Boss 前营火链路、中后期压力目标成长、死亡复盘缺口/决策展示，以及 `reward / forge / shop / rest` 无出口状态机检查
+- `npm run test:boss-checkpoints`：baseline 第 5 波 `59/60` 通过，第 10/15/20 波 Boss 死亡 `0 / 2 / 13`；smart 第 5 波 `60/60` 通过，第 10/15/20/25 波 Boss 死亡 `1 / 1 / 1 / 3`，第 25 波到达 `51/60`，通关 `48/60`；smart 无 max-tick 卡局，短板标签仍以 `safety` 最集中
+- `npm test`：核心逻辑测试全部通过；已覆盖早期卡牌推荐回归、首个 Boss 极大单体缺口双输出保底、普通远程敌人场外卡局回归、Boss 前营火链路、中后期压力目标成长、脆皮烟幕残影保命、死亡复盘缺口/决策展示，以及 `reward / forge / shop / rest` 无出口状态机检查
 - `npm run test:web-smoke`：资源、缓存清单、UI 状态路由、离线 fallback、本地 MIME 和核心粒子绘制覆盖检查全部通过
 - `npm run test:visual-smoke`：桌面/移动端菜单、角色选择、局内 canvas、奖励选择页、Boss 前营火、第 5 波 Boss 进入、桌面/移动端活跃 Boss 战读招画面，以及固定第 20 波高压桌面样本渲染通过；移动端摇杆与闪避按钮可见；奖励页首选卡、决策标签和风险代价可见；截图已输出到 `output/visual-smoke/`
 - `npm run test:visual-regression`：视觉 smoke 截图像素回归通过；基线文件为 `tests/visual-regression-baseline.json`
 - Playwright MCP：`开始远征 -> 开始战斗 · 标准 -> 局内 HUD/canvas` 交互通过，canvas 非空采样 `1031`，无水平溢出；PWA 安装横幅仅产生 info 级浏览器提示
-- `npm run build:android:debug`：Android debug APK 构建和 APK Web payload 校验通过
+- `npm run build:android:debug`：Android debug APK 构建和 APK Web payload 校验通过；本轮 APK SHA256 为 `34BB211096BF2F963EB0ECD5EAA2FED0AC56FAEC87219C037C38A5FFCC7BC1FE`
 - `npm run verify:android:smoke`：自动启动唯一 AVD `NightRunner35`，模拟器安装/启动通过，焦点窗口属于 `com.ember.roguelike`，点击流已到局内战斗，`output/android-smoke/app-launch.png` / `character-select.png` / `gameplay.png` 已保存，logcat fatal-error scan 通过，验证后自动关闭模拟器
-- 当前验证 APK SHA256：`909B142FD2608BF9E8A7B77B1421071B454D81D1E95E1FB3BC1A2478E3166E99`
+- 当前验证 APK SHA256：`34BB211096BF2F963EB0ECD5EAA2FED0AC56FAEC87219C037C38A5FFCC7BC1FE`
 - 难度抽样：`steady avgWave 19.00 / standard 18.20 / trial 16.90`
 - 浏览器验证：锻造选择后可进入第 4 波，不再卡在锻造层
 - 浏览器验证：菜单首屏按钮、角色选择页 AI 头像、局内 AI 玩家模型和敌人 spritesheet 已确认渲染

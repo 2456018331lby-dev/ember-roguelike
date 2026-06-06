@@ -488,6 +488,7 @@ export function createDebugBossFight(seed = 2048, options = {}) {
   run.player.hp = Math.max(1, Math.floor(stats.maxHp * hpRatio));
   run.player.barrier = Math.max(stats.barrier, targetWave >= 20 ? 34 : 18);
   run.player.tempDeathWard = targetWave >= 15 ? 1 : 0;
+  run.player.tempDeathWardSource = run.player.tempDeathWard > 0 ? 'ward' : null;
   run.player.attackTimer = Math.max(0.05, stats.attackCooldown * 0.35);
   run.player.facingAngle = -Math.PI / 2;
 
@@ -610,6 +611,7 @@ function startNextWave(run) {
   run.player.tempSpeedBonus = 0;
   run.player.tempDodgeBonus = 0;
   run.player.tempDeathWard = 0;
+  run.player.tempDeathWardSource = null;
   run.player.tempWaveStartSlow = 0;
   run.player.tempWaveStartSlowAmount = 1;
 
@@ -1534,8 +1536,10 @@ function enrichRestChoices(run, choices, context) {
       fitScore = 4.2 + safetyNeed * 0.92 + Math.max(0, 0.8 - hpRatio) * 5 + Math.min(4, (choice.barrier || 0) / 10) + (choice.deathWard || 0) * 2.8 + (bossPrep ? 0.8 : 0);
       fitHint = '补一次失误容错，避免被高压弹幕直接斩穿。';
     } else if (choice.restAction === 'smoke') {
-      fitScore = 3.5 + safetyNeed * 0.84 + mobilityNeed * 1.35 + ((targetProfile?.wave || 0) >= 20 ? 1.5 : 0) + (choice.waveStartSlow || 0) * 0.45;
-      fitHint = choice.mobilityFocus && safetyNeed < 10
+      fitScore = 3.5 + safetyNeed * 0.84 + mobilityNeed * 1.35 + ((targetProfile?.wave || 0) >= 20 ? 1.5 : 0) + (choice.waveStartSlow || 0) * 0.45 + (choice.deathWard || 0) * 2.6;
+      fitHint = choice.deathWard
+        ? '身板太薄，烟幕残影会额外保住一次致命失误。'
+        : choice.mobilityFocus && safetyNeed < 10
         ? '机动性短板更明显，用移速、闪避和开场迟滞换出走位窗口。'
         : '补走位和开场控场，先把第一轮弹幕节奏拖慢。';
       decisionRisk = 1;
@@ -1566,7 +1570,7 @@ function enrichRestChoices(run, choices, context) {
     } else if (isBest) {
       decisionLabel = '本轮首选';
       decisionTone = 'recommended';
-    } else if ((choice.restAction === 'ward' || choice.restAction === 'smoke') && safetyNeed >= 4) {
+    } else if ((choice.restAction === 'ward' || choice.restAction === 'smoke') && (safetyNeed >= 4 || choice.deathWard)) {
       decisionLabel = '保命';
       decisionTone = 'safe';
     } else if (choice.restAction === 'heal' && hpRatio < 0.62) {
@@ -1588,6 +1592,14 @@ function enrichRestChoices(run, choices, context) {
   });
 }
 
+function grantTempDeathWard(run, amount, source) {
+  const wardCount = Math.max(0, Math.floor(amount || 0));
+  if (wardCount <= 0) return;
+  const previousSource = run.player.tempDeathWardSource;
+  run.player.tempDeathWard = (run.player.tempDeathWard || 0) + wardCount;
+  run.player.tempDeathWardSource = !previousSource || previousSource === source ? source : 'mixed';
+}
+
 export function generateRestChoices(run) {
   const stats = getPlayerStats(run);
   const hpRatio = run.player.hp / Math.max(1, stats.maxHp);
@@ -1598,6 +1610,9 @@ export function generateRestChoices(run) {
     analysis?.pressure || {},
     buildPressureTargets(targetWave, targetProfile)
   );
+  const baseMaxHp = Math.max(1, Number(run.player.baseMaxHp || stats.maxHp || 1));
+  const maxHpRatio = stats.maxHp / baseMaxHp;
+  const fragileBody = targetProfile?.kind === 'boss' && targetWave >= 20 && maxHpRatio <= 0.28;
   const mobilityNeed =
     Math.max(0, 290 - (stats.speed || 0)) / 38 +
     Math.max(0, 0.24 - (stats.dodgeChance || 0)) * 18;
@@ -1658,14 +1673,16 @@ export function generateRestChoices(run) {
       Math.min(0.9, mobilityScale * 0.25) +
       (targetWave >= 25 ? 0.4 : 0)
     ).toFixed(1);
+    const deathWard = (fragileBody && (targetGaps.safety >= 8 || targetWave >= 25)) || targetGaps.safety >= 18 ? 1 : 0;
     choices.push({
       id: 'rest_smoke', name: '烟幕疾行', type: 'rest',
       restAction: 'smoke',
-      desc: `下一波移速 +${speedBonus}、闪避 +${Math.round(dodgeBonus * 100)}%，Boss 开场迟滞 ${waveStartSlow} 秒`,
+      desc: `下一波移速 +${speedBonus}、闪避 +${Math.round(dodgeBonus * 100)}%，Boss 开场迟滞 ${waveStartSlow} 秒${deathWard ? '，残影保命 1 次' : ''}`,
       speedBonus,
       dodgeBonus,
       waveStartSlow,
       waveStartSlowAmount: 0.45,
+      deathWard,
       mobilityFocus: mobilityNeed >= 2.2,
     });
   }
@@ -1738,8 +1755,11 @@ export function applyRestChoice(run, choice) {
       dodgeBonus: Math.max(0, Number(choice.dodgeBonus || 0)),
       waveStartSlow: Math.max(0, Number(choice.waveStartSlow || 0)),
       waveStartSlowAmount: Math.max(0.2, Math.min(0.9, Number(choice.waveStartSlowAmount || 0.45))),
+      deathWard: Math.max(0, Math.floor(choice.deathWard || 0)),
     };
-    pushMessage(run, '🌫 烟幕疾行：下一波移速、闪避提高，Boss 开场会被烟幕拖慢！');
+    pushMessage(run, smokeAfterWaveStart.deathWard > 0
+      ? '🌫 烟幕疾行：下一波移速、闪避提高，残影会保住一次致命失误！'
+      : '🌫 烟幕疾行：下一波移速、闪避提高，Boss 开场会被烟幕拖慢！');
   } else if (choice.restAction === 'gamble') {
     const hpCost = Math.min(Math.max(1, choice.hpCost || 0), Math.max(1, run.player.hp - 1));
     delayedHpCost = hpCost;
@@ -1768,13 +1788,14 @@ export function applyRestChoice(run, choice) {
   }
   if (wardAfterWaveStart) {
     run.player.barrier += wardAfterWaveStart.barrier;
-    run.player.tempDeathWard = (run.player.tempDeathWard || 0) + wardAfterWaveStart.deathWard;
+    grantTempDeathWard(run, wardAfterWaveStart.deathWard, 'ward');
   }
   if (smokeAfterWaveStart) {
     run.player.tempSpeedBonus = (run.player.tempSpeedBonus || 0) + smokeAfterWaveStart.speedBonus;
     run.player.tempDodgeBonus = +((run.player.tempDodgeBonus || 0) + smokeAfterWaveStart.dodgeBonus).toFixed(3);
     run.player.tempWaveStartSlow = Math.max(run.player.tempWaveStartSlow || 0, smokeAfterWaveStart.waveStartSlow);
     run.player.tempWaveStartSlowAmount = Math.min(run.player.tempWaveStartSlowAmount ?? 1, smokeAfterWaveStart.waveStartSlowAmount);
+    grantTempDeathWard(run, smokeAfterWaveStart.deathWard, 'smoke');
   }
   if (delayedHpCost > 0) {
     run.player.hp = Math.max(1, run.player.hp - delayedHpCost);
@@ -2138,6 +2159,17 @@ function analyzeBuild(run) {
     if (name === '诅咒之王') { focus.curse += 3; pressure.aoe += 22; pressure.singleTarget += 12; }
     if (name === '幽灵血脉') { focus.sustain += 2; pressure.sustain += 24; pressure.safety += 12; }
     if (name === '巨炮节奏') { focus.barrage += 3; pressure.singleTarget += 28; }
+  }
+
+  const stats = getPlayerStats(run);
+  const baseMaxHp = Math.max(1, Number(run.player?.baseMaxHp || stats.maxHp || 1));
+  const maxHpRatio = stats.maxHp / baseMaxHp;
+  const fragilityDebt = clamp((0.36 - maxHpRatio) / 0.24, 0, 1);
+  if (fragilityDebt > 0) {
+    // 高闪避/屏障不能完全抵消“最大生命过低”的高波斩杀风险。
+    pressure.sustain -= fragilityDebt * 14;
+    pressure.safety -= fragilityDebt * 24;
+    pressure.fragilityDebt = Math.round(fragilityDebt * 100) / 100;
   }
 
   const ranked = Object.entries(focus).sort((a, b) => b[1] - a[1]);
@@ -3227,12 +3259,16 @@ function takeDamage(run, amount) {
   if (run.player.hp <= 0) {
     const stats = getPlayerStats(run);
     if ((run.player.tempDeathWard || 0) > 0) {
+      const source = run.player.tempDeathWardSource;
       run.player.tempDeathWard -= 1;
+      if (run.player.tempDeathWard <= 0) run.player.tempDeathWardSource = null;
       run.player.hp = 1;
       run.player.invuln = 1.6;
       run.screenShake = 0.65;
       run.screenFlash = 0.45;
-      pushMessage(run, '🛡 余烬护符碎裂，保住最后一息。');
+      pushMessage(run, source === 'smoke'
+        ? '🌫 烟幕残影散尽，保住最后一息。'
+        : '🛡 余烬护符碎裂，保住最后一息。');
       run.events.push('revive');
       run.particles.push({ type: 'revive', x: run.player.x, y: run.player.y, life: 1.4, maxLife: 1.4 });
     } else if (stats.revive > 0 && !run.reviveUsed) {

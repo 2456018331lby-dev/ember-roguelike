@@ -1923,6 +1923,53 @@ test('烟幕疾行应在下一波提供机动与开场控场', () => {
   assert.ok(firstEnemy.slowAmount < 1, `首个敌人应被减速，实际 slowAmount=${firstEnemy.slowAmount}`);
 });
 
+test('第 25 波脆皮构筑选择烟幕时应附带残影保命', () => {
+  const run = createRun(1708);
+  run.wave = 24;
+  run.state = 'rest';
+  run.sacrifices.health.amount = 0.76;
+  run.player.hp = 20;
+  run.nextWavePreview = {
+    wave: 25,
+    kind: 'boss',
+    label: '第 25 波 Boss 讨伐',
+    rewardTag: 'survival',
+  };
+  run.buildAnalysis = {
+    pressure: {
+      singleTarget: 999,
+      aoe: 999,
+      sustain: 999,
+      mitigation: 999,
+      safety: 30,
+    },
+  };
+
+  const smoke = generateRestChoices(run).find(choice => choice.restAction === 'smoke');
+  assert.ok(smoke, '第 25 波脆皮构筑应能看到烟幕疾行');
+  assert.equal(smoke.deathWard, 1, '脆皮高波烟幕应附带一次残影保命');
+  assert.match(smoke.fitHint, /残影/, `烟幕提示应说明残影保命，实际 ${smoke.fitHint}`);
+
+  applyRestChoice(run, smoke);
+  assert.equal(run.wave, 25, `烟幕后应进入第 25 波，实际 ${run.wave}`);
+  assert.equal(run.player.tempDeathWard, 1, '残影保命应带入下一波');
+  assert.equal(run.player.tempDeathWardSource, 'smoke', '残影保命来源应标记为 smoke');
+
+  run.state = 'playing';
+  run.waveEnemyQueue = [{ type: 'slime', delay: 999 }];
+  run.spawnTimer = 999;
+  run.player.hp = 1;
+  run.player.barrier = 0;
+  run.player.invuln = 0;
+  run.projectiles = [{ x: run.player.x, y: run.player.y, vx: 0, vy: 0, life: 1, fromEnemy: true, radius: 20, damage: 9999, color: '#fff' }];
+  updateRun(run, { x: 0, y: 0 }, 0.016);
+
+  assert.equal(run.state, 'playing', '残影触发后不应立即 gameover');
+  assert.equal(run.player.tempDeathWard, 0, '残影触发后次数应被消耗');
+  assert.equal(run.player.tempDeathWardSource, null, '残影触发耗尽后来源应清空');
+  assert.match(run.messages.join('\n'), /烟幕残影/, `触发文案应明确残影来源，实际 ${run.messages.join(' | ')}`);
+});
+
 test('战前豪赌应扣血并直接获得一张高品质卡', () => {
   const run = createRun(1702);
   run.wave = 4;
