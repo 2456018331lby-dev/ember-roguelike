@@ -397,6 +397,12 @@ const highWaveBossActiveExpression = `(() => new Promise(resolve => {
         snapshot.bossCount >= 1 &&
         snapshot.ward >= 1 &&
         snapshot.barrier >= 1 &&
+        typeof snapshot.bossPattern === 'string' &&
+        snapshot.bossPattern.length > 0 &&
+        typeof snapshot.bossPatternLabel === 'string' &&
+        snapshot.bossPatternLabel.length > 0 &&
+        typeof snapshot.bossCharge === 'number' &&
+        snapshot.bossCharge >= 0 &&
         (snapshot.projectileCount >= 2 || snapshot.telegraphCount >= 2) &&
         visibleSamples > 80),
       snapshot,

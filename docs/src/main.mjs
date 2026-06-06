@@ -1027,13 +1027,8 @@ function drawBossArenaPressure() {
   const boss = run.enemies?.find(e => e.isBoss);
   if (!boss) return;
 
-  const phase = getCurrentBossPhase(boss);
-  const hpRatio = boss.maxHp > 0 ? clamp(boss.hp / boss.maxHp, 0, 1) : 1;
-  const cooldown = Math.max(0.4, phase?.attackCooldown || 2.5);
-  const warningWindow = Math.min(1.35, cooldown * 0.48);
-  const charge = clamp(1 - (boss.phaseAttackTimer || 0) / warningWindow, 0, 1);
-  const lateWavePressure = clamp(((run.wave || 5) - 5) / 20, 0, 1);
-  const pressure = clamp((1 - hpRatio) * 0.58 + charge * 0.38 + lateWavePressure * 0.18, 0, 1);
+  const readout = getBossThreatReadout(boss);
+  const { phase, charge, pressure } = readout;
   const pulse = (Math.sin(gameTime * (2.2 + pressure * 2.4)) + 1) * 0.5;
   const phaseColor = getBossPatternColor(phase?.pattern, boss.color || '#fb923c');
 
@@ -1085,6 +1080,43 @@ function drawBossArenaPressure() {
     ctx.lineTo(640 + Math.cos(a) * outer, 360 + Math.sin(a) * outer);
     ctx.stroke();
   }
+
+  const panelX = 92;
+  const panelY = 134;
+  const panelW = 258;
+  const panelH = 72;
+  ctx.globalAlpha = 0.9;
+  ctx.fillStyle = 'rgba(15,23,42,0.72)';
+  roundRect(panelX, panelY, panelW, panelH, 18);
+  ctx.fill();
+  ctx.strokeStyle = hexToRgba(phaseColor, 0.55 + charge * 0.35);
+  ctx.lineWidth = 1.5 + charge * 1.5;
+  ctx.stroke();
+
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = '#fde68a';
+  ctx.font = 'bold 13px sans-serif';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('BOSS READ', panelX + 16, panelY + 20);
+  ctx.fillStyle = '#e5e7eb';
+  ctx.font = 'bold 19px sans-serif';
+  ctx.fillText(readout.patternLabel, panelX + 16, panelY + 43);
+
+  const barX = panelX + 152;
+  const barY = panelY + 53;
+  const barW = 88;
+  const barH = 8;
+  ctx.fillStyle = 'rgba(148,163,184,0.28)';
+  roundRect(barX, barY, barW, barH, 6);
+  ctx.fill();
+  ctx.fillStyle = hexToRgba(phaseColor, 0.86);
+  roundRect(barX, barY, barW * charge, barH, 6);
+  ctx.fill();
+  ctx.fillStyle = '#cbd5e1';
+  ctx.font = 'bold 11px sans-serif';
+  ctx.textAlign = 'right';
+  ctx.fillText(`蓄力 ${Math.round(charge * 100)}%`, panelX + panelW - 16, panelY + 20);
   ctx.restore();
 }
 
@@ -1486,6 +1518,17 @@ function getBossPatternColor(pattern, fallback) {
   }
 }
 
+function getBossPatternLabel(pattern) {
+  return {
+    circle_shot: '环形喷发',
+    spiral_shot: '螺旋弹幕',
+    aimed_burst: '定点连射',
+    ring_burst: '双环爆发',
+    cross_shot: '十字冰枪',
+    random_rain: '冰雨覆盖',
+  }[pattern] || '高压技能';
+}
+
 function getCurrentBossPhase(e) {
   if (!e?.phases?.length) return null;
   const hpRatio = e.maxHp > 0 ? e.hp / e.maxHp : 1;
@@ -1494,6 +1537,26 @@ function getCurrentBossPhase(e) {
     if (hpRatio <= candidate.hpThreshold) phase = candidate;
   }
   return phase;
+}
+
+function getBossThreatReadout(boss) {
+  if (!boss) return { phase: null, pattern: '', patternLabel: '', charge: 0, pressure: 0, hpRatio: null };
+  const phase = getCurrentBossPhase(boss);
+  const hpRatio = boss.maxHp > 0 ? clamp(boss.hp / boss.maxHp, 0, 1) : 1;
+  const cooldown = Math.max(0.4, phase?.attackCooldown || 2.5);
+  const warningWindow = Math.min(1.35, cooldown * 0.48);
+  const charge = clamp(1 - (boss.phaseAttackTimer || 0) / warningWindow, 0, 1);
+  const lateWavePressure = clamp(((run?.wave || 5) - 5) / 20, 0, 1);
+  const pressure = clamp((1 - hpRatio) * 0.58 + charge * 0.38 + lateWavePressure * 0.18, 0, 1);
+  const pattern = phase?.pattern || '';
+  return {
+    phase,
+    pattern,
+    patternLabel: getBossPatternLabel(pattern),
+    charge,
+    pressure,
+    hpRatio,
+  };
 }
 
 function drawEnemySprite(e, x, y, size, alpha = 1) {
@@ -2216,6 +2279,7 @@ function enableDebugHooks() {
   window.__EMBER_DEBUG__ = {
     getSnapshot() {
       const boss = run?.enemies?.find(e => e.isBoss);
+      const bossReadout = getBossThreatReadout(boss);
       return {
         state: run?.state || state,
         wave: run?.wave || 0,
@@ -2224,6 +2288,10 @@ function enableDebugHooks() {
         projectileCount: run?.projectiles?.filter(p => p.fromEnemy).length || 0,
         telegraphCount: run?.telegraphs?.length || 0,
         bossPhaseAttackTimer: boss?.phaseAttackTimer ?? null,
+        bossPattern: bossReadout.pattern,
+        bossPatternLabel: bossReadout.patternLabel,
+        bossCharge: bossReadout.charge,
+        bossPressure: bossReadout.pressure,
         bossHpRatio: boss?.maxHp > 0 ? boss.hp / boss.maxHp : null,
         ward: run?.player?.tempDeathWard || 0,
         barrier: run?.player?.barrier || 0,

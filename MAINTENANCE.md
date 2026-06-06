@@ -1,6 +1,6 @@
 # 余烬 Ember - 维护与接手文档
 
-最后更新：2026-06-06（本轮继续修高波 Boss 前 safety 和可读性：极低最大生命的脆皮构筑现在会在压力模型中记录 `fragilityDebt`，第 25 波等高波 Boss 前选择 `烟幕疾行` 时可附带 1 次 `残影保命`；临时防死现在记录来源，护符仍显示金色 `护符 1`，烟幕残影显示蓝色 `残影 1`，触发文案也会区分“余烬护符碎裂”和“烟幕残影散尽”。对应已跑过 core 回归、Boss checkpoint、Web smoke、视觉回归、Android debug APK 构建和 APK payload 校验，并已同步 `web -> docs -> android`；当前 `boss-checkpoints` 最新结果为 `baseline avgWave 18.68`、`smart avgWave 23.75`，其中 smart 第 5 波 `60/60` 通过、第 25 波到达 `51/60`、通关 `48/60`，且 smart 已无 max-tick 卡局。最新 debug APK SHA256 为 `34BB211096BF2F963EB0ECD5EAA2FED0AC56FAEC87219C037C38A5FFCC7BC1FE`。前序记录中的职业身份、早期敌压、阶段压力环、延迟 `aimed_burst`、Boss 前营火链路、护符 HUD、竖屏布局、视觉像素回归、参考图竞技场背景、沉浸式 Android 外壳与 Web smoke / APK 内容校验仍继续成立）
+最后更新：2026-06-06（本轮继续修高波 Boss 前 safety 和读招可读性：极低最大生命的脆皮构筑现在会在压力模型中记录 `fragilityDebt`，第 25 波等高波 Boss 前选择 `烟幕疾行` 时可附带 1 次 `残影保命`；临时防死现在记录来源，护符仍显示金色 `护符 1`，烟幕残影显示蓝色 `残影 1`，触发文案也会区分“余烬护符碎裂”和“烟幕残影散尽”。本轮新增高波 Boss 左上读招面板，会显示当前阶段技能名和蓄力百分比；debug snapshot 同步暴露 `bossPatternLabel` / `bossCharge`，视觉 smoke 会断言这些字段存在；service worker 预缓存改为逐资源容错，避免 Android WebView 因 `Cache.addAll` 内部错误产生启动期 fatal log。对应已跑过 core 回归、Boss checkpoint、Web smoke、视觉回归、Playwright 高波读招检查、Android debug APK 构建和 `NightRunner35` 模拟器点击 smoke，并已同步 `web -> docs -> android`；当前 `boss-checkpoints` 最新结果为 `baseline avgWave 18.68`、`smart avgWave 23.75`，其中 smart 第 5 波 `60/60` 通过、第 25 波到达 `51/60`、通关 `48/60`，且 smart 已无 max-tick 卡局。最新 debug APK SHA256 为 `8D104114BB89AA0E3AB5BC19FA5233383257B3195D42835D7ACC22E222F758C2`。前序记录中的职业身份、早期敌压、阶段压力环、延迟 `aimed_burst`、Boss 前营火链路、护符 HUD、竖屏布局、视觉像素回归、参考图竞技场背景、沉浸式 Android 外壳与 Web smoke / APK 内容校验仍继续成立）
 
 本文件给下一个继续维护的人或 AI，用来快速判断三件事：
 
@@ -127,7 +127,7 @@ roguelike-game/
 - HUD 右上角已从单块文本墙整理成分区式“战术读板”，生命条、波次、构筑倾向和危险提示更容易扫读
 - 战斗内敌人与 Boss 已接入本地生成的 4x4 spritesheet，普通敌人、远程/支援敌人和三种 Boss 都有独立轮廓；本轮继续加强了 slime / bat / skeleton / golem / archer / fire_mage / healer / summoner 的 silhouette 和细节
 - 敌人即将近战、远程射击、支援/召唤和 Boss 蓄力时已有画面提示；核心逻辑发出的链击、爆炸、子弹命中、护盾吸收、自伤、冲刺残影、复活和死亡爆裂等粒子也已接入绘制
-- Boss 战已增加根据当前阶段 `pattern` 绘制的危险可见性：竞技场压力环、边界压迫、瞄准 / 环形 / 螺旋 / 十字 / 随机弹雨预览，以及 Boss 血条阶段阈值刻度
+- Boss 战已增加根据当前阶段 `pattern` 绘制的危险可见性：竞技场压力环、边界压迫、瞄准 / 环形 / 螺旋 / 十字 / 随机弹雨预览、左上读招面板，以及 Boss 血条阶段阈值刻度；读招面板会显示当前技能名和蓄力百分比
 - 顶部生命 HUD 改为紧凑版，减少对第 5 波 Boss 上半身和读招环的遮挡
 - 竖屏手机渲染不再把 16:9 竞技场严格居中，而是将战斗区域上移到屏幕中段；这让活跃 Boss、玩家和读招环更靠近 HUD 与消息之间的可视区
 - `createDebugBossFight()` 已加入 core，可构造固定第 20 波 Boss 场景，回归高波护盾、护符、侧翼火力与首领阶段压迫感
@@ -142,11 +142,11 @@ roguelike-game/
 - 之前 Python 静态服务的 `.mjs` MIME 问题已绕开
 - `scripts/serve-web.mjs` 已提供正确的本地 Node 静态服务
 - `scripts/web-smoke.mjs` 已建立无依赖 smoke test，可验证 spritesheet 尺寸/内容、敌人图集格子、service worker 预缓存覆盖和离线 fallback、本地 MIME、UI 状态路由，以及 `game_core.mjs` 发出的粒子类型是否都有 `drawParticles` 覆盖
-- `scripts/visual-smoke.mjs` 已建立无 npm 依赖视觉 smoke，可用本机 Chrome/Edge 验证桌面/移动端菜单、角色选择、战斗 canvas 非空、奖励选择页推荐卡渲染、Boss 前奖励点击后进入营火、营火选择后进入第 5 波 Boss，并额外保存桌面和移动端活跃首领战 `boss-fight-*.png`，以及固定的高波桌面场景 `boss-fight-highwave-desktop.png`
+- `scripts/visual-smoke.mjs` 已建立无 npm 依赖视觉 smoke，可用本机 Chrome/Edge 验证桌面/移动端菜单、角色选择、战斗 canvas 非空、奖励选择页推荐卡渲染、Boss 前奖励点击后进入营火、营火选择后进入第 5 波 Boss，并额外保存桌面和移动端活跃首领战 `boss-fight-*.png`，以及固定的高波桌面场景 `boss-fight-highwave-desktop.png`；高波样本会断言 debug snapshot 中存在当前 `bossPatternLabel` 和 `bossCharge`
 - `scripts/visual-regression.mjs` 已建立 PNG 解码后的像素回归：角色选择等稳定界面使用严格 RGBA 哈希，菜单和动画界面使用亮度、RGB 均值、暗/亮/饱和像素比例容差；基线在 `tests/visual-regression-baseline.json`，包含桌面/移动端活跃 Boss 战截图和高波桌面样本
 - `scripts/generate-art-assets.mjs` 默认保留现有角色 spritesheet，避免误运行后覆盖 AI 人物资源；同时会重生成参考图风格竞技场背景和敌人 / Boss spritesheet
 - `web/src/main.mjs` 会按背景图原始比例居中裁切绘制竞技场 PNG，因此后续直接替换 `web/assets/arena-ember-fortress.png` 不会被拉伸；它也会优先使用敌人 spritesheet，加载失败时仍回退到 SVG 符号和圆形占位
-- `web/sw.js` 已预缓存 `main.mjs` 的静态模块依赖和核心美术资源；替换同名 PNG 或修改核心脚本后必须提升 `CACHE` 版本，避免 PWA/Android WebView 继续命中旧缓存；fetch handler 只拦截同源 GET，离线 cache miss 会返回明确 Response，避免 WebView console 噪声
+- `web/sw.js` 已预缓存 `main.mjs` 的静态模块依赖和核心美术资源；替换同名 PNG 或修改核心脚本后必须提升 `CACHE` 版本，避免 PWA/Android WebView 继续命中旧缓存；预缓存必须逐资源容错，不能使用 `cache.addAll()`，否则 Android WebView 可能因单个 Cache 内部错误产生启动期 fatal log；fetch handler 只拦截同源 GET，离线 cache miss 会返回明确 Response，避免 WebView console 噪声
 - `web/index.html` 不再依赖 Google Fonts 外链，Android / PWA 离线环境不会因为外部字体请求污染 logcat 或首屏加载
 - Android `assembleDebug` 已在本机成功跑通过一次
 - `scripts/build-android-debug.ps1` 已建立，负责选择可用 JDK 21、同步资源、构建 APK，并校验 APK 内关键 Web 资源和代码标记
@@ -186,8 +186,8 @@ npm run serve
   - `avgWave = 22.68`
   - `wave5failSeeds = 0 / 60`
 - `npm run test:boss-checkpoints`：
-  - baseline：第 5 波 `59/60` 通过；第 10/15/20 波 Boss 死亡分别为 `1 / 3 / 11`
-  - smart：第 5 波 `60/60` 通过；第 10/15/20/25 波 Boss 死亡分别为 `1 / 1 / 12 / 7`，第 25 波到达 `39/60`，通关 `32/60`
+  - baseline：第 5 波 `59/60` 通过；第 10/15/20 波 Boss 死亡分别为 `0 / 2 / 13`
+  - smart：第 5 波 `60/60` 通过；第 10/15/20/25 波 Boss 死亡分别为 `1 / 1 / 1 / 3`，第 25 波到达 `51/60`，通关 `48/60`
   - smart `maxTickStops = []`，历史 seed 59 场外弓箭手卡局已消失，当前该 seed 可推进到胜利
   - 当前最集中的短板标签仍是 `safety`；第 20/25 波 Boss 仍是下一轮主要平衡对象，不建议为站桩 baseline 的单个第 5 波失败继续削弱首个 Boss
 - `npm test`：
@@ -210,12 +210,14 @@ npm run serve
   - spritesheet 尺寸、非空像素和敌人图集关键格子通过
   - service worker 预缓存覆盖所有静态导入模块和美术资源
   - service worker 只拦截同源 GET，离线 cache miss 会返回 `Response`，不会让 `respondWith()` 收到 `undefined`
+  - service worker 不再使用 `cache.addAll()`；Web smoke 会断言逐资源 `cache.add(asset)`、install 容错和 runtime cache write 容错，避免 Android WebView cache 内部错误变成 fatal log
   - 前端 UI handler 依赖的 `applyForgeChoice`、`applyShopChoice`、`getDifficultyPresets` 等 core 绑定通过
   - 奖励 / 锻造 / 商店 / 营火点击 handler 必须走 `syncOverlayForRunState({ resumeIfPlaying: true })`，防止核心状态变化后 UI 覆盖层不刷新
   - `game_core.mjs` 发出的核心战斗粒子类型均有 `drawParticles` case 覆盖
   - 本地 Node 服务 MIME 返回通过
 - `npm run test:visual-smoke`：
   - 桌面菜单、角色选择、局内 canvas、奖励选择页、Boss 前营火、第 5 波 Boss 进入、桌面/移动端活跃 Boss 读招画面，以及固定第 20 波高波 Boss 桌面场景渲染通过
+  - 固定第 20 波高波样本会断言 debug snapshot 中存在 `bossPatternLabel` 和 `bossCharge`
   - 移动端菜单、角色选择、局内 canvas、奖励选择页和 Boss 前营火渲染通过，无水平溢出
   - 移动端局内摇杆与闪避按钮可见
   - 参考图风格竞技场背景已在桌面/移动端局内截图中渲染；移动端角色选择底部按钮不再在“标准”中间断行
@@ -243,6 +245,7 @@ npm run serve
   - 局内 combat feedback 检查 5 秒无 console error，canvas 非空，截图保存到 `output/playwright/ember-combat-feedback-live.png`
   - Playwright 加速跑到第 3 波锻造，点击锻造卡后已进入第 4 波，截图保存到 `output/playwright/ember-forge-click-fixed.png`
   - Playwright MCP 验证 `开始远征 -> 开始战斗 · 标准 -> 局内 HUD/canvas`：`hudVisible = true`，`hpText = 120 / 120`，`waveText = 第 1 / 25 波`，canvas 非空采样 `1031`，无水平溢出；截图保存为 `.playwright-mcp/ember-arena-gameplay-after-background.png`
+  - Playwright MCP 通过 `?debug=1` 跳转第 20 波高波 Boss：snapshot 返回 `bossPatternLabel = 螺旋弹幕`、`bossCharge ≈ 0.89`，canvas 非空采样 `920`；截图保存到 `output/playwright/boss-readout-highwave-desktop.png`
 - 难度抽样（30 seeds，自动选牌）：
   - `steady`：`avgWave = 19.00`，`worst = 10`，`wave5Fails = 0`
   - `standard`：`avgWave = 18.20`，`worst = 9`，`wave5Fails = 0`
@@ -253,7 +256,7 @@ npm run serve
 - Android 构建：
   - `npm run build:android:debug` 当前返回成功
   - APK 路径：`android/app/build/outputs/apk/debug/app-debug.apk`
-  - 当前 APK SHA256：`909B142FD2608BF9E8A7B77B1421071B454D81D1E95E1FB3BC1A2478E3166E99`
+  - 当前 APK SHA256：`8D104114BB89AA0E3AB5BC19FA5233383257B3195D42835D7ACC22E222F758C2`
   - 构建脚本会自动验证 APK 内容，避免 Web 修复没有同步进 Android 包
   - 已验证 APK 内包含当前 Web 资源关键标记：
     - `assets/public/index.html` 含 `Arena Roguelike`
@@ -261,12 +264,12 @@ npm run serve
     - `assets/public/src/main.mjs` 含 `renderBuildSummary`
     - `assets/public/src/main.mjs` 含 `applyForgeChoice`、`applyShopChoice` 与难度 UI
     - `assets/public/src/main.mjs` 含 `syncOverlayForRunState` 和 `card-recommended`
-    - `assets/public/sw.js` 含 versioned `ember-vN` cache 与静态模块预缓存清单
-    - `assets/public/sw.js` 含同源 fetch guard 和离线 504 fallback
+    - `assets/public/sw.js` 含 versioned `ember-vN` cache、静态模块预缓存清单和逐资源 cache 容错
+    - `assets/public/sw.js` 含同源 fetch guard、runtime cache write 容错和离线 504 fallback
     - `assets/public/assets/ember-enemies-spritesheet.png` 存在
 - Android 模拟器安装 / 启动 / 点击流：
   - 命令：`npm run verify:android:smoke`
-  - 当前验证 APK SHA256：`909B142FD2608BF9E8A7B77B1421071B454D81D1E95E1FB3BC1A2478E3166E99`
+  - 当前验证 APK SHA256：`8D104114BB89AA0E3AB5BC19FA5233383257B3195D42835D7ACC22E222F758C2`
   - 结果：APK 安装成功，`com.ember.roguelike/.MainActivity` 冷启动成功
   - 没有在线设备时，脚本已自动发现唯一 AVD `NightRunner35` 并启动，验证后自动关闭
   - emulator `sys.boot_completed` 后会额外等待 8 秒再启动验证，减少冷启动期误报 `ActivityManager` ANR

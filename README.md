@@ -40,7 +40,7 @@ https://2456018331lby-dev.github.io/ember-roguelike/
 - Boss 前奖励点击后会自动进入战前营火；第 19 波事件锻造在下一波是 Boss 时也会转入营火，再继续进入高波 Boss 链路
 - 战士不会再像远程职业那样站桩白打：现在会主动追击中距离目标；Boss 与普通远程敌人都已纳入可战斗区域约束，避免首领或弓箭手退到场外导致近战无法收尾
 - 首个 Boss 前如果单体输出缺口极大，奖励池会保底提供两张可靠输出选择，同时保留必要生存位，减少前 4 波误堆纯防御后进入第 5 波输出不足的概率
-- Boss 战画面已补上阶段压力环、弹幕形状预览、分区式战术读板和更紧凑的顶部生命 HUD，减少首领读招被界面遮挡的问题
+- Boss 战画面已补上阶段压力环、弹幕形状预览、左上读招面板、分区式战术读板和更紧凑的顶部生命 HUD；读招面板会显示当前技能名与蓄力百分比，减少首领威胁被界面遮挡或只靠弹幕猜测的问题
 - 第 20 / 25 波恶魔领主第三阶段的 `aimed_burst` 现在会先给出真实预警，再延迟释放；高压连射间隔也略微拉长，减少“预警即命中”的不公平感
 - 竖屏手机战斗画面已把 16:9 竞技场上移，减少 HUD 和战斗之间的空白区，保留底部消息和触控按钮空间
 - 已加入固定的第 20 波 Boss 调试场景，用来回归高波护盾、护符、侧翼火力和首领阶段压迫感
@@ -73,7 +73,7 @@ http://127.0.0.1:5173
 - `npm test` 会验证核心玩法和平衡回归；其中包含奖励 / 锻造 / 商店 / 营火等决策状态不能进入无出口卡死状态的状态机检查。
 - `npm run test:boss-checkpoints` 会跑 baseline / smart 两套 60 seed 模拟，输出第 5/10/15/20/25 波 Boss 检查点、死亡 seed、短板标签和少量死亡样本，方便继续调中后期节奏；当前最近一次结果为 `baseline avgWave 18.68`、`smart avgWave 23.75`，其中 smart 第 5 波 `60/60` 通过、第 25 波到达 `51/60`、通关 `48/60`，且没有 max-tick 卡局。
 - `npm run test:web-smoke` 会验证 spritesheet 尺寸/内容、service worker 预缓存清单、本地服务 MIME、UI 状态路由，以及核心逻辑发出的粒子类型是否都被前端绘制，不需要新增浏览器测试依赖。
-- `npm run test:visual-smoke` 会用本机 Chrome/Edge 做桌面和移动端视觉 smoke，覆盖菜单、角色选择、局内 canvas、奖励选择页、Boss 前营火、Boss 波进入、桌面/移动端活跃 Boss 战读招画面，以及固定的第 20 波高波 Boss 桌面场景，截图输出到 `output/visual-smoke/`，不需要新增 Playwright/Puppeteer 依赖。
+- `npm run test:visual-smoke` 会用本机 Chrome/Edge 做桌面和移动端视觉 smoke，覆盖菜单、角色选择、局内 canvas、奖励选择页、Boss 前营火、Boss 波进入、桌面/移动端活跃 Boss 战读招画面，以及固定的第 20 波高波 Boss 桌面场景；高波样本会断言 debug snapshot 中存在 `bossPatternLabel` 与 `bossCharge`，截图输出到 `output/visual-smoke/`，不需要新增 Playwright/Puppeteer 依赖。
 - `npm run test:visual-regression` 会先跑视觉 smoke，再读取 PNG 像素并和 `tests/visual-regression-baseline.json` 对比；角色选择等稳定界面使用严格 RGBA 哈希，动画界面使用像素亮度/色彩比例容差。
 - 如果要构建 Android，优先使用仓库脚本 `npm run build:android:debug`；它会同步资源、构建 APK，并校验 APK 内的关键 Web 资源与代码标记。
 - `npm run verify:android:debug` 会用 `adb` 安装并启动 debug APK，检查应用进程、首屏截图和启动后的 WebView/JS 致命错误；没有在线设备且本机只有一个 AVD 时会自动启动并在结束后关闭。
@@ -85,7 +85,7 @@ http://127.0.0.1:5173
 
 当前仓库已经验证过可在本机生成 debug APK，并在本机 `NightRunner35` Android 模拟器完成安装、冷启动、焦点窗口、点击进入角色选择、点击进入局内战斗、截图和 logcat 致命错误扫描。
 
-最近一次验证 APK SHA256：`34BB211096BF2F963EB0ECD5EAA2FED0AC56FAEC87219C037C38A5FFCC7BC1FE`
+最近一次验证 APK SHA256：`8D104114BB89AA0E3AB5BC19FA5233383257B3195D42835D7ACC22E222F758C2`
 
 ```bash
 npm run build:android:debug

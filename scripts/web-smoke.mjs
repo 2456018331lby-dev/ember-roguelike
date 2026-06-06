@@ -208,6 +208,10 @@ async function validateServiceWorker() {
   assert(/const\s+CACHE\s*=\s*['"]ember-v\d+['"]/.test(swText), 'sw.js should use a versioned ember cache name');
   assert(swText.includes('url.origin !== self.location.origin'), 'sw.js should not intercept cross-origin requests');
   assert(swText.includes("new Response('', { status: 504"), 'sw.js should return a Response for uncached offline GET requests');
+  assert(!swText.includes('.addAll('), 'sw.js should not use cache.addAll because Android WebView can reject the whole install');
+  assert(swText.includes('cache.add(asset)'), 'sw.js should precache assets individually');
+  assert(swText.includes('precacheAssets().catch(() => {})'), 'sw.js install should tolerate cache storage failures');
+  assert(swText.includes("cache.put(event.request, clone))\n        .catch(() => {})"), 'sw.js runtime cache writes should not create unhandled WebView errors');
   assert(assets.size === new Set(assets).size, 'sw.js ASSETS should not contain duplicates');
 
   const requiredBaseAssets = [
