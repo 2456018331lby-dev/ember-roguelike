@@ -2297,13 +2297,16 @@ function resizeCanvas() {
   }
 }
 function getScale() {
-  const scale = Math.min(canvas.width / 1280, canvas.height / 720);
+  const portrait = canvas.height > canvas.width * 1.35;
+  const baseScale = Math.min(canvas.width / 1280, canvas.height / 720);
+  const portraitRatio = portrait ? canvas.height / Math.max(1, canvas.width) : 1;
+  const portraitBias = portrait ? clamp((portraitRatio - 1.35) / 0.9, 0, 1) : 0;
+  const scale = portrait ? baseScale * (1 + portraitBias * 0.16) : baseScale;
   const logicalWidth = canvas.width / scale;
   const logicalHeight = canvas.height / scale;
   const offsetX = (logicalWidth - 1280) / 2;
   const freeY = Math.max(0, logicalHeight - 720);
-  const portrait = canvas.height > canvas.width * 1.35;
-  const offsetY = portrait ? freeY * 0.4 : freeY / 2;
+  const offsetY = portrait ? freeY * (0.32 - portraitBias * 0.08) : freeY / 2;
   return { scale, offsetX, offsetY };
 }
 

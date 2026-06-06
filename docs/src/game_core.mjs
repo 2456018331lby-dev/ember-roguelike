@@ -268,6 +268,29 @@ function pushMessage(run, message) {
 
 function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
 
+const ARENA_BOUNDS = {
+  left: 40,
+  top: 50,
+  right: 1240,
+  bottom: 670,
+};
+
+function clampActorToArena(actor, padding = 0) {
+  if (!actor) return;
+  const radius = Math.max(0, Number(actor.radius || 0)) + padding;
+  actor.x = clamp(actor.x, ARENA_BOUNDS.left + radius, ARENA_BOUNDS.right - radius);
+  actor.y = clamp(actor.y, ARENA_BOUNDS.top + radius, ARENA_BOUNDS.bottom - radius);
+}
+
+function isActorInsideArena(actor, padding = 0) {
+  if (!actor) return false;
+  const radius = Math.max(0, Number(actor.radius || 0)) + padding;
+  return actor.x >= ARENA_BOUNDS.left + radius &&
+    actor.x <= ARENA_BOUNDS.right - radius &&
+    actor.y >= ARENA_BOUNDS.top + radius &&
+    actor.y <= ARENA_BOUNDS.bottom - radius;
+}
+
 function buildPressureTargets(wave = 1, profile = null) {
   const w = Math.max(1, Math.floor(Number(wave) || 1));
   const late = Math.max(0, w - 5);
@@ -944,6 +967,7 @@ function spawnEnemy(run, typeKey, isBoss, isElite = false) {
     slowTimer: 0, slowAmount: 1,
     hitFlash: 0,
     spawnAge: 0,
+    enteredArena: isBoss,
     phased: false, phaseTimer: 0,
     // 攻击预警
     telegraphTimer: 0,
@@ -1068,6 +1092,16 @@ function needsBossDamagePrep(run, targetProfile) {
   return singleTarget < 64;
 }
 
+function getRequiredBossDamageChoices(run, targetProfile) {
+  if (!needsBossDamagePrep(run, targetProfile)) return 0;
+  const analysis = run.buildAnalysis || analyzeBuild(run);
+  const gap = buildPressureGaps(
+    analysis?.pressure || {},
+    buildPressureTargets(targetProfile?.wave || run.wave + 1, targetProfile)
+  ).singleTarget;
+  return gap >= 28 ? 2 : 1;
+}
+
 function pickGuaranteedCard(run, rarityBonus, predicate, excludedIds = new Set()) {
   const weighted = buildWeightedCardPool(rarityBonus);
   for (let i = weighted.length - 1; i > 0; i--) {
@@ -1096,7 +1130,8 @@ function enforceRewardArchetype(run, cards, targetProfile, rarityBonus) {
   if (!targetProfile) return cards;
   const targetTag = targetProfile.rewardTag || 'tempo';
   const guaranteeSurvival = targetTag === 'survival' || targetTag === 'stabilize' || targetProfile.rewardGuard === 'survival' || needsBossPrep(run, targetProfile);
-  const guaranteeBossDamage = needsBossDamagePrep(run, targetProfile);
+  const requiredBossDamageChoices = getRequiredBossDamageChoices(run, targetProfile);
+  const guaranteeBossDamage = requiredBossDamageChoices > 0;
   if (!guaranteeSurvival && !guaranteeBossDamage) return cards;
   const nextCards = [...cards];
   const requiredSurvivalChoices = guaranteeSurvival
@@ -1115,7 +1150,7 @@ function enforceRewardArchetype(run, cards, targetProfile, rarityBonus) {
   }
 
   let bossDamageCount = nextCards.filter(isReliableBossDamageCard).length;
-  for (let i = nextCards.length - 1; i >= 0 && guaranteeBossDamage && bossDamageCount < 1; i--) {
+  for (let i = nextCards.length - 1; i >= 0 && guaranteeBossDamage && bossDamageCount < requiredBossDamageChoices; i--) {
     if (isReliableBossDamageCard(nextCards[i])) continue;
     const wouldBreakSurvival = isSurvivalCard(nextCards[i]) && survivalCount <= requiredSurvivalChoices;
     if (wouldBreakSurvival) continue;
@@ -1800,6 +1835,7 @@ function scoreCardFit(card, analysis, waveProfile) {
   let score = 0;
   const focus = analysis?.focusScores || {};
   const pressure = analysis?.pressure || {};
+  const cardCounts = analysis?.cardCounts || {};
   const wave = waveProfile?.wave ?? 0;
   const needsSurvival = (waveProfile?.kind === 'boss' && ((focus.sustain || 0) + (focus.fortress || 0) < 5)) || waveProfile?.rewardGuard === 'survival';
   const earlyRun = wave > 0 ? wave <= 5 : false;
@@ -1823,6 +1859,9 @@ function scoreCardFit(card, analysis, waveProfile) {
   const safetyNeed = pressureGaps.safety;
   const safetyCard = Boolean(card.revive || hasPositiveStat(card, 'barrier') || hasPositiveStat(card, 'dodgeChance'));
   const firstBossOutputGap = bossPrep && earlyRun && singleTargetNeed >= 18;
+  const openingBossRunway = earlyRun && wave > 0 && wave < 5;
+  const tightBossRunway = openingBossRunway && wave <= 2 && singleTargetNeed >= 24;
+  const duplicateCount = cardCounts[card.id] || 0;
   const strongSafetyGap = safetyNeed >= (bossPrep ? 10 : 14);
   const curseFocus = focus.curse || 0;
   const curseControlReady = curseFocus >= 4 && safetyNeed <= 0 && sustainNeed <= 0;
@@ -1845,6 +1884,15 @@ function scoreCardFit(card, analysis, waveProfile) {
   if (aoeNeed > 0 && (card.chain || card.attackSpeedBonus || card.rangeBonus || card.slow || card.dot || card.bleed)) score += Math.min(1.9, aoeNeed * 0.05);
   if (sustainNeed > 0 && (sustainCard || fortressCard)) score += Math.min(2.2, sustainNeed * 0.04);
   if (strongSafetyGap && safetyCard && !firstBossOutputGap) score += Math.min(2.4, safetyNeed * 0.06);
+
+  // 首个 Boss 的构筑跑道很短，wave 1/2 若已明显缺单体，就不能继续无脑堆纯防御。
+  if (tightBossRunway && bossDamageCard && !card.doomTimer && !card.decayRate && !card.selfDamageChance && !riskyBossMultiplier) {
+    score += Math.min(3.1, 1.3 + singleTargetNeed * 0.055);
+  }
+  if (tightBossRunway && fortressCard && !attackCard && card.sacrifice?.stat === 'attack') score -= 2.2;
+  if (openingBossRunway && duplicateCount > 0 && fortressCard && !attackCard && singleTargetNeed > 0) {
+    score -= 1.1 + duplicateCount * 0.55;
+  }
 
   // 首个 Boss 前不能只堆容错；如果单体输出缺口明显，可靠输出牌应压过继续牺牲攻击/生命的纯防御。
   if (firstBossOutputGap && bossDamageCard && !card.doomTimer && !card.decayRate && !card.selfDamageChance && !riskyBossMultiplier) {
@@ -2044,6 +2092,7 @@ function evaluateSynergies(run) {
 
 function analyzeBuild(run) {
   const deck = run.player.deck || [];
+  const cardCounts = {};
   const focus = {
     crit: 0,
     barrage: 0,
@@ -2064,6 +2113,7 @@ function analyzeBuild(run) {
   };
 
   for (const card of deck) {
+    cardCounts[card.id] = (cardCounts[card.id] || 0) + 1;
     if (card.critChance || card.critDamageBonus) focus.crit += 2;
     if ((card.attackSpeedBonus ?? 0) > 0 || card.chain || card.rangeBonus) focus.barrage += 2;
     if (card.regen || card.lifesteal || card.barrier) focus.sustain += 2;
@@ -2105,6 +2155,7 @@ function analyzeBuild(run) {
     pressure,
     pressureTargets,
     pressureGaps,
+    cardCounts,
     summary: descriptors.length ? descriptors.join(' / ') : '均衡',
     weaknesses: {
       singleTarget: pressureGaps.singleTarget > 0,
@@ -2396,8 +2447,8 @@ export function dash(run, dirX, dirY) {
   if (run.dashCooldown > 0 || run.state !== 'playing') return;
   const len = Math.hypot(dirX, dirY) || 1;
   const dist = 140;
-  const targetX = clamp(run.player.x + (dirX / len) * dist, 40, 1240);
-  const targetY = clamp(run.player.y + (dirY / len) * dist, 50, 670);
+  const targetX = clamp(run.player.x + (dirX / len) * dist, ARENA_BOUNDS.left, ARENA_BOUNDS.right);
+  const targetY = clamp(run.player.y + (dirY / len) * dist, ARENA_BOUNDS.top, ARENA_BOUNDS.bottom);
   // 冲刺残影
   run.particles.push({ type: 'dash_trail', x: run.player.x, y: run.player.y, life: 0.3, maxLife: 0.3 });
   run.player.x = targetX;
@@ -2417,8 +2468,8 @@ function movePlayer(run, input, dt, stats) {
   const len = Math.hypot(input.x, input.y);
   if (len > 0.1) {
     const nx = input.x / len, ny = input.y / len;
-    run.player.x = clamp(run.player.x + nx * stats.speed * dt, 40, 1240);
-    run.player.y = clamp(run.player.y + ny * stats.speed * dt, 50, 670);
+    run.player.x = clamp(run.player.x + nx * stats.speed * dt, ARENA_BOUNDS.left, ARENA_BOUNDS.right);
+    run.player.y = clamp(run.player.y + ny * stats.speed * dt, ARENA_BOUNDS.top, ARENA_BOUNDS.bottom);
     run.player.facingAngle = Math.atan2(ny, nx);
   }
   run.player.invuln = Math.max(0, run.player.invuln - dt);
@@ -2641,10 +2692,8 @@ function updateEnemies(run, dt, stats) {
     }
 
     updateEnemyAttackResolution(run, e, dt, stats);
-    if (e.isBoss) {
-      e.x = clamp(e.x, 40 + e.radius, 1240 - e.radius);
-      e.y = clamp(e.y, 50 + e.radius, 670 - e.radius);
-    }
+    e.enteredArena = e.enteredArena || isActorInsideArena(e);
+    if (e.enteredArena || (e.spawnAge || 0) > 3.5) clampActorToArena(e);
   }
   run.enemies = run.enemies.filter(e => e.hp > 0);
 }
@@ -2968,8 +3017,8 @@ function performWarriorLunge(run, target, distance, packet) {
     const lunge = Math.min(stats.lungeDistance || 0, Math.max(0, distance - stats.attackRange * 0.78));
     if (lunge > 0) {
       run.particles.push({ type: 'dash_trail', x: run.player.x, y: run.player.y, life: 0.24, maxLife: 0.24 });
-      run.player.x = clamp(run.player.x + Math.cos(angle) * lunge, 40, 1240);
-      run.player.y = clamp(run.player.y + Math.sin(angle) * lunge, 50, 670);
+      run.player.x = clamp(run.player.x + Math.cos(angle) * lunge, ARENA_BOUNDS.left, ARENA_BOUNDS.right);
+      run.player.y = clamp(run.player.y + Math.sin(angle) * lunge, ARENA_BOUNDS.top, ARENA_BOUNDS.bottom);
       run.player.invuln = Math.max(run.player.invuln, 0.08);
     }
   }

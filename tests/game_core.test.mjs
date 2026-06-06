@@ -479,6 +479,57 @@ test('Boss 在压场时不应被逼出可战斗区域', () => {
   assert.ok(boss.y >= 50, `Boss 不应离开上边界，当前 y=${boss.y}`);
 });
 
+test('普通远程敌人不应退到场外导致波次无法结束', () => {
+  const run = createRun(2051);
+  run.enemies = [{
+    id: 'edge_archer',
+    typeKey: 'archer',
+    name: '弓箭手',
+    color: '#FF9800',
+    x: 760,
+    y: -140,
+    radius: 12,
+    hp: 37,
+    maxHp: 37,
+    baseDamage: 4,
+    speed: 56,
+    behavior: 'ranged',
+    attackType: 'projectile',
+    attackCooldown: 2,
+    attackTimer: 0.05,
+    attackRange: 350,
+    meleeRange: 35,
+    preferredDist: 200,
+    projectileSpeed: 320,
+    projectileRadius: 5,
+    projectileColor: '#FFB74D',
+    projectileLife: 3.5,
+    touchTimer: 0,
+    meleeSwingTimer: 0,
+    meleePendingDamage: 0,
+    dotTimer: 0,
+    dotDamage: 0,
+    slowTimer: 0,
+    slowAmount: 1,
+    hitFlash: 0,
+    spawnAge: 200,
+    phased: false,
+    phaseTimer: 0,
+    telegraphTimer: 0,
+    telegraphType: null,
+  }];
+  run.waveEnemyQueue = [];
+  run.state = 'playing';
+  run.waveTransitionTimer = 0;
+  run.player.x = 777;
+  run.player.y = 50;
+
+  updateRun(run, { x: 0, y: 0 }, 0.05);
+
+  const archer = run.enemies[0];
+  assert.ok(!archer || archer.y >= 50 + archer.radius, `远程敌人应被限制回可战斗区域，当前 y=${archer?.y}`);
+});
+
 test('敌人有攻击冷却和攻击行为', () => {
   const run = createRun(100);
   fastForward(run, 3);
@@ -984,6 +1035,47 @@ test('Boss 前低血线奖励应给出至少两张生存向选择', () => {
   assert.ok(survivalChoices.length >= 2, `预期至少两张生存向奖励，实际只有 ${survivalChoices.length} 张`);
 });
 
+test('首个 Boss 前单体缺口极大时应保底两张可靠输出选择', () => {
+  const run = createRun(391);
+  run.player.deck = run.player.deck.filter(card => card.id.startsWith('starter_'));
+  run.buildAnalysis = {
+    primaryFocus: 'fortress',
+    focusScores: { fortress: 2, sustain: 0, crit: 0, barrage: 0, curse: 0, bleed: 0, control: 0, greed: 0 },
+    pressure: {
+      singleTarget: 20,
+      aoe: 18,
+      sustain: 26,
+      mitigation: 12,
+      safety: 12,
+    },
+  };
+  run.state = 'reward';
+  run.rewardRerolls = 1;
+  run.nextWavePreview = {
+    wave: 5,
+    kind: 'boss',
+    rewardTag: 'survival',
+    rewardGuard: 'survival',
+  };
+  run.rewardContext = { choiceCount: 3, rarityBonus: 2, targetTag: 'survival' };
+
+  const ok = rerollRewardChoices(run);
+  assert.equal(ok, true);
+
+  const reliableOutput = run.rewardChoices.filter(card => (
+    card.damage ||
+    card.attackBonus ||
+    card.armorPierce ||
+    card.damageMultiplier ||
+    card.attackSpeedBonus > 0 ||
+    card.critChance ||
+    card.critDamageBonus ||
+    card.perCardDamage ||
+    card.perCardsDamage
+  ));
+  assert.ok(reliableOutput.length >= 2, `单体缺口极大时预期至少两张可靠输出，实际 ${reliableOutput.map(card => card.id).join(',')}`);
+});
+
 test('首个 Boss 前高风险牌评分应低于治疗牌', () => {
   const run = createRun(15);
   run.buildAnalysis = {
@@ -1331,6 +1423,11 @@ test('标准档历史首个 Boss 失败 seed 应不再卡在第 5 波', () => {
     const run = simulateAutoRun(seed);
     assert.ok(run.wave > 5, `seed ${seed} 预期至少通过第 5 波，实际停在第 ${run.wave} 波，状态 ${run.state}`);
   }
+});
+
+test('标准档 seed 27 的自动选牌不应因重复堆闪避而卡死在首个 Boss', () => {
+  const run = simulateAutoRun(27);
+  assert.ok(run.wave > 5, `seed 27 预期至少通过第 5 波，实际停在第 ${run.wave} 波，状态 ${run.state}`);
 });
 
 test('奖励评分应合理（攻防兼备）', () => {

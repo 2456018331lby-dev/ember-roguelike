@@ -38,24 +38,24 @@
       "mode": "metric",
       "width": 1343,
       "height": 670,
-      "fileBytes": 735558,
-      "pixelHash": "12ca2e278b26a50e5bd573f37d1aaad27fc287b52a0552df52aa8c58b2fcd952",
+      "fileBytes": 736645,
+      "pixelHash": "536f86539bd8447a30abe61bc1438f14734b92faebaba9906a7a3ab2c7914ba8",
       "metrics": {
-        "r": 23.89,
-        "g": 24.03,
-        "b": 27.8,
-        "luma": 24.27,
-        "darkRatio": 0.9319,
+        "r": 24.04,
+        "g": 24.05,
+        "b": 27.89,
+        "luma": 24.33,
+        "darkRatio": 0.931,
         "lightRatio": 0.011,
-        "saturatedRatio": 0.018
+        "saturatedRatio": 0.0186
       }
     },
     "reward-desktop.png": {
       "mode": "metric",
       "width": 1343,
       "height": 670,
-      "fileBytes": 351580,
-      "pixelHash": "a5d0f0eea5ac78e3532dcd6f209dd688ec588f7e966dc02c0c8e4885f9c5fbe1",
+      "fileBytes": 351548,
+      "pixelHash": "6dec9f2f27cc134b650bb74f7e3fd735e0818b4205de68c5e712f1814cd63b39",
       "metrics": {
         "r": 25.3,
         "g": 25.98,
@@ -70,8 +70,8 @@
       "mode": "metric",
       "width": 1343,
       "height": 670,
-      "fileBytes": 436657,
-      "pixelHash": "566299881634672bf4dd3d7de9de4fe7a4c671c705112fb8fdd03c1b3b7a1a6a",
+      "fileBytes": 436654,
+      "pixelHash": "3e1f1d44e83af8448ab2bd6b6ed29d7c05252f53d1133f87f74abbb0dc51a2f1",
       "metrics": {
         "r": 20.7,
         "g": 22.13,
@@ -86,15 +86,15 @@
       "mode": "metric",
       "width": 1343,
       "height": 670,
-      "fileBytes": 805463,
-      "pixelHash": "9b4e653e44d88f432b4bdd931ace5480d014a102520243c51fb9b4cae4be992e",
+      "fileBytes": 804433,
+      "pixelHash": "6bbcb9218f69febf46e975c70f69dbf61fde258b44a5ef025a5d3f218e8736a8",
       "metrics": {
-        "r": 28.09,
-        "g": 25.72,
-        "b": 29.11,
-        "luma": 26.47,
-        "darkRatio": 0.9226,
-        "lightRatio": 0.0156,
+        "r": 28,
+        "g": 25.66,
+        "b": 29.08,
+        "luma": 26.4,
+        "darkRatio": 0.9227,
+        "lightRatio": 0.015,
         "saturatedRatio": 0.0186
       }
     },
@@ -102,32 +102,32 @@
       "mode": "metric",
       "width": 1343,
       "height": 670,
-      "fileBytes": 814397,
-      "pixelHash": "60fb1dad2dab1654baf7e1778e75825e26a260ba478759e39f11cb3a65ac1e2b",
+      "fileBytes": 815368,
+      "pixelHash": "9b09a9cb7481aa1d9d5169c18b7d086f32929dfe414070b05d80e8f5d2e85450",
       "metrics": {
-        "r": 30.01,
-        "g": 26.14,
-        "b": 29.3,
-        "luma": 27.19,
-        "darkRatio": 0.9051,
-        "lightRatio": 0.0118,
-        "saturatedRatio": 0.0286
+        "r": 29.66,
+        "g": 25.69,
+        "b": 28.87,
+        "luma": 26.76,
+        "darkRatio": 0.9112,
+        "lightRatio": 0.012,
+        "saturatedRatio": 0.0307
       }
     },
     "boss-fight-highwave-desktop.png": {
       "mode": "metric",
       "width": 1343,
       "height": 670,
-      "fileBytes": 844096,
-      "pixelHash": "35c5a3f63d76a74191d734761f1d3d9a91808dcbe78dbe09dd103194d3e0c3ef",
+      "fileBytes": 845812,
+      "pixelHash": "c5a11bfe4b641f41429372bb42ce67bb2f36bf4c34b2e2c78617234aa53b51d2",
       "metrics": {
-        "r": 32.36,
-        "g": 27.11,
+        "r": 32.23,
+        "g": 27.03,
         "b": 29.18,
-        "luma": 28.37,
-        "darkRatio": 0.8834,
+        "luma": 28.29,
+        "darkRatio": 0.8846,
         "lightRatio": 0.0126,
-        "saturatedRatio": 0.036
+        "saturatedRatio": 0.0363
       }
     },
     "menu-mobile.png": {
@@ -150,13 +150,13 @@
       "mode": "strict",
       "width": 780,
       "height": 1688,
-      "fileBytes": 565755,
-      "pixelHash": "cf31a6df9362d887e312bfa10666fd8989f4e1cec356202cc0a44d0e0aa169c2",
+      "fileBytes": 568332,
+      "pixelHash": "6eb00a79ea14b2cee4f0d42f8f332f14b1f301dd298415530ad40e03d2df1eca",
       "metrics": {
-        "r": 26.45,
-        "g": 28.89,
-        "b": 32.73,
-        "luma": 28.65,
+        "r": 26.47,
+        "g": 28.91,
+        "b": 32.75,
+        "luma": 28.66,
         "darkRatio": 0.8931,
         "lightRatio": 0.023,
         "saturatedRatio": 0.0338
@@ -166,29 +166,29 @@
       "mode": "metric",
       "width": 780,
       "height": 1688,
-      "fileBytes": 648340,
-      "pixelHash": "1fe23a1fe74baa682862a9c4da58f6d699f6d462a33f9b7a308689fd6b11f3c9",
+      "fileBytes": 887964,
+      "pixelHash": "24eba26921ffa1c1652e76c8a93a70cdef70b37338eedb80c11a547c2db9c610",
       "metrics": {
-        "r": 14.83,
-        "g": 16.05,
-        "b": 19.33,
-        "luma": 16.03,
-        "darkRatio": 0.9556,
-        "lightRatio": 0.0144,
-        "saturatedRatio": 0.0108
+        "r": 16.37,
+        "g": 16.8,
+        "b": 19.6,
+        "luma": 16.91,
+        "darkRatio": 0.9568,
+        "lightRatio": 0.0123,
+        "saturatedRatio": 0.0141
       }
     },
     "reward-mobile.png": {
       "mode": "metric",
       "width": 780,
       "height": 1688,
-      "fileBytes": 588394,
-      "pixelHash": "a868a75f81c449cddbf6f647451c480fc44dc9d5c7863e6522c1e7fb17ec5d78",
+      "fileBytes": 589195,
+      "pixelHash": "72c6310473b81042eb74e08d2c9f8909762704b9b14ce7949108baf8d9adde7b",
       "metrics": {
         "r": 32.11,
         "g": 32.59,
-        "b": 32.83,
-        "luma": 32.5,
+        "b": 32.84,
+        "luma": 32.51,
         "darkRatio": 0.8908,
         "lightRatio": 0.0287,
         "saturatedRatio": 0.0235
@@ -198,13 +198,13 @@
       "mode": "metric",
       "width": 780,
       "height": 1688,
-      "fileBytes": 666979,
-      "pixelHash": "10392bf1d31f5b1daf6a135857714ee15830aa9146f6967814dcf78ba03481ed",
+      "fileBytes": 667953,
+      "pixelHash": "7c8a9c76e5144fb9ac2b42f34341e7d8e0bb74845386438b6facdb4bf21143eb",
       "metrics": {
-        "r": 25.54,
+        "r": 25.55,
         "g": 27.66,
-        "b": 30.6,
-        "luma": 27.42,
+        "b": 30.61,
+        "luma": 27.43,
         "darkRatio": 0.9206,
         "lightRatio": 0.0208,
         "saturatedRatio": 0.0073
@@ -214,16 +214,16 @@
       "mode": "metric",
       "width": 780,
       "height": 1688,
-      "fileBytes": 730723,
-      "pixelHash": "63167d793c46628648238efda282eb85ef9cf2e09a28bee5092714ce2d9e9ff9",
+      "fileBytes": 925559,
+      "pixelHash": "04590a01277f1046acf3f5263a68afbd0965cdf7f2334ea98edba7e4a81cff0e",
       "metrics": {
-        "r": 18.47,
-        "g": 17.72,
-        "b": 20.29,
-        "luma": 18.06,
-        "darkRatio": 0.9397,
-        "lightRatio": 0.0161,
-        "saturatedRatio": 0.0183
+        "r": 18.05,
+        "g": 17.24,
+        "b": 19.75,
+        "luma": 17.59,
+        "darkRatio": 0.9554,
+        "lightRatio": 0.0121,
+        "saturatedRatio": 0.0142
       }
     }
   }

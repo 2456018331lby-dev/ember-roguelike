@@ -1,6 +1,6 @@
 # Ember 下一阶段执行计划
 
-最后更新：2026-06-06（本轮把“职业区分、早期敌压、界面完成度、Android 验证”一起往前推了一步：四个角色现在分别使用近战突进 / 奥术球 / 飞刀扇射 / 噬魂咒弹，不再只是同模板改数值；早中期小怪补了 skirmish / hybrid / lobber 型弹幕压力；战士已修正中距离追击断层，Boss 也加回场内边界约束；角色选择页、HUD 战术读板和本地生成敌人 spritesheet 又做了一轮强化；Android verifier 改成多候选点击 smoke，更能扛布局变化。对应 core 回归、Boss checkpoint、Web smoke、视觉 smoke、视觉回归、Android debug APK 构建与 `verify:android:smoke` 已重新通过；smart `avgWave` 已到 `21.87`，第 25 波到达 `37/60`、通关 `34/60`；最新 debug APK SHA256 为 `997CE343CCEC06B8D82634E213AD972625F6AFC5AD439464D5932238C573BA79`。前序记录中的阶段压力环、弹幕形状预览、Boss 血条阶段刻度、竖屏竞技场上移、护符可见反馈、`末日` 拿牌计时、奖励解释 / 死亡复盘、视觉像素回归、覆盖层状态路由集中化、核心状态机无出口检查、参考图竞技场背景、沉浸式 Android 外壳、移动端首屏修复和 Web smoke / APK 内容校验仍继续成立；下一步继续补中后期 Boss 安全网、更多高波阶段特效和真机复测）
+最后更新：2026-06-06（本轮继续推进“早期构筑推荐、战斗边界、移动端布局和 Android 包验证”：普通远程敌人现在会在入场后被限制回可战斗区域，避免弓箭手退到场外导致近战战士无法收尾；首个 Boss 前若单体输出缺口极大，奖励池会保底两张可靠输出选择；竖屏战斗画面继续上移和压缩底部控件空间；Android debug APK 已重新构建并校验 payload。对应 core 回归、Boss checkpoint、Web smoke、视觉回归、Android debug APK 构建已通过；smart `avgWave` 当前为 `22.68`，第 5 波 `60/60` 通过，第 25 波到达 `39/60`、通关 `32/60`，且无 max-tick 卡局；最新 debug APK SHA256 为 `909B142FD2608BF9E8A7B77B1421071B454D81D1E95E1FB3BC1A2478E3166E99`。前序记录中的职业区分、早期敌压、阶段压力环、弹幕形状预览、Boss 血条阶段刻度、护符可见反馈、`末日` 拿牌计时、奖励解释 / 死亡复盘、视觉像素回归、覆盖层状态路由集中化、核心状态机无出口检查、参考图竞技场背景、沉浸式 Android 外壳、移动端首屏修复和 Web smoke / APK 内容校验仍继续成立；下一步继续补中后期 Boss safety、更多高波阶段特效和真机复测）
 
 这个文件只回答一个问题：下一阶段最值得继续做什么。
 
@@ -19,6 +19,8 @@
 - 豪赌会在开战前真实结算生命代价，并给更契合下一波的高品质卡
 - Boss 前奖励点击后会立刻渲染战前营火，不再因为前端覆盖层没跟随 `run.state = rest` 而卡住
 - 第 5 波 Boss 已不再是“几乎所有局都卡死”的唯一断点
+- 首个 Boss 前如果单体输出缺口极大，奖励会保底两张可靠输出选择，避免生存保底把输出补强全部挤掉
+- 普通远程敌人已加入入场后场内约束，避免已入场弓箭手在边界风筝时退到场外造成近战无法收尾
 - 第 3 波事件后的余烬锻造点击卡住已修复，并加了回归测试
 - 已有稳健 / 标准 / 试炼三档难度，标准保持当前模拟基线
 - 首个 Boss 前奖励推荐已同时检查输出缺口和生存缺口，早期 `末日` / `玻璃炮` 这类高风险牌不再被自动当成最优解
@@ -67,19 +69,19 @@
 
 ### 已验证数据
 
-- `node tests/baseline_sim.mjs`：`avgWave 18.83`
-- `node tests/smart_sim.mjs`：`avgWave 21.87`
+- `node tests/baseline_sim.mjs`：`avgWave 18.45`
+- `node tests/smart_sim.mjs`：`avgWave 22.68`
 - `smart_sim` 第 5 波失败样本：`0 / 60`
-- `baseline_sim` 第 5 波失败样本：`0 / 60`
-- `npm run test:boss-checkpoints`：baseline 第 5 波 `59/60` 通过，第 10/15/20 波 Boss 死亡 `1 / 3 / 6`；smart 第 5 波 `60/60` 通过，第 10/15/20/25 波 Boss 死亡 `3 / 2 / 8 / 3`，第 25 波到达 `37/60`，通关 `34/60`；短板标签仍以 `safety` 最集中，但首个 Boss 已不再是主硬断点
-- `npm test`：核心逻辑测试全部通过；已覆盖早期卡牌推荐回归、Boss 前营火链路、中后期压力目标成长、死亡复盘缺口/决策展示，以及 `reward / forge / shop / rest` 无出口状态机检查
+- `baseline_sim` 第 5 波失败样本：`1 / 60`（seed 39，站桩 baseline 仅作保守压力参考）
+- `npm run test:boss-checkpoints`：baseline 第 5 波 `59/60` 通过，第 10/15/20 波 Boss 死亡 `1 / 3 / 11`；smart 第 5 波 `60/60` 通过，第 10/15/20/25 波 Boss 死亡 `1 / 1 / 12 / 7`，第 25 波到达 `39/60`，通关 `32/60`；smart 无 max-tick 卡局，短板标签仍以 `safety` 最集中
+- `npm test`：核心逻辑测试全部通过；已覆盖早期卡牌推荐回归、首个 Boss 极大单体缺口双输出保底、普通远程敌人场外卡局回归、Boss 前营火链路、中后期压力目标成长、死亡复盘缺口/决策展示，以及 `reward / forge / shop / rest` 无出口状态机检查
 - `npm run test:web-smoke`：资源、缓存清单、UI 状态路由、离线 fallback、本地 MIME 和核心粒子绘制覆盖检查全部通过
 - `npm run test:visual-smoke`：桌面/移动端菜单、角色选择、局内 canvas、奖励选择页、Boss 前营火、第 5 波 Boss 进入、桌面/移动端活跃 Boss 战读招画面，以及固定第 20 波高压桌面样本渲染通过；移动端摇杆与闪避按钮可见；奖励页首选卡、决策标签和风险代价可见；截图已输出到 `output/visual-smoke/`
 - `npm run test:visual-regression`：视觉 smoke 截图像素回归通过；基线文件为 `tests/visual-regression-baseline.json`
 - Playwright MCP：`开始远征 -> 开始战斗 · 标准 -> 局内 HUD/canvas` 交互通过，canvas 非空采样 `1031`，无水平溢出；PWA 安装横幅仅产生 info 级浏览器提示
 - `npm run build:android:debug`：Android debug APK 构建和 APK Web payload 校验通过
 - `npm run verify:android:smoke`：自动启动唯一 AVD `NightRunner35`，模拟器安装/启动通过，焦点窗口属于 `com.ember.roguelike`，点击流已到局内战斗，`output/android-smoke/app-launch.png` / `character-select.png` / `gameplay.png` 已保存，logcat fatal-error scan 通过，验证后自动关闭模拟器
-- 当前验证 APK SHA256：`997CE343CCEC06B8D82634E213AD972625F6AFC5AD439464D5932238C573BA79`
+- 当前验证 APK SHA256：`909B142FD2608BF9E8A7B77B1421071B454D81D1E95E1FB3BC1A2478E3166E99`
 - 难度抽样：`steady avgWave 19.00 / standard 18.20 / trial 16.90`
 - 浏览器验证：锻造选择后可进入第 4 波，不再卡在锻造层
 - 浏览器验证：菜单首屏按钮、角色选择页 AI 头像、局内 AI 玩家模型和敌人 spritesheet 已确认渲染
@@ -90,7 +92,7 @@
 
 ### 玩法
 
-- 标准档第 5 波在当前站桩基线已无 60 seed 早期失败，但仍需继续观察玩家实际操作和试炼档压力
+- 标准档 smart 策略第 5 波已无 60 seed 早期失败；站桩 baseline 仍有 1 个第 5 波失败 seed，下一步不要为该单点过度削弱首个 Boss，应优先观察玩家实际操作和试炼档压力
 - 第 10/15/20/25 波 Boss 已有 checkpoint 统计；第 20 波前现在已有真实营火窗口，但 safety 仍是最集中的高波短板
 - 奖励系统还可以更强地修复构筑缺口，而不是只做单卡评分
 - 结束页复盘仍有提升空间
