@@ -140,10 +140,28 @@ const BOSS_TYPES = {
     phases: [
       { hpThreshold: 1.0, attackCooldown: 2.8, pattern: 'circle_shot', bulletCount: 16, bulletSpeed: 200 },
       { hpThreshold: 0.7, attackCooldown: 2.2, pattern: 'spiral_shot', bulletCount: 10, bulletSpeed: 250 },
-      { hpThreshold: 0.4, attackCooldown: 1.4, pattern: 'aimed_burst', bulletCount: 6, bulletSpeed: 340 },
+      { hpThreshold: 0.4, attackCooldown: 1.5, pattern: 'aimed_burst', bulletCount: 6, bulletSpeed: 340 },
     ],
   },
 };
+
+const DEBUG_HIGH_WAVE_CARD_IDS = [
+  'barrier',
+  'heal_aura',
+  'phase_shift',
+  'hunter_mark',
+  'quick_blade',
+  'crit_eye',
+  'vampire_edge',
+  'time_rift',
+  'phoenix_ember',
+  'iron_wall',
+  'shock_orb',
+  'thorn_skin',
+  'armor_pierce',
+  'chain_detonate',
+  'soul_drain',
+];
 
 // ---- 随机数 ----
 function mulberry32(seed) {
@@ -156,6 +174,15 @@ function mulberry32(seed) {
   };
 }
 function clone(obj) { return JSON.parse(JSON.stringify(obj)); }
+
+function cloneCardById(id) {
+  const card = CARD_POOL.find(entry => entry.id === id);
+  return card ? clone(card) : null;
+}
+
+function markStarterCards(cards) {
+  return clone(cards).map(card => ({ ...card, starter: true }));
+}
 
 const SACRIFICE_NAMES = {
   speed: '移速',
@@ -175,6 +202,59 @@ const FOCUS_LABELS = {
   greed: '赏金',
 };
 
+const DIFFICULTY_PRESETS = {
+  steady: {
+    id: 'steady',
+    name: '稳健',
+    desc: '敌人伤害和血量更低，适合熟悉构筑节奏。',
+    enemyHpScale: 0.84,
+    enemyDamageScale: 0.82,
+    enemySpeedScale: 0.94,
+    playerHpScale: 1.14,
+    playerAttackScale: 1.08,
+    startBarrier: 18,
+    rewardRarityBonus: 0,
+    scoreMultiplier: 1.05,
+    sacrificeScale: 0.72,
+  },
+  standard: {
+    id: 'standard',
+    name: '标准',
+    desc: '推荐体验，保留压力但第 5 波不再是系统性断点。',
+    enemyHpScale: 1,
+    enemyDamageScale: 1,
+    enemySpeedScale: 1,
+    playerHpScale: 1,
+    playerAttackScale: 1,
+    startBarrier: 0,
+    rewardRarityBonus: 0,
+    scoreMultiplier: 1,
+    sacrificeScale: 1,
+  },
+  trial: {
+    id: 'trial',
+    name: '试炼',
+    desc: '敌人更硬更危险，适合熟悉后追求压迫感。',
+    enemyHpScale: 1.14,
+    enemyDamageScale: 1.12,
+    enemySpeedScale: 1.04,
+    playerHpScale: 1,
+    playerAttackScale: 1,
+    startBarrier: 0,
+    rewardRarityBonus: 0,
+    scoreMultiplier: 1.18,
+    sacrificeScale: 1.08,
+  },
+};
+
+export function getDifficultyPresets() {
+  return clone(DIFFICULTY_PRESETS);
+}
+
+function resolveDifficulty(key) {
+  return DIFFICULTY_PRESETS[key] || DIFFICULTY_PRESETS.standard;
+}
+
 function pushMessage(run, message) {
   run.messages.unshift(message);
   if (run.messages.length > 5) run.messages.pop();
@@ -182,12 +262,42 @@ function pushMessage(run, message) {
 
 function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
 
+function buildPressureTargets(wave = 1, profile = null) {
+  const w = Math.max(1, Math.floor(Number(wave) || 1));
+  const late = Math.max(0, w - 5);
+  const kind = profile?.kind || '';
+  const hordeBonus = kind === 'onslaught' || kind === 'siege' ? 4 : 0;
+  const eliteBonus = kind === 'elite' ? 3 : 0;
+  const bossBonus = kind === 'boss' ? 4 : 0;
+  return {
+    singleTarget: Math.round(52 + w * 4),
+    aoe: Math.round(20 + late * 1.0 + hordeBonus),
+    sustain: Math.round(48 + late * 1.6 + eliteBonus + bossBonus),
+    safety: Math.round(18 + Math.min(14, late * 0.8) + bossBonus),
+  };
+}
+
+function pressureValue(pressure, key) {
+  if (key === 'sustain') return (pressure?.sustain || 0) + (pressure?.mitigation || 0);
+  return pressure?.[key] || 0;
+}
+
+function buildPressureGaps(pressure, targets) {
+  return {
+    singleTarget: Math.max(0, (targets.singleTarget || 0) - pressureValue(pressure, 'singleTarget')),
+    aoe: Math.max(0, (targets.aoe || 0) - pressureValue(pressure, 'aoe')),
+    sustain: Math.max(0, (targets.sustain || 0) - pressureValue(pressure, 'sustain')),
+    safety: Math.max(0, (targets.safety || 0) - pressureValue(pressure, 'safety')),
+  };
+}
+
 // ============================================================
 // 创建新游戏
 // ============================================================
-export function createRun(seed = Date.now(), character = null) {
+export function createRun(seed = Date.now(), character = null, difficultyKey = 'standard') {
   // 角色默认值（向后兼容）
   const meta = getMetaBonuses();
+  const difficulty = resolveDifficulty(difficultyKey);
   const ch = character || {
     baseHp: 100, baseSpeed: 250, baseAttack: 15, baseAttackCooldown: 0.5,
     startCards: [
@@ -196,6 +306,8 @@ export function createRun(seed = Date.now(), character = null) {
       { id: 'starter_boots', name: '旧靴', type: 'passive', rarity: 'common', speedBonus: 15, desc: '移速 +15' },
     ],
   };
+  const baseHp = Math.floor((ch.baseHp + meta.hpBoost) * (difficulty.playerHpScale ?? 1));
+  const baseAttack = Math.ceil((ch.baseAttack + meta.attackBoost) * (difficulty.playerAttackScale ?? 1));
   const run = {
     seed, rand: mulberry32(seed),
     metaBonuses: meta,
@@ -216,6 +328,8 @@ export function createRun(seed = Date.now(), character = null) {
     nextWavePreview: null,
     buildAnalysis: null,
     waveHistory: [],
+    difficultyKey: difficulty.id,
+    difficulty,
     kills: 0,
     score: meta.startEmber,
     combo: 0,
@@ -230,14 +344,14 @@ export function createRun(seed = Date.now(), character = null) {
     characterId: ch.id || 'warrior',
     player: {
       x: 640, y: 360, radius: 16,
-      hp: ch.baseHp + meta.hpBoost, maxHp: ch.baseHp + meta.hpBoost, baseMaxHp: ch.baseHp + meta.hpBoost,
-      baseSpeed: ch.baseSpeed + meta.speedBoost, baseAttack: ch.baseAttack + meta.attackBoost, baseAttackCooldown: ch.baseAttackCooldown,
+      hp: baseHp, maxHp: baseHp, baseMaxHp: baseHp,
+      baseSpeed: ch.baseSpeed + meta.speedBoost, baseAttack, baseAttackCooldown: ch.baseAttackCooldown,
       attackTimer: 0,
       invuln: 0,
-      barrier: 0,
+      barrier: difficulty.startBarrier || 0,
       regen: 0,
       facingAngle: 0,
-      deck: clone(ch.startCards),
+      deck: markStarterCards(ch.startCards),
     },
     sacrifices: {
       speed: { count: 0, amount: 0 },
@@ -266,6 +380,169 @@ export function createRun(seed = Date.now(), character = null) {
   return run;
 }
 
+export function createDebugBossFight(seed = 2048, options = {}) {
+  const {
+    wave = 20,
+    difficultyKey = 'standard',
+    character = null,
+  } = options;
+
+  const run = createRun(seed, character, difficultyKey);
+  const targetWave = Math.max(5, Math.min(run.totalWaves, Math.floor(Number(wave) || 20)));
+  const hpRatio = targetWave >= 20 ? 0.68 : 0.82;
+  const bossHpRatio = targetWave >= 20 ? 0.58 : 0.74;
+
+  run.player.deck = clone(run.player.deck || []);
+  for (const id of DEBUG_HIGH_WAVE_CARD_IDS) {
+    if (run.player.deck.some(card => card.id === id)) continue;
+    const card = cloneCardById(id);
+    if (card) run.player.deck.push(card);
+  }
+  run.jokers = run.player.deck.filter(card => card.type === 'joker');
+  run.extremes = [];
+  run.synergies = [];
+  run.rewardChoices = [];
+  run.forgeChoices = [];
+  run.shopChoices = [];
+  run.restChoices = [];
+  run.nextWavePreview = null;
+  run.decisionLog = [];
+  run.waveHistory = [];
+  run.enemies = [];
+  run.projectiles = [];
+  run.playerProjectiles = [];
+  run.particles = [];
+  run.pickups = [];
+  run.telegraphs = [];
+  run.scheduledActions = [];
+  run.waveEnemyQueue = [];
+  run.events = [];
+  run.messages = [];
+  run.score = 1400 + targetWave * 245;
+  run.kills = Math.floor(targetWave * 14.2);
+  run.combo = 8;
+  run.maxCombo = 15;
+  run.comboTimer = 1.4;
+  run.gameTime = 84 + targetWave * 2.6;
+  run.wave = targetWave - 1;
+
+  startNextWave(run);
+  run.state = 'playing';
+  run.waveTransitionTimer = 0;
+  run.waveTime = targetWave >= 20 ? 11.8 : 8.6;
+  run.spawnTimer = 0;
+  run.player.x = 640;
+  run.player.y = targetWave >= 20 ? 432 : 396;
+
+  const stats = getPlayerStats(run);
+  run.player.maxHp = stats.maxHp;
+  run.player.hp = Math.max(1, Math.floor(stats.maxHp * hpRatio));
+  run.player.barrier = Math.max(stats.barrier, targetWave >= 20 ? 34 : 18);
+  run.player.tempDeathWard = targetWave >= 15 ? 1 : 0;
+  run.player.attackTimer = Math.max(0.05, stats.attackCooldown * 0.35);
+  run.player.facingAngle = -Math.PI / 2;
+
+  const bossEntry = run.waveEnemyQueue.find(entry => entry.isBoss) || { type: 'dragon', isBoss: true };
+  run.waveEnemyQueue = [];
+  const boss = spawnEnemy(run, bossEntry.type, true, false);
+  boss.x = 640;
+  boss.y = targetWave >= 20 ? 176 : 150;
+  boss.spawnAge = 1.8;
+  boss.phaseAttackTimer = targetWave >= 20 ? 0.16 : 0.22;
+  boss.bulletAngle = targetWave * 0.19;
+  boss.hp = Math.max(1, Math.floor(boss.maxHp * bossHpRatio));
+  run.enemies.push(boss);
+
+  if (targetWave >= 20) {
+    const archer = spawnEnemy(run, 'archer', false, false);
+    archer.x = 394;
+    archer.y = 248;
+    archer.spawnAge = 1.5;
+    archer.attackTimer = 0.16;
+
+    const fireMage = spawnEnemy(run, 'fire_mage', false, false);
+    fireMage.x = 902;
+    fireMage.y = 282;
+    fireMage.spawnAge = 1.5;
+    fireMage.attackTimer = 0.18;
+
+    run.enemies.push(archer, fireMage);
+  }
+
+  run.projectiles.push(
+    {
+      x: boss.x - 112,
+      y: boss.y + 82,
+      vx: -92,
+      vy: 214,
+      damage: boss.baseDamage,
+      life: 3.1,
+      radius: 7,
+      color: boss.color,
+      fromEnemy: true,
+    },
+    {
+      x: boss.x + 118,
+      y: boss.y + 92,
+      vx: 104,
+      vy: 208,
+      damage: boss.baseDamage,
+      life: 3.3,
+      radius: 6,
+      color: '#ffb3a7',
+      fromEnemy: true,
+    },
+    {
+      x: run.player.x - 188,
+      y: run.player.y - 42,
+      vx: 178,
+      vy: -24,
+      damage: Math.max(1, Math.floor(boss.baseDamage * 0.7)),
+      life: 2.6,
+      radius: 5,
+      color: '#ffcf70',
+      fromEnemy: true,
+    },
+  );
+
+  run.telegraphs.push(
+    {
+      x: run.player.x + 58,
+      y: run.player.y - 24,
+      radius: 52,
+      angle: 0,
+      life: 0.48,
+      maxLife: 0.48,
+      color: 'rgba(255,120,120,0.24)',
+      type: 'circle',
+      owner: boss.id,
+    },
+    {
+      x: run.player.x - 124,
+      y: run.player.y + 28,
+      radius: 42,
+      angle: 0,
+      life: 0.4,
+      maxLife: 0.4,
+      color: 'rgba(255,180,80,0.2)',
+      type: 'circle',
+      owner: boss.id,
+    },
+  );
+
+  pushMessage(run, `⚠ ${boss.name} 已进入高压阶段，先守住容错再找输出窗口。`);
+  pushMessage(run, `🛡 调试场景：第 ${targetWave} 波，护盾与护符已就位。`);
+
+  run.debugScenario = {
+    wave: run.wave,
+    boss: boss.name,
+    deckSize: run.player.deck.length,
+    ward: run.player.tempDeathWard || 0,
+    barrier: run.player.barrier || 0,
+  };
+  return run;
+}
+
 // ============================================================
 // 波次系统
 // ============================================================
@@ -273,7 +550,7 @@ function startNextWave(run) {
   run.wave += 1;
   run.waveTime = 0;
   run.state = 'wave_transition';
-  run.waveTransitionTimer = 1.8;
+  run.waveTransitionTimer = 0.85;
   run.waveEnemyQueue = [];
   run.spawnTimer = 0;
   run.combo = 0;
@@ -281,6 +558,11 @@ function startNextWave(run) {
   run.midWaveEventKills = 0;
   run.player.tempAttackBonus = 0;
   run.player.tempAttackSpeedBonus = 0;
+  run.player.tempSpeedBonus = 0;
+  run.player.tempDodgeBonus = 0;
+  run.player.tempDeathWard = 0;
+  run.player.tempWaveStartSlow = 0;
+  run.player.tempWaveStartSlowAmount = 1;
 
   const isBoss = run.wave % 5 === 0;
   const isEventWave = !isBoss && (run.wave === 3 || (run.wave > 8 && (run.wave - 3) % 8 === 0));
@@ -288,6 +570,8 @@ function startNextWave(run) {
   const analysis = analyzeBuild(run);
   run.buildAnalysis = analysis;
   run.waveProfile = createWaveProfile(run.wave, { isBoss, isEliteWave, isEventWave, analysis });
+  run.buildAnalysis = analyzeBuild(run);
+  run.waveTransitionTimer = isBoss ? 1.15 : run.wave === 1 ? 0.55 : 0.85;
   run.waveHistory.push({
     wave: run.wave,
     kind: run.waveProfile.kind,
@@ -551,6 +835,16 @@ function previewNextWaveProfile(run) {
   });
 }
 
+function applyWaveStartSlowToEnemy(run, enemy) {
+  if (!enemy) return enemy;
+  const stats = getPlayerStats(run);
+  const slowDuration = Math.max(0, Number(stats.waveStartSlow || 0) - Number(run.waveTime || 0));
+  if (slowDuration <= 0) return enemy;
+  enemy.slowTimer = Math.max(enemy.slowTimer || 0, slowDuration);
+  enemy.slowAmount = Math.min(enemy.slowAmount || 1, Number(stats.waveStartSlowAmount || 0.2));
+  return enemy;
+}
+
 // ============================================================
 // 生成敌人
 // ============================================================
@@ -586,7 +880,7 @@ function spawnEnemy(run, typeKey, isBoss, isElite = false) {
   const damage = Math.floor((isBoss ? 9 : 3) * type.dmgMult * (1 + run.wave * 0.055) * (isElite ? 1.25 : 1) * scaling.damageScale * damageScale);
   const speed = (isBoss ? 58 : 76) * type.spdMult * (1 + run.wave * 0.012) * (isElite ? 1.06 : 1) * scaling.speedScale * speedScale;
 
-  return {
+  return applyWaveStartSlowToEnemy(run, {
     id: `${isBoss ? 'boss' : 'e'}_${run.wave}_${run.waveEnemyQueue.length}`,
     typeKey, isBoss, isElite,
     name: type.name, color: type.color,
@@ -621,12 +915,13 @@ function spawnEnemy(run, typeKey, isBoss, isElite = false) {
     dotTimer: 0, dotDamage: 0,
     slowTimer: 0, slowAmount: 1,
     hitFlash: 0,
+    spawnAge: 0,
     phased: false, phaseTimer: 0,
     // 攻击预警
     telegraphTimer: 0,
     telegraphType: null,
     supportDropBonus: scaling.supportDropBonus,
-  };
+  });
 }
 
 // ============================================================
@@ -686,6 +981,30 @@ function isSurvivalCard(card) {
   );
 }
 
+function isBossDamageCard(card) {
+  return Boolean(
+    hasPositiveStat(card, 'damage') ||
+    hasPositiveStat(card, 'attackBonus') ||
+    (card.damageMultiplier || 1) > 1 ||
+    hasPositiveStat(card, 'critChance') ||
+    hasPositiveStat(card, 'critDamageBonus') ||
+    hasPositiveStat(card, 'dot') ||
+    hasPositiveStat(card, 'bleed') ||
+    hasPositiveStat(card, 'armorPierce') ||
+    hasPositiveStat(card, 'slow')
+  );
+}
+
+function isReliableBossDamageCard(card) {
+  return Boolean(
+    isBossDamageCard(card) &&
+    !card.doomTimer &&
+    !card.decayRate &&
+    !card.selfDamageChance &&
+    !(card.armorBonus < 0)
+  );
+}
+
 function isBossPunishCard(card) {
   return Boolean(
     card.selfDamageChance ||
@@ -710,6 +1029,15 @@ function needsBossPrep(run, targetProfile) {
   const defenseThin = defenseLoad < 4;
   const noSafetyNet = !hasRevive && hpRatio < 0.58;
   return hpUnsafe || defenseThin || noSafetyNet;
+}
+
+function needsBossDamagePrep(run, targetProfile) {
+  if (!targetProfile || targetProfile.kind !== 'boss') return false;
+  const targetWave = targetProfile.wave ?? run.wave + 1;
+  if (targetWave > 5) return false;
+  const analysis = run.buildAnalysis || analyzeBuild(run);
+  const singleTarget = analysis?.pressure?.singleTarget || 0;
+  return singleTarget < 64;
 }
 
 function pickGuaranteedCard(run, rarityBonus, predicate, excludedIds = new Set()) {
@@ -740,13 +1068,15 @@ function enforceRewardArchetype(run, cards, targetProfile, rarityBonus) {
   if (!targetProfile) return cards;
   const targetTag = targetProfile.rewardTag || 'tempo';
   const guaranteeSurvival = targetTag === 'survival' || targetTag === 'stabilize' || targetProfile.rewardGuard === 'survival' || needsBossPrep(run, targetProfile);
-  if (!guaranteeSurvival) return cards;
+  const guaranteeBossDamage = needsBossDamagePrep(run, targetProfile);
+  if (!guaranteeSurvival && !guaranteeBossDamage) return cards;
   const nextCards = [...cards];
-  const requiredSurvivalChoices = Math.min(nextCards.length, Math.max(1, getRequiredSurvivalChoices(run, targetProfile)));
-  let survivalCount = nextCards.filter(isSurvivalCard).length;
-  if (survivalCount >= requiredSurvivalChoices) return nextCards;
-
+  const requiredSurvivalChoices = guaranteeSurvival
+    ? Math.min(nextCards.length, Math.max(1, getRequiredSurvivalChoices(run, targetProfile)))
+    : 0;
   const excludedIds = new Set(nextCards.map(card => card.id));
+
+  let survivalCount = nextCards.filter(isSurvivalCard).length;
   for (let i = nextCards.length - 1; i >= 0 && survivalCount < requiredSurvivalChoices; i--) {
     if (isSurvivalCard(nextCards[i])) continue;
     const guaranteed = pickGuaranteedCard(run, rarityBonus, isSurvivalCard, excludedIds);
@@ -755,6 +1085,21 @@ function enforceRewardArchetype(run, cards, targetProfile, rarityBonus) {
     excludedIds.add(guaranteed.id);
     survivalCount += 1;
   }
+
+  let bossDamageCount = nextCards.filter(isReliableBossDamageCard).length;
+  for (let i = nextCards.length - 1; i >= 0 && guaranteeBossDamage && bossDamageCount < 1; i--) {
+    if (isReliableBossDamageCard(nextCards[i])) continue;
+    const wouldBreakSurvival = isSurvivalCard(nextCards[i]) && survivalCount <= requiredSurvivalChoices;
+    if (wouldBreakSurvival) continue;
+
+    const guaranteed = pickGuaranteedCard(run, rarityBonus, isReliableBossDamageCard, excludedIds);
+    if (!guaranteed) break;
+    if (isSurvivalCard(nextCards[i])) survivalCount -= 1;
+    nextCards[i] = guaranteed;
+    excludedIds.add(guaranteed.id);
+    bossDamageCount += 1;
+  }
+
   return nextCards;
 }
 
@@ -762,6 +1107,15 @@ function buildRewardChoices(run, count, rarityBonus, targetProfile) {
   const base = rollCardChoices(run, count, rarityBonus);
   const enforced = enforceRewardArchetype(run, base, targetProfile, rarityBonus);
   return enrichRewardChoices(run, enforced, targetProfile);
+}
+
+function buildEventRewardCard(run, rarityBonus, targetProfile) {
+  const choices = buildRewardChoices(run, 3, rarityBonus, targetProfile);
+  const avoidEarlySelfDestruct = run.wave < 5;
+  const picked = choices.find(card => (
+    !(avoidEarlySelfDestruct && (card.doomTimer || card.decayRate || card.selfDamageChance))
+  )) || choices[0];
+  return picked ? clone(picked) : null;
 }
 
 export function rerollRewardChoices(run) {
@@ -911,9 +1265,24 @@ export function applyForgeChoice(run, choice) {
     }
   }
 
+  run.decisionLog.push({
+    wave: run.wave,
+    type: 'forge',
+    action: choice.forgeAction,
+    name: choice.name,
+  });
+
   run.buildAnalysis = analyzeBuild(run);
-  run.state = 'playing';
   run.forgeChoices = [];
+  const nextWavePreview = run.nextWavePreview || previewNextWaveProfile(run);
+  if (nextWavePreview?.kind === 'boss') {
+    run.state = 'rest';
+    run.nextWavePreview = nextWavePreview;
+    run.restChoices = generateRestChoices(run);
+    pushMessage(run, `⛺ ${nextWavePreview.label} 前出现战前营火，你可以求稳，也可以豪赌。`);
+    return;
+  }
+  run.state = 'playing';
   startNextWave(run);
 }
 
@@ -1058,9 +1427,117 @@ export function applyShopChoice(run, choice) {
 // ============================================================
 // Boss 前休息站
 // ============================================================
+function getRestSacrificeBurden(run) {
+  return Object.values(run.sacrifices || {}).reduce((sum, bucket) => sum + Math.max(0, bucket?.amount || 0), 0);
+}
+
+function enrichRestChoices(run, choices, context) {
+  const stats = context?.stats || getPlayerStats(run);
+  const hpRatio = context?.hpRatio ?? (run.player.hp / Math.max(1, stats.maxHp));
+  const targetProfile = context?.targetProfile || run.nextWavePreview || previewNextWaveProfile(run);
+  const targetGaps = context?.targetGaps || {};
+  const safetyNeed = targetGaps.safety || 0;
+  const sustainNeed = targetGaps.sustain || 0;
+  const singleTargetNeed = targetGaps.singleTarget || 0;
+  const aoeNeed = targetGaps.aoe || 0;
+  const sacrificeBurden = getRestSacrificeBurden(run);
+  const mobilityNeed =
+    Math.max(0, 280 - (stats.speed || 0)) / 40 +
+    Math.max(0, 0.22 - (stats.dodgeChance || 0)) * 18;
+  const bossPrep = targetProfile?.kind === 'boss';
+
+  const enriched = choices.map(choice => {
+    let fitScore = 1;
+    let fitHint = '提供通用战前准备。';
+    let decisionRisk = choice.restAction === 'gamble' ? 3 : choice.restAction === 'train' ? 1 : 0;
+
+    if (choice.restAction === 'heal') {
+      fitScore = 1.8 + Math.max(0, (0.92 - hpRatio) * 12) + sustainNeed * 0.35 + safetyNeed * 0.18;
+      fitHint = hpRatio < 0.62
+        ? '血线偏低，先稳住生命再见 Boss。'
+        : '当前血线还够用，除非担心容错不足再回头选它。';
+    } else if (choice.restAction === 'meditate') {
+      fitScore = 1.4 + sacrificeBurden * 3.2 + (bossPrep ? 0.2 : 0.8) - Math.max(safetyNeed, sustainNeed) * 0.18;
+      fitHint = sacrificeBurden >= 0.45
+        ? '献祭压力已经偏重，适合先减轻长期负担。'
+        : '更偏长线收益，当前波次不算最急迫。';
+    } else if (choice.restAction === 'train') {
+      fitScore = 2.6 + singleTargetNeed * 0.85 + aoeNeed * 0.32 + (hpRatio > 0.82 ? 1.1 : 0) - safetyNeed * 0.42;
+      fitHint = singleTargetNeed > Math.max(safetyNeed, sustainNeed)
+        ? '输出缺口更明显，适合压缩 Boss 战时长。'
+        : '当前更像锦上添花，不是最稳的补短板方式。';
+      decisionRisk = bossPrep ? 1 : 0;
+    } else if (choice.restAction === 'ward') {
+      fitScore = 4.2 + safetyNeed * 0.92 + Math.max(0, 0.8 - hpRatio) * 5 + Math.min(4, (choice.barrier || 0) / 10) + (choice.deathWard || 0) * 2.8 + (bossPrep ? 0.8 : 0);
+      fitHint = '补一次失误容错，避免被高压弹幕直接斩穿。';
+    } else if (choice.restAction === 'smoke') {
+      fitScore = 3.5 + safetyNeed * 0.84 + mobilityNeed * 1.35 + ((targetProfile?.wave || 0) >= 20 ? 1.5 : 0) + (choice.waveStartSlow || 0) * 0.45;
+      fitHint = choice.mobilityFocus && safetyNeed < 10
+        ? '机动性短板更明显，用移速、闪避和开场迟滞换出走位窗口。'
+        : '补走位和开场控场，先把第一轮弹幕节奏拖慢。';
+      decisionRisk = 1;
+    } else if (choice.restAction === 'gamble') {
+      const hpCostRatio = (choice.hpCost || 0) / Math.max(1, stats.maxHp);
+      fitScore = 1.3 + singleTargetNeed * 1.05 + aoeNeed * 0.4 + (hpRatio > 0.88 ? 1.2 : 0) - safetyNeed * 0.9 - sustainNeed * 0.5 - hpCostRatio * 8;
+      fitHint = '输出缺口够大时可以豪赌，但会明显压低容错。';
+    }
+
+    return {
+      ...choice,
+      fitScore: Math.round(fitScore * 100) / 100,
+      fitHint,
+      decisionRisk,
+    };
+  });
+
+  const bestScore = enriched.reduce((max, choice) => Math.max(max, Number(choice.fitScore) || -Infinity), -Infinity);
+  return enriched.map(choice => {
+    const score = Number(choice.fitScore) || 0;
+    const isBest = score >= bestScore - 0.001;
+    let decisionLabel = '备选';
+    let decisionTone = 'muted';
+
+    if (isBest && choice.restAction === 'gamble') {
+      decisionLabel = '高分豪赌';
+      decisionTone = 'danger';
+    } else if (isBest) {
+      decisionLabel = '本轮首选';
+      decisionTone = 'recommended';
+    } else if ((choice.restAction === 'ward' || choice.restAction === 'smoke') && safetyNeed >= 4) {
+      decisionLabel = '保命';
+      decisionTone = 'safe';
+    } else if (choice.restAction === 'heal' && hpRatio < 0.62) {
+      decisionLabel = '稳血线';
+      decisionTone = 'safe';
+    } else if (bestScore - score <= 1.1) {
+      decisionLabel = '可替代';
+      decisionTone = 'neutral';
+    } else if (choice.restAction === 'gamble') {
+      decisionLabel = '高风险';
+      decisionTone = 'danger';
+    }
+
+    return {
+      ...choice,
+      decisionLabel,
+      decisionTone,
+    };
+  });
+}
+
 export function generateRestChoices(run) {
   const stats = getPlayerStats(run);
   const hpRatio = run.player.hp / Math.max(1, stats.maxHp);
+  const targetProfile = run.nextWavePreview || previewNextWaveProfile(run);
+  const analysis = run.buildAnalysis || analyzeBuild(run);
+  const targetWave = targetProfile?.wave || run.wave + 1;
+  const targetGaps = buildPressureGaps(
+    analysis?.pressure || {},
+    buildPressureTargets(targetWave, targetProfile)
+  );
+  const mobilityNeed =
+    Math.max(0, 290 - (stats.speed || 0)) / 38 +
+    Math.max(0, 0.24 - (stats.dodgeChance || 0)) * 18;
   const choices = [];
 
   // 1. 休息：回血
@@ -1086,11 +1563,92 @@ export function generateRestChoices(run) {
     desc: '下一波攻击 +20，攻速 +15%',
   });
 
-  return choices;
+  if (targetProfile?.kind === 'boss' && targetWave >= 15 && targetGaps.safety >= 6) {
+    const barrierValue = Math.floor(stats.maxHp * (0.24 + Math.min(0.18, targetGaps.safety * 0.01)));
+    choices.push({
+      id: 'rest_ward', name: '余烬护符', type: 'rest',
+      restAction: 'ward',
+      desc: `下一波获得 ${barrierValue} 护盾，并保留一次致命伤至 1 生命`,
+      barrier: barrierValue,
+      deathWard: 1,
+    });
+  }
+
+  if (targetProfile?.kind === 'boss' && targetWave >= 20 && (targetGaps.safety >= 10 || mobilityNeed >= 2.2)) {
+    const safetyScale = Math.max(0, targetGaps.safety - 10);
+    const mobilityScale = Math.max(0, mobilityNeed - 2.2);
+    const speedBonus = 35 +
+      Math.min(20, safetyScale * 2) +
+      Math.min(16, Math.round(mobilityScale * 8)) +
+      (targetWave >= 25 ? 8 : 0);
+    const dodgeBonus = +Math.min(
+      0.26,
+      0.12 +
+      Math.min(0.08, safetyScale * 0.01) +
+      Math.min(0.04, mobilityScale * 0.03) +
+      (targetWave >= 25 ? 0.02 : 0)
+    ).toFixed(2);
+    const waveStartSlow = +Math.min(
+      4.3,
+      2.4 +
+      Math.min(1.2, safetyScale * 0.1) +
+      Math.min(0.9, mobilityScale * 0.25) +
+      (targetWave >= 25 ? 0.4 : 0)
+    ).toFixed(1);
+    choices.push({
+      id: 'rest_smoke', name: '烟幕疾行', type: 'rest',
+      restAction: 'smoke',
+      desc: `下一波移速 +${speedBonus}、闪避 +${Math.round(dodgeBonus * 100)}%，Boss 开场迟滞 ${waveStartSlow} 秒`,
+      speedBonus,
+      dodgeBonus,
+      waveStartSlow,
+      waveStartSlowAmount: 0.45,
+      mobilityFocus: mobilityNeed >= 2.2,
+    });
+  }
+
+  const riskPreview = buildRewardChoices(run, 3, Math.max(2, Math.floor(run.wave / 5) + 2), targetProfile)
+    .find(card => !isSurvivalCard(card) || hasPositiveStat(card, 'damage') || hasPositiveStat(card, 'attackBonus') || hasPositiveStat(card, 'attackSpeedBonus') || hasPositiveStat(card, 'critChance'));
+  if (riskPreview) {
+    choices.push({
+      id: 'rest_gamble', name: '余烬豪赌', type: 'rest',
+      restAction: 'gamble',
+      desc: `开战前失去 ${Math.max(8, Math.floor(stats.maxHp * 0.18))} 生命，直接夺取一张更契合下一波的高品质卡`,
+      hpCost: Math.max(8, Math.floor(stats.maxHp * 0.18)),
+      rewardCard: riskPreview,
+    });
+  }
+
+  return enrichRestChoices(run, choices, { stats, hpRatio, targetProfile, targetGaps });
+}
+
+function addCardToDeck(run, card, { announce = true, prefix = '获得' } = {}) {
+  const c = clone(card);
+  if (c.doomTimer && !Number.isFinite(c.doomExpiresAt)) {
+    c.doomExpiresAt = (run.gameTime || 0) + c.doomTimer;
+  }
+  run.player.deck.push(c);
+  if (c.type === 'joker') {
+    if (!run.jokers.some(j => j.id === c.id)) run.jokers.push(c);
+  }
+  if (c.sacrifice) applySacrifice(run, c.sacrifice);
+  if (c.barrier) run.player.barrier += c.barrier;
+  if (c.regen) run.player.regen += c.regen;
+  const stats = getPlayerStats(run);
+  run.player.maxHp = stats.maxHp;
+  run.player.hp = Math.min(run.player.hp, stats.maxHp);
+  if (announce) pushMessage(run, `${prefix}【${c.name}】· 代价：${sacrificeText(c.sacrifice)}`);
+  run.buildAnalysis = analyzeBuild(run);
+  return c;
 }
 
 export function applyRestChoice(run, choice) {
   if (!choice || run.state !== 'rest') return;
+  let delayedHpCost = 0;
+  let delayedHpMessage = '';
+  let applyTrainingAfterWaveStart = false;
+  let wardAfterWaveStart = null;
+  let smokeAfterWaveStart = null;
 
   if (choice.restAction === 'heal') {
     const stats = getPlayerStats(run);
@@ -1103,9 +1661,31 @@ export function applyRestChoice(run, choice) {
     }
     pushMessage(run, '🧘 余烬冥想：所有献祭代价降低 10%！');
   } else if (choice.restAction === 'train') {
-    run.player.tempAttackBonus = (run.player.tempAttackBonus || 0) + 20;
-    run.player.tempAttackSpeedBonus = 0.15;
+    applyTrainingAfterWaveStart = true;
     pushMessage(run, '⚔ 战斗训练：下一波攻击 +20，攻速 +15%！');
+  } else if (choice.restAction === 'ward') {
+    wardAfterWaveStart = {
+      barrier: Math.max(0, Math.floor(choice.barrier || 0)),
+      deathWard: Math.max(1, Math.floor(choice.deathWard || 1)),
+    };
+    pushMessage(run, '🛡 余烬护符：下一波保留一次致命伤！');
+  } else if (choice.restAction === 'smoke') {
+    smokeAfterWaveStart = {
+      speedBonus: Math.max(0, Math.floor(choice.speedBonus || 0)),
+      dodgeBonus: Math.max(0, Number(choice.dodgeBonus || 0)),
+      waveStartSlow: Math.max(0, Number(choice.waveStartSlow || 0)),
+      waveStartSlowAmount: Math.max(0.2, Math.min(0.9, Number(choice.waveStartSlowAmount || 0.45))),
+    };
+    pushMessage(run, '🌫 烟幕疾行：下一波移速、闪避提高，Boss 开场会被烟幕拖慢！');
+  } else if (choice.restAction === 'gamble') {
+    const hpCost = Math.min(Math.max(1, choice.hpCost || 0), Math.max(1, run.player.hp - 1));
+    delayedHpCost = hpCost;
+    const rewardCard = choice.rewardCard ? addCardToDeck(run, choice.rewardCard, { announce: false }) : null;
+    if (rewardCard) {
+      delayedHpMessage = `☠ 余烬豪赌：开战前失去 ${hpCost} 生命，夺取【${rewardCard.name}】。`;
+    } else {
+      delayedHpMessage = `☠ 余烬豪赌：开战前失去 ${hpCost} 生命，强行闯入下一波。`;
+    }
   }
 
   run.decisionLog.push({
@@ -1113,24 +1693,48 @@ export function applyRestChoice(run, choice) {
     type: 'rest',
     action: choice.restAction,
     name: choice.name,
+    rewardCardId: choice.rewardCard?.id || null,
   });
 
   run.state = 'playing';
   run.restChoices = [];
   startNextWave(run);
+  if (applyTrainingAfterWaveStart) {
+    run.player.tempAttackBonus = (run.player.tempAttackBonus || 0) + 20;
+    run.player.tempAttackSpeedBonus = (run.player.tempAttackSpeedBonus || 0) + 0.15;
+  }
+  if (wardAfterWaveStart) {
+    run.player.barrier += wardAfterWaveStart.barrier;
+    run.player.tempDeathWard = (run.player.tempDeathWard || 0) + wardAfterWaveStart.deathWard;
+  }
+  if (smokeAfterWaveStart) {
+    run.player.tempSpeedBonus = (run.player.tempSpeedBonus || 0) + smokeAfterWaveStart.speedBonus;
+    run.player.tempDodgeBonus = +((run.player.tempDodgeBonus || 0) + smokeAfterWaveStart.dodgeBonus).toFixed(3);
+    run.player.tempWaveStartSlow = Math.max(run.player.tempWaveStartSlow || 0, smokeAfterWaveStart.waveStartSlow);
+    run.player.tempWaveStartSlowAmount = Math.min(run.player.tempWaveStartSlowAmount ?? 1, smokeAfterWaveStart.waveStartSlowAmount);
+  }
+  if (delayedHpCost > 0) {
+    run.player.hp = Math.max(1, run.player.hp - delayedHpCost);
+    run.particles.push({ type: 'self_damage', x: run.player.x, y: run.player.y - 25, life: 1.2, maxLife: 1.2, value: delayedHpCost });
+    pushMessage(run, delayedHpMessage);
+  }
 }
 
 export function applyCardChoice(run, card) {
-  const c = clone(card);
-  run.player.deck.push(c);
-  if (c.type === 'joker') {
-    if (!run.jokers.some(j => j.id === c.id)) run.jokers.push(c);
+  const previousState = run.state;
+  const previousWave = run.wave;
+  addCardToDeck(run, card);
+
+  if (previousState === 'reward') {
+    run.decisionLog.push({
+      wave: previousWave,
+      type: 'reward',
+      action: 'card',
+      name: card.name,
+      cardId: card.id,
+      fitScore: typeof card.fitScore === 'number' ? card.fitScore : null,
+    });
   }
-  if (c.sacrifice) applySacrifice(run, c.sacrifice);
-  if (c.barrier) run.player.barrier += c.barrier;
-  if (c.regen) run.player.regen += c.regen;
-  pushMessage(run, `获得【${c.name}】· 代价：${sacrificeText(c.sacrifice)}`);
-  run.buildAnalysis = analyzeBuild(run);
 
   if (run.state === 'reward') {
     // Boss 后奖励 -> 进商店
@@ -1140,6 +1744,11 @@ export function applyCardChoice(run, card) {
       run.shopChoices = generateShopChoices(run);
       run.nextWavePreview = previewNextWaveProfile(run);
       pushMessage(run, '🏪 Boss 已倒！余烬商人出现了。');
+    } else if (run.nextWavePreview?.kind === 'boss') {
+      run.state = 'rest';
+      run.rewardChoices = [];
+      run.restChoices = generateRestChoices(run);
+      pushMessage(run, `⛺ ${run.nextWavePreview.label} 前出现战前营火，你可以求稳，也可以豪赌。`);
     } else {
       run.state = 'playing';
       run.rewardChoices = [];
@@ -1153,7 +1762,7 @@ export function enrichRewardChoices(run, cards, targetProfile = null) {
   run.buildAnalysis = analysis;
   return cards.map(card => {
     const cloneCard = clone(card);
-    cloneCard.fitHint = describeCardFit(cloneCard, analysis);
+    cloneCard.fitHint = describeCardFit(cloneCard, analysis, targetProfile || run.waveProfile);
     cloneCard.fitScore = scoreCardFit(cloneCard, analysis, targetProfile || run.waveProfile);
     return cloneCard;
   }).sort((a, b) => (b.fitScore || 0) - (a.fitScore || 0));
@@ -1175,12 +1784,21 @@ function scoreCardFit(card, analysis, waveProfile) {
   const sustainCard = hasPositiveStat(card, 'regen') || hasPositiveStat(card, 'lifesteal') || hasPositiveStat(card, 'barrier');
   const fortressCard = hasPositiveStat(card, 'armorBonus') || hasPositiveStat(card, 'dodgeChance') || hasPositiveStat(card, 'reflect') || hasPositiveStat(card, 'thorns');
   const attackCard = Boolean(card.damage || card.attackBonus || card.damageMultiplier || card.critChance || card.critDamageBonus || card.attackSpeedBonus || card.chain || card.dot || card.bleed || card.rangeBonus || card.armorPierce || card.slow);
+  const bossDamageCard = isBossDamageCard(card);
+  const riskyBossMultiplier = card.type === 'joker' && (card.damageMultiplier || 1) >= 1.8 && card.sacrifice?.stat === 'health' && (card.sacrifice?.amount || 0) >= 0.12;
 
-  // 单体输出缺口：阈值随波次增长，后期需要更多输出
-  const singleTargetThreshold = 52 + wave * 4;
-  const singleTargetNeed = Math.max(0, singleTargetThreshold - (pressure.singleTarget || 0));
-  const aoeNeed = Math.max(0, 20 - (pressure.aoe || 0));
-  const sustainNeed = Math.max(0, 48 - ((pressure.sustain || 0) + (pressure.mitigation || 0)));
+  const pressureTargets = buildPressureTargets(wave || 1, waveProfile);
+  const pressureGaps = buildPressureGaps(pressure, pressureTargets);
+  const singleTargetNeed = pressureGaps.singleTarget;
+  const aoeNeed = pressureGaps.aoe;
+  const sustainNeed = pressureGaps.sustain;
+  const safetyNeed = pressureGaps.safety;
+  const safetyCard = Boolean(card.revive || hasPositiveStat(card, 'barrier') || hasPositiveStat(card, 'dodgeChance'));
+  const firstBossOutputGap = bossPrep && earlyRun && singleTargetNeed >= 18;
+  const strongSafetyGap = safetyNeed >= (bossPrep ? 10 : 14);
+  const curseFocus = focus.curse || 0;
+  const curseControlReady = curseFocus >= 4 && safetyNeed <= 0 && sustainNeed <= 0;
+  const riskPressure = safetyNeed + sustainNeed * 0.45;
 
   // 基础分：攻击牌有基础加成
   if (card.damage || card.attackBonus) score += 1;
@@ -1192,12 +1810,21 @@ function scoreCardFit(card, analysis, waveProfile) {
   if (sustainCard) score += sustainFocusBonus + 1;
   if (fortressCard) score += fortressFocusBonus + 0.8;
   if (card.dot || card.bleed) score += (focus.bleed || 0) * 0.75 + 0.6;
-  if (card.type === 'curse') score += (focus.curse || 0) * 0.8;
+  if (card.type === 'curse') score += Math.min(1.8, curseFocus * 0.45);
 
   // 输出缺口加成：阈值随波次增长，中后期输出牌大幅加分
   if (singleTargetNeed > 0 && (card.damage || card.attackBonus || card.damageMultiplier || card.critChance || card.critDamageBonus)) score += Math.min(4.0, singleTargetNeed * 0.04);
   if (aoeNeed > 0 && (card.chain || card.attackSpeedBonus || card.rangeBonus || card.slow || card.dot || card.bleed)) score += Math.min(1.9, aoeNeed * 0.05);
   if (sustainNeed > 0 && (sustainCard || fortressCard)) score += Math.min(2.2, sustainNeed * 0.04);
+  if (strongSafetyGap && safetyCard && !firstBossOutputGap) score += Math.min(2.4, safetyNeed * 0.06);
+
+  // 首个 Boss 前不能只堆容错；如果单体输出缺口明显，可靠输出牌应压过继续牺牲攻击/生命的纯防御。
+  if (firstBossOutputGap && bossDamageCard && !card.doomTimer && !card.decayRate && !card.selfDamageChance && !riskyBossMultiplier) {
+    score += Math.min(4.4, 2.4 + singleTargetNeed * 0.06);
+  }
+  if (firstBossOutputGap && !attackCard && (sustainCard || fortressCard)) score -= 1.1;
+  if (firstBossOutputGap && !attackCard && card.sacrifice?.stat === 'attack') score -= 1.4;
+  if (firstBossOutputGap && !attackCard && card.sacrifice?.stat === 'health') score -= 0.8;
 
   // 波次标签加成
   if ((waveProfile?.rewardTag || '') === 'survival' && (sustainCard || fortressCard)) score += 1.8;
@@ -1210,9 +1837,32 @@ function scoreCardFit(card, analysis, waveProfile) {
   if (waveProfile?.kind === 'boss' && isSurvivalCard(card)) score += needsSurvival ? 2.8 : 1.4;
   if (waveProfile?.kind === 'boss' && card.revive) score += 2.4;
   if (waveProfile?.kind === 'boss' && isBossPunishCard(card) && !isSurvivalCard(card)) score -= 1.5;
+  if (bossPrep && wave >= 15 && strongSafetyGap && safetyCard) score += Math.min(1.4, safetyNeed * 0.04);
+  if (bossPrep && wave >= 15 && safetyNeed >= 16 && card.revive) score += 0.8;
+  if (bossPrep && card.sacrifice?.stat === 'health' && !isSurvivalCard(card)) {
+    score -= earlyRun ? 2.4 : 1.2;
+  }
+  if (bossPrep && earlyRun && (sustainCard || card.revive)) score += 1.6;
   if ((waveProfile?.rewardGuard === 'survival' || waveProfile?.kind === 'boss') && card.id === 'blood_pact') score -= 2.4;
   if ((waveProfile?.rewardGuard === 'survival' || waveProfile?.kind === 'boss') && (card.decayRate || card.doomTimer)) score -= 2.1;
   if (earlyRun && card.id === 'blood_pact') score -= 1.4;
+  if (earlyRun && card.doomTimer) score -= bossPrep ? 3.5 : 5.0;
+  if (earlyRun && card.decayRate && ((pressure.sustain || 0) + (pressure.mitigation || 0)) < 45) score -= 1.6;
+  if (bossPrep && earlyRun && riskyBossMultiplier) score -= 1.8;
+  if (card.doomTimer) {
+    score -= 1.1;
+    if (bossPrep) score -= 1.4 + Math.min(2.4, riskPressure * 0.08);
+    if (wave >= 15) score -= 0.8 + Math.min(1.8, Math.max(safetyNeed, sustainNeed) * 0.05);
+    if (!curseControlReady) score -= 0.7;
+  }
+  if (card.decayRate) {
+    score -= 0.45;
+    if (bossPrep) score -= 0.75 + Math.min(1.6, riskPressure * 0.06);
+    if (sustainNeed > 0) score -= Math.min(1.5, sustainNeed * 0.05);
+    if (!curseControlReady) score -= 0.4;
+  }
+  if ((card.doomTimer || card.decayRate) && strongSafetyGap) score -= 1.2;
+  if ((card.doomTimer || card.decayRate) && wave >= 10 && pressureValue(pressure, 'safety') < 18) score -= 0.8;
 
   // 防御堆叠预防：有防御优势时，降低防御牌吸引力，提高攻击牌
   if (defenseOverAttack >= 4 && fortressCard && !sustainCard && !attackCard) {
@@ -1263,7 +1913,8 @@ function applySacrifice(run, s) {
   // 献祭转移：降低所有献祭代价
   const stats = getPlayerStats(run);
   const reduction = 1 - (stats.sacrificeReduce || 0);
-  const effectiveAmount = s.amount * reduction;
+  const difficultyScale = run.difficulty?.sacrificeScale ?? 1;
+  const effectiveAmount = s.amount * reduction * difficultyScale;
   bucket.count += 1;
   bucket.amount += effectiveAmount;
   if (bucket.count >= 3) {
@@ -1416,35 +2067,42 @@ function analyzeBuild(run) {
   const primaryFocus = top[0]?.[0] || 'barrage';
   const secondaryFocus = top[1]?.[0] || null;
   const descriptors = top.map(([key]) => FOCUS_LABELS[key]).filter(Boolean);
+  const pressureTargets = buildPressureTargets(run.wave || 1, run.waveProfile);
+  const pressureGaps = buildPressureGaps(pressure, pressureTargets);
   return {
     primaryFocus,
     secondaryFocus,
     descriptors,
     focusScores: focus,
     pressure,
+    pressureTargets,
+    pressureGaps,
     summary: descriptors.length ? descriptors.join(' / ') : '均衡',
     weaknesses: {
-      singleTarget: pressure.singleTarget < 52,
-      aoe: pressure.aoe < 20,
-      sustain: (pressure.sustain + pressure.mitigation) < 48,
-      safety: pressure.safety < 18,
+      singleTarget: pressureGaps.singleTarget > 0,
+      aoe: pressureGaps.aoe > 0,
+      sustain: pressureGaps.sustain > 0,
+      safety: pressureGaps.safety > 0,
     },
   };
 }
 
-function describeCardFit(card, analysis) {
+function describeCardFit(card, analysis, waveProfile = null) {
   const reasons = [];
   const focus = analysis?.focusScores || {};
   const pressure = analysis?.pressure || {};
+  const targets = buildPressureTargets(waveProfile?.wave || 1, waveProfile);
+  const gaps = buildPressureGaps(pressure, targets);
   if ((card.critChance || card.critDamageBonus) && (focus.crit || 0) >= 2) reasons.push('补强暴击主轴');
   if ((card.attackSpeedBonus || card.chain || card.rangeBonus) && (focus.barrage || 0) >= 2) reasons.push('提升清场节奏');
   if ((card.regen || card.lifesteal || card.barrier) && (focus.sustain || 0) >= 2) reasons.push('增强续航稳定性');
   if ((card.armorBonus || card.dodgeChance || card.reflect || card.thorns) && (focus.fortress || 0) >= 2) reasons.push('巩固生存下限');
   if ((card.dot || card.bleed) && (focus.bleed || 0) >= 2) reasons.push('放大持续伤害');
   if ((card.type === 'curse' || card.decayRate || card.doomTimer) && (focus.curse || 0) >= 2) reasons.push('强化高风险爆发');
-  if (reasons.length === 0 && pressure.singleTarget < 45 && (card.damage || card.attackBonus || card.critChance || card.damageMultiplier)) reasons.push('补首领输出缺口');
-  if (reasons.length === 0 && pressure.aoe < 18 && (card.chain || card.attackSpeedBonus || card.rangeBonus || card.slow)) reasons.push('补清场与控场');
-  if (reasons.length === 0 && pressure.sustain + pressure.mitigation < 42 && (card.regen || card.lifesteal || card.barrier || card.armorBonus || card.dodgeChance || card.reflect)) reasons.push('补容错短板');
+  if (reasons.length === 0 && gaps.singleTarget > 0 && (card.damage || card.attackBonus || card.critChance || card.damageMultiplier)) reasons.push('补首领输出缺口');
+  if (reasons.length === 0 && gaps.aoe > 0 && (card.chain || card.attackSpeedBonus || card.rangeBonus || card.slow)) reasons.push('补清场与控场');
+  if (reasons.length === 0 && gaps.sustain > 0 && (card.regen || card.lifesteal || card.barrier || card.armorBonus || card.dodgeChance || card.reflect)) reasons.push('补容错短板');
+  if (reasons.length === 0 && gaps.safety > 0 && (card.revive || card.barrier || card.dodgeChance)) reasons.push('补高波安全网');
   if (reasons.length === 0 && card.type === 'attack') reasons.push('直接抬升输出');
   if (reasons.length === 0 && card.type === 'defense') reasons.push('补当前容错');
   if (reasons.length === 0 && card.type === 'joker') reasons.push('改变战斗节奏');
@@ -1464,21 +2122,26 @@ export function getPlayerStats(run) {
   let speed = p.baseSpeed * Math.max(0.12, 1 - s.speed.amount);
   let attack = p.baseAttack * Math.max(0.15, 1 - s.attack.amount);
   let cooldown = p.baseAttackCooldown * (1 + s.attack_speed.amount);
+  let attackSpeedBonus = 0;
+  let tempDodgeBonus = 0;
 
   // 临时攻击加成（波次内事件/休息训练）
   attack += p.tempAttackBonus || 0;
+  speed += p.tempSpeedBonus || 0;
   if (p.tempAttackSpeedBonus) attackSpeedBonus += p.tempAttackSpeedBonus;
+  if (p.tempDodgeBonus) tempDodgeBonus += p.tempDodgeBonus;
 
   // 累加卡牌属性
   let armor = 0, thorns = 0, lifesteal = 0, damageMultiplier = 1, revive = 0;
   let critChance = 0, critDamageBonus = 0.5; // 基础暴击伤害 +50%
   let dodgeChance = 0, reflect = 0, rangeBonus = 0;
-  let attackSpeedBonus = 0, chain = 0, slow = 0, dot = 0, bleed = 0;
+  let chain = 0, slow = 0, dot = 0, bleed = 0;
   let scoreBonus = 0, selfDamageChance = 0, doomTimer = 0, decayRate = 0;
   let regen = 0, barrier = 0;
   let armorPierce = 0, speedPenalty = 0;
   let onKillExplosion = 0, healOnKill = 0, perCardDamage = 0;
   let waveStartSlow = 0, sacrificeReduce = 0, rewardDoubleChance = 0;
+  let waveStartSlowAmount = 1;
 
   for (const card of p.deck) {
     attack += card.damage ?? 0;
@@ -1500,7 +2163,12 @@ export function getPlayerStats(run) {
     bleed += card.bleed ?? 0;
     scoreBonus += card.scoreBonus ?? 0;
     selfDamageChance += card.selfDamageChance ?? 0;
-    doomTimer += card.doomTimer ?? 0;
+    if (card.doomTimer) {
+      if (!Number.isFinite(card.doomExpiresAt)) {
+        card.doomExpiresAt = (run.gameTime || 0) + card.doomTimer;
+      }
+      doomTimer = doomTimer > 0 ? Math.min(doomTimer, card.doomExpiresAt) : card.doomExpiresAt;
+    }
     decayRate += card.decayRate ?? 0;
     regen += card.regen ?? 0;
     barrier += card.barrier ?? 0;
@@ -1509,11 +2177,19 @@ export function getPlayerStats(run) {
     onKillExplosion += card.onKillExplosion ?? 0;
     healOnKill += card.healOnKill ?? 0;
     perCardDamage += card.perCardDamage ?? 0;
-    waveStartSlow += card.waveStartSlow ?? 0;
+    if (card.waveStartSlow) {
+      waveStartSlow += card.waveStartSlow ?? 0;
+      waveStartSlowAmount = Math.min(waveStartSlowAmount, card.waveStartSlowAmount ?? 0.2);
+    }
     sacrificeReduce += card.sacrificeReduce ?? 0;
     rewardDoubleChance += card.rewardDoubleChance ?? 0;
     if (card.damageMultiplier) damageMultiplier *= card.damageMultiplier;
     if (card.perCardsDamage) damageMultiplier *= (1 + Math.floor(p.deck.length / 4) * card.perCardsDamage);
+  }
+
+  if (p.tempWaveStartSlow) {
+    waveStartSlow += p.tempWaveStartSlow;
+    waveStartSlowAmount = Math.min(waveStartSlowAmount, p.tempWaveStartSlowAmount ?? 0.45);
   }
 
   // 玻璃炮：最大生命 -40%
@@ -1553,6 +2229,8 @@ export function getPlayerStats(run) {
   if (syn.decayRate) decayRate += syn.decayRate;
   run.synergies = syn.names;
 
+  dodgeChance += tempDodgeBonus;
+
   // 攻速计算
   if (attackSpeedBonus > 0) cooldown /= (1 + attackSpeedBonus);
   else if (attackSpeedBonus < 0) cooldown *= (1 - attackSpeedBonus); // 负攻速=减速
@@ -1574,18 +2252,23 @@ export function getPlayerStats(run) {
     scoreBonus, selfDamageChance, doomTimer, decayRate,
     regen, barrier, armorPierce,
     onKillExplosion, healOnKill, perCardDamage: perCardDamage * p.deck.length,
-    waveStartSlow, sacrificeReduce, rewardDoubleChance,
+    waveStartSlow, waveStartSlowAmount: waveStartSlow > 0 ? waveStartSlowAmount : 1, sacrificeReduce, rewardDoubleChance,
   };
 }
 
 function getEnemyScaling(run) {
   const profile = run.waveProfile || {};
+  const difficulty = run.difficulty || DIFFICULTY_PRESETS.standard;
   return {
-    hpScale: profile.enemyHpScale ?? 1,
-    damageScale: profile.enemyDamageScale ?? 1,
-    speedScale: profile.enemySpeedScale ?? 1,
+    hpScale: (profile.enemyHpScale ?? 1) * (difficulty.enemyHpScale ?? 1),
+    damageScale: (profile.enemyDamageScale ?? 1) * (difficulty.enemyDamageScale ?? 1),
+    speedScale: (profile.enemySpeedScale ?? 1) * (difficulty.enemySpeedScale ?? 1),
     supportDropBonus: profile.supportDropBonus ?? 0,
   };
+}
+
+function scaledScore(run, value) {
+  return Math.floor(value * (run.difficulty?.scoreMultiplier ?? 1));
 }
 
 // ============================================================
@@ -1688,6 +2371,7 @@ function movePlayer(run, input, dt, stats) {
 // ============================================================
 function updateEnemies(run, dt, stats) {
   for (const e of run.enemies) {
+    e.spawnAge = (e.spawnAge || 0) + dt;
     e.hitFlash = Math.max(0, e.hitFlash - dt * 10);
     e.slowTimer = Math.max(0, e.slowTimer - dt);
     const spdMult = e.slowTimer > 0 ? e.slowAmount : 1;
@@ -1968,20 +2652,28 @@ function performBossAttack(run, boss, phase, dirX, dirY, dist) {
       break;
     }
     case 'aimed_burst': {
-      // 瞄准连射
-      const baseAngle = Math.atan2(dirY, dirX);
-      for (let i = 0; i < bulletCount; i++) {
-        const spread = (run.rand() - 0.5) * 0.4;
-        const angle = baseAngle + spread;
-        run.projectiles.push({
-          x: boss.x + Math.cos(baseAngle) * (boss.radius + 5),
-          y: boss.y + Math.sin(baseAngle) * (boss.radius + 5),
-          vx: Math.cos(angle) * bulletSpeed,
-          vy: Math.sin(angle) * bulletSpeed,
-          damage: boss.baseDamage * (run.wave === 5 ? 1.08 : 1.3), life: 3,
-          radius: 8, color: '#ff0', fromEnemy: true,
-        });
-      }
+      // 瞄准连射：先给出短暂预警，再在释放瞬间重新锁定玩家
+      const windup = run.wave >= 20 ? 0.2 : (run.wave === 5 ? 0.12 : 0.16);
+      const volley = Array.from({ length: bulletCount }, () => (run.rand() - 0.5) * 0.4);
+      scheduleAction(run, windup, () => {
+        if (run.state !== 'playing' || boss.hp <= 0) return;
+        const fireAngle = Math.atan2(run.player.y - boss.y, run.player.x - boss.x);
+        const burstSpeed = run.wave >= 20 ? bulletSpeed * 0.94 : bulletSpeed;
+        const spawnX = boss.x + Math.cos(fireAngle) * (boss.radius + 5);
+        const spawnY = boss.y + Math.sin(fireAngle) * (boss.radius + 5);
+        for (const spread of volley) {
+          const angle = fireAngle + spread;
+          run.projectiles.push({
+            x: spawnX,
+            y: spawnY,
+            vx: Math.cos(angle) * burstSpeed,
+            vy: Math.sin(angle) * burstSpeed,
+            damage: boss.baseDamage * (run.wave === 5 ? 1.08 : 1.3), life: 3,
+            radius: 8, color: '#ff0', fromEnemy: true,
+          });
+        }
+        run.screenShake = Math.max(run.screenShake, 0.24);
+      });
       break;
     }
     case 'ring_burst': {
@@ -2122,7 +2814,7 @@ function damageEnemy(run, enemy, amount, stats, isCrit) {
   const finalDmg = Math.max(1, amount - Math.max(0, (enemy.armor || 0) - stats.armorPierce));
   enemy.hp -= finalDmg;
   enemy.hitFlash = 1;
-  run.score += Math.max(1, Math.floor(finalDmg * (1 + stats.scoreBonus)));
+  run.score += Math.max(1, scaledScore(run, finalDmg * (1 + stats.scoreBonus)));
   run.combo += 1;
   run.comboTimer = 2.5;
   run.maxCombo = Math.max(run.maxCombo, run.combo);
@@ -2131,7 +2823,7 @@ function damageEnemy(run, enemy, amount, stats, isCrit) {
   if (enemy.hp <= 0) {
     run.kills += 1;
     const bonus = enemy.isBoss ? 800 : enemy.isElite ? 160 : 40;
-    run.score += Math.floor(bonus * (1 + stats.scoreBonus));
+    run.score += scaledScore(run, bonus * (1 + stats.scoreBonus));
     // 掉落
     const metaDrop = run.metaBonuses?.potionDrop || 0;
     const healChance = clamp((enemy.isElite ? 0.85 : 0.45) + metaDrop + (enemy.supportDropBonus || 0), 0, 1);
@@ -2189,7 +2881,16 @@ function takeDamage(run, amount) {
 
   if (run.player.hp <= 0) {
     const stats = getPlayerStats(run);
-    if (stats.revive > 0 && !run.reviveUsed) {
+    if ((run.player.tempDeathWard || 0) > 0) {
+      run.player.tempDeathWard -= 1;
+      run.player.hp = 1;
+      run.player.invuln = 1.6;
+      run.screenShake = 0.65;
+      run.screenFlash = 0.45;
+      pushMessage(run, '🛡 余烬护符碎裂，保住最后一息。');
+      run.events.push('revive');
+      run.particles.push({ type: 'revive', x: run.player.x, y: run.player.y, life: 1.4, maxLife: 1.4 });
+    } else if (stats.revive > 0 && !run.reviveUsed) {
       // 凤凰余烬：仅限一次
       run.reviveUsed = true;
       run.player.hp = Math.max(1, Math.round(stats.maxHp * 0.3));
@@ -2208,9 +2909,31 @@ function takeDamage(run, amount) {
   }
 }
 
+function formatDecisionLogEntry(entry) {
+  if (!entry) return '';
+  const labels = { reward: '奖励', forge: '锻造', shop: '商店', rest: '营火' };
+  const actionLabels = {
+    heal: '休整',
+    meditate: '冥想',
+    train: '训练',
+    gamble: '豪赌',
+    upgrade: '升级',
+    purify: '净化',
+    reforge: '重铸',
+    card: '拿牌',
+    skip: '离开',
+  };
+  const type = labels[entry.type] || '选择';
+  const action = actionLabels[entry.action] || entry.action || '';
+  const score = typeof entry.fitScore === 'number' ? ` · 契合 ${entry.fitScore.toFixed(1)}` : '';
+  const cost = entry.cost ? ` · 花费 ${entry.cost}` : '';
+  return `第 ${entry.wave} 波 ${type}${action ? `/${action}` : ''}：${entry.name}${score}${cost}`;
+}
+
 function die(run, msg) {
   run.state = 'gameover';
-  const analysis = run.buildAnalysis || analyzeBuild(run);
+  const analysis = analyzeBuild(run);
+  run.buildAnalysis = analysis;
   const weaknesses = analysis?.weaknesses || {};
   const stats = getPlayerStats(run);
   const waveProfile = run.waveProfile || {};
@@ -2249,6 +2972,12 @@ function die(run, msg) {
   const deckSize = run.player.deck.length;
   const focus = analysis?.summary || '均衡';
   const buildTip = getBuildTip(analysis);
+  const pressureTargets = analysis?.pressureTargets || buildPressureTargets(run.wave || 1, waveProfile);
+  const pressureGaps = analysis?.pressureGaps || buildPressureGaps(analysis?.pressure || {}, pressureTargets);
+  const lastDecisions = (run.decisionLog || [])
+    .slice(-4)
+    .map(formatDecisionLogEntry)
+    .filter(Boolean);
 
   run.deathSummary = {
     message: msg,
@@ -2264,6 +2993,10 @@ function die(run, msg) {
     kills: run.kills,
     extremes: run.extremes?.length || 0,
     synergies: run.synergies?.length || 0,
+    pressure: clone(analysis?.pressure || {}),
+    pressureTargets: clone(pressureTargets),
+    pressureGaps: clone(pressureGaps),
+    lastDecisions,
   };
   pushMessage(run, msg);
   pushMessage(run, `☠ ${reason}`);
@@ -2356,8 +3089,9 @@ function updatePickups(run, dt) {
         run.particles.push({ type: 'heal', x: run.player.x, y: run.player.y - 25, life: 0.8, maxLife: 0.8, value: p.value });
         run.events.push('heal');
       } else if (p.type === 'ember') {
-        run.score += p.value;
-        run.particles.push({ type: 'ember_pickup', x: run.player.x, y: run.player.y - 25, life: 0.6, maxLife: 0.6, value: p.value });
+        const value = scaledScore(run, p.value);
+        run.score += value;
+        run.particles.push({ type: 'ember_pickup', x: run.player.x, y: run.player.y - 25, life: 0.6, maxLife: 0.6, value });
         run.events.push('pickup');
       }
       p.life = 0;
@@ -2426,13 +3160,12 @@ function checkMidWaveEvent(run) {
     const stats = getPlayerStats(run);
     const cost = Math.floor(stats.maxHp * 0.1);
     run.player.hp = Math.max(1, run.player.hp - cost);
-    const cards = rollCardChoices(run, 1, 2);
-    if (cards.length > 0) {
-      const card = clone(cards[0]);
+    const card = buildEventRewardCard(run, 2, previewNextWaveProfile(run));
+    if (card) {
       card.forged = true;
-      run.player.deck.push(card);
-      run.buildAnalysis = analyzeBuild(run);
-      pushMessage(run, `👤 诅咒商人：付出 ${cost} 生命，获得【${card.name}】！`);
+      card.sacrifice = null;
+      const added = addCardToDeck(run, card, { announce: false });
+      pushMessage(run, `👤 诅咒商人：付出 ${cost} 生命，获得无献祭代价的【${added.name}】！`);
     }
   }
   run.midWaveEventTriggered = true;
@@ -2456,16 +3189,16 @@ function checkWaveComplete(run) {
       run.nextWavePreview = previewNextWaveProfile(run);
       run.rewardContext = {
         choiceCount: 3,
-        rarityBonus: Math.floor(run.wave / 6) + (run.waveProfile?.rewardBias || 0) + (run.nextWavePreview?.rewardBias || 0),
+        rarityBonus: Math.floor(run.wave / 6) + (run.waveProfile?.rewardBias || 0) + (run.nextWavePreview?.rewardBias || 0) + (run.difficulty?.rewardRarityBonus || 0),
         targetTag: run.nextWavePreview?.rewardTag || run.waveProfile?.rewardTag || 'tempo',
       };
       run.rewardChoices = buildRewardChoices(run, run.rewardContext.choiceCount, run.rewardContext.rarityBonus, run.nextWavePreview);
       // 命运之轮：额外牌
       const dblStats = getPlayerStats(run);
       if (dblStats.rewardDoubleChance > 0 && run.rand() < dblStats.rewardDoubleChance) {
-        const extraCards = rollCardChoices(run, 1, run.rewardContext.rarityBonus);
+        const extraCards = buildRewardChoices(run, 1, run.rewardContext.rarityBonus, run.nextWavePreview);
         if (extraCards.length > 0) {
-          run.rewardChoices.push(clone(extraCards[0]));
+          run.rewardChoices = enrichRewardChoices(run, [...run.rewardChoices, extraCards[0]], run.nextWavePreview);
           pushMessage(run, '🎰 命运之轮触发！额外奖励已出现！');
         }
       }
@@ -2476,4 +3209,4 @@ function checkWaveComplete(run) {
 
 export function updateWaveState(run, _dt) { checkWaveComplete(run); }
 
-export function restart(run, seed = Date.now()) { Object.assign(run, createRun(seed)); }
+export function restart(run, seed = Date.now()) { Object.assign(run, createRun(seed, null, run.difficultyKey || 'standard')); }

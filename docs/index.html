@@ -6,9 +6,7 @@
   <meta name="theme-color" content="#0b0e14" />
   <meta name="description" content="余烬 - 献祭构筑肉鸽" />
   <title>余烬 Ember</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Noto+Sans+SC:wght@400;500;700;800&display=swap" rel="stylesheet" />
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml" />
   <link rel="manifest" href="./manifest.webmanifest" />
   <link rel="stylesheet" href="./styles.css" />
 </head>
@@ -22,18 +20,17 @@
     <div class="panel hero-panel">
       <div class="hero-grid">
         <div class="hero-copy">
-          <div class="brand-mark">✦</div>
-          <div class="eyebrow">Sacrifice-Build Survivor</div>
-          <h1>余 烬</h1>
-          <p class="subtitle">用生命换构筑，用牺牲换强度，在不断升级的猎场里撑到最后。</p>
-          <div class="hero-lore-strip">
-            <span>每一张牌都可能让你更强，也更脆。</span>
-            <span>你不是在“堆数值”，你是在把自己推向一种极端。</span>
+          <div class="eyebrow">Obsidian Arena</div>
+          <div class="hero-title-lockup">
+            <h1>余烬</h1>
+            <div class="hero-season">
+              <span>远征令</span>
+              <strong>第 25 波</strong>
+            </div>
           </div>
-          <div class="hero-feature-list">
-            <div class="hero-feature"><span>献祭构筑</span><small>每次强化都要付出属性代价</small></div>
-            <div class="hero-feature"><span>极端化觉醒</span><small>连续牺牲同类属性，强制改变玩法</small></div>
-            <div class="hero-feature"><span>精英与 Boss 波</span><small>战斗节奏逐波升压，不只是刷怪</small></div>
+          <p class="subtitle">在黑曜石猎场里，把生命、速度、护甲铸成一套能活到最后的极端构筑。</p>
+          <div class="hero-sigil-line" aria-hidden="true">
+            <span></span><i></i><span></span>
           </div>
           <div class="menu-buttons">
             <button id="startBtn" class="btn-primary">开始远征</button>
@@ -45,27 +42,19 @@
           </div>
         </div>
         <div class="hero-aside">
-          <div class="hero-orbit-card">
-            <div class="orbit-title">本局战斗节奏</div>
-            <div class="orbit-line"><span>补给波</span><strong>回收血线与资源</strong></div>
-            <div class="orbit-line"><span>猛攻波</span><strong>检验清场效率</strong></div>
-            <div class="orbit-line"><span>精英波</span><strong>高压高收益</strong></div>
-            <div class="orbit-line"><span>Boss 波</span><strong>保留冲刺窗口</strong></div>
-          </div>
-          <div class="hero-status-card">
-            <div class="hero-status-label">本轮目标</div>
-            <div class="hero-status-value">活到第 25 波</div>
-            <p>优先成型一个明确流派，不要平均拿牌。</p>
+          <div class="hero-map-window" aria-hidden="true">
+            <div class="hero-map-rune"></div>
           </div>
           <div class="hero-status-card">
             <div class="hero-status-label">当前存档</div>
             <div class="menu-meta" id="menuMeta">最高分 0 · 最远第 0 波</div>
             <div class="meta-preview" id="metaPreview">余烬点 0 · 永久升级 0 项</div>
           </div>
-          <div class="hero-help-card">
-            <div>手机：左下摇杆移动，双击冲刺</div>
-            <div>电脑：WASD / 方向键移动，空格冲刺</div>
-            <div>建议：优先围绕 1-2 个协同方向拿牌</div>
+          <div class="hero-route-card">
+            <div class="orbit-line"><span>补给</span><strong>稳住血线</strong></div>
+            <div class="orbit-line"><span>猛攻</span><strong>清场校验</strong></div>
+            <div class="orbit-line"><span>精英</span><strong>高压收益</strong></div>
+            <div class="orbit-line"><span>首领</span><strong>保留窗口</strong></div>
           </div>
         </div>
       </div>
@@ -79,8 +68,8 @@
   <div id="reward" class="overlay hidden">
     <div class="panel reward-panel">
       <div class="reward-header">
-        <h2>选择一张卡牌</h2>
-        <p>强化自己，同时承担代价。每一次选择都应当推动一个更明确的 build。</p>
+        <h2>战后献祭</h2>
+        <p>选择一枚铭牌，把构筑推向更明确的方向。</p>
       </div>
       <div class="reward-toolbar">
         <div id="rewardMeta" class="reward-meta">重随 0 次</div>
@@ -92,7 +81,7 @@
         <div id="waveSummaryText" class="reward-guidance-value">常规波次，用于积累 build 与资源。</div>
         <div id="rewardWhyText" class="reward-guidance-subvalue">优先补清场、首领输出或容错短板。</div>
       </div>
-</div>
+      </div>
       <div id="choices" class="choices"></div>
     </div>
   </div>
@@ -144,7 +133,7 @@
 
     <div id="messageLog" class="message-log"></div>
 
-    <div id="doomTimer" class="doom-timer hidden">☠ <span id="doomTime">45</span>s</div>
+    <div id="doomTimer" class="doom-timer hidden">末日 <span id="doomTime">45</span>s</div>
 
     <button id="dashIndicator" class="dash-button" aria-label="冲刺">
       <span class="dash-ring"></span>

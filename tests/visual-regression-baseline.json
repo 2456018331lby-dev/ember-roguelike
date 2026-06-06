@@ -1,0 +1,230 @@
+{
+  "version": 1,
+  "description": "Stable screens use exact decoded RGBA hashes; animated screens use decoded pixel metrics with tolerances.",
+  "screenshots": {
+    "menu-desktop.png": {
+      "mode": "metric",
+      "width": 1343,
+      "height": 670,
+      "fileBytes": 646815,
+      "pixelHash": "40934fa6d480929d75c9527dee82c9a9d0d41d5d16430485b9be05ba69ee03b6",
+      "metrics": {
+        "r": 14.74,
+        "g": 14.95,
+        "b": 17.36,
+        "luma": 15.08,
+        "darkRatio": 0.9638,
+        "lightRatio": 0.0092,
+        "saturatedRatio": 0.0074
+      }
+    },
+    "character-select-desktop.png": {
+      "mode": "strict",
+      "width": 1343,
+      "height": 670,
+      "fileBytes": 331803,
+      "pixelHash": "66a33eea914830b4b54b96e2516e017c53df6b3551ada1d832cce0499230b808",
+      "metrics": {
+        "r": 17.88,
+        "g": 19.93,
+        "b": 23.35,
+        "luma": 19.74,
+        "darkRatio": 0.9507,
+        "lightRatio": 0.0049,
+        "saturatedRatio": 0.0033
+      }
+    },
+    "gameplay-desktop.png": {
+      "mode": "metric",
+      "width": 1343,
+      "height": 670,
+      "fileBytes": 750259,
+      "pixelHash": "52948b92ac0e587401cefbfd786f3f6d55b87b6c6215ca8f4bcbde371ef5cac9",
+      "metrics": {
+        "r": 22.49,
+        "g": 23.26,
+        "b": 28.01,
+        "luma": 23.44,
+        "darkRatio": 0.9311,
+        "lightRatio": 0.0087,
+        "saturatedRatio": 0.0184
+      }
+    },
+    "reward-desktop.png": {
+      "mode": "metric",
+      "width": 1343,
+      "height": 670,
+      "fileBytes": 349980,
+      "pixelHash": "92d5ea1b6ba831d3febcf344d166792e4c28bfc884b0ee1f2627960c83809637",
+      "metrics": {
+        "r": 25.27,
+        "g": 25.95,
+        "b": 27.7,
+        "luma": 25.93,
+        "darkRatio": 0.9269,
+        "lightRatio": 0.0146,
+        "saturatedRatio": 0.0118
+      }
+    },
+    "rest-desktop.png": {
+      "mode": "metric",
+      "width": 1343,
+      "height": 670,
+      "fileBytes": 418595,
+      "pixelHash": "1003e7ac373b346e7291618c5a8ff9eae4ad56bccbc3376b0d6f69b47080eb62",
+      "metrics": {
+        "r": 18.61,
+        "g": 20.48,
+        "b": 24.58,
+        "luma": 20.38,
+        "darkRatio": 0.9557,
+        "lightRatio": 0.0084,
+        "saturatedRatio": 0.0017
+      }
+    },
+    "boss-wave-desktop.png": {
+      "mode": "metric",
+      "width": 1343,
+      "height": 670,
+      "fileBytes": 807807,
+      "pixelHash": "a66c1d6f11975074111dc06ae95834c2815f33434d024bbbd1df23b1c00ff9d1",
+      "metrics": {
+        "r": 26.27,
+        "g": 24.57,
+        "b": 28.9,
+        "luma": 25.24,
+        "darkRatio": 0.9233,
+        "lightRatio": 0.0137,
+        "saturatedRatio": 0.0178
+      }
+    },
+    "boss-fight-desktop.png": {
+      "mode": "metric",
+      "width": 1343,
+      "height": 670,
+      "fileBytes": 819812,
+      "pixelHash": "a1112e6b3d17bdb7532b540d9b68b02797eda058ce2eff84ffce05735e584cec",
+      "metrics": {
+        "r": 28.36,
+        "g": 24.85,
+        "b": 28.94,
+        "luma": 25.89,
+        "darkRatio": 0.9048,
+        "lightRatio": 0.0101,
+        "saturatedRatio": 0.0308
+      }
+    },
+    "boss-fight-highwave-desktop.png": {
+      "mode": "metric",
+      "width": 1343,
+      "height": 670,
+      "fileBytes": 851918,
+      "pixelHash": "db48df0750626169d08ad0a5fec98b34e392324ab8b7855d548953e15c319c59",
+      "metrics": {
+        "r": 30.7,
+        "g": 25.98,
+        "b": 28.85,
+        "luma": 27.19,
+        "darkRatio": 0.8812,
+        "lightRatio": 0.0104,
+        "saturatedRatio": 0.036
+      }
+    },
+    "menu-mobile.png": {
+      "mode": "metric",
+      "width": 780,
+      "height": 1688,
+      "fileBytes": 817616,
+      "pixelHash": "9231a2b44df00f5d4520677d0fe9f46cfef6fdc699304d5d34f306078b90c22c",
+      "metrics": {
+        "r": 33.6,
+        "g": 32.06,
+        "b": 30.64,
+        "luma": 32.28,
+        "darkRatio": 0.8936,
+        "lightRatio": 0.034,
+        "saturatedRatio": 0.0498
+      }
+    },
+    "character-select-mobile.png": {
+      "mode": "strict",
+      "width": 780,
+      "height": 1688,
+      "fileBytes": 554567,
+      "pixelHash": "aa9e4084def2beb5a5f3fd38a2bd16c2092144362ab07acc43e1bff262960956",
+      "metrics": {
+        "r": 26.81,
+        "g": 26.99,
+        "b": 28.22,
+        "luma": 27.04,
+        "darkRatio": 0.9004,
+        "lightRatio": 0.0176,
+        "saturatedRatio": 0.0272
+      }
+    },
+    "gameplay-mobile.png": {
+      "mode": "metric",
+      "width": 780,
+      "height": 1688,
+      "fileBytes": 644517,
+      "pixelHash": "0f622591bf28a52c912d79d5ad6d37518b770c8e26f160ce6af033ce07659565",
+      "metrics": {
+        "r": 14.42,
+        "g": 15.67,
+        "b": 19.15,
+        "luma": 15.65,
+        "darkRatio": 0.9569,
+        "lightRatio": 0.0124,
+        "saturatedRatio": 0.0112
+      }
+    },
+    "reward-mobile.png": {
+      "mode": "metric",
+      "width": 780,
+      "height": 1688,
+      "fileBytes": 587352,
+      "pixelHash": "ba131a2e389f6da698bda176f03655cb2dd9cb1bbd92abf0aea0b3c3fa723ec0",
+      "metrics": {
+        "r": 32.11,
+        "g": 32.59,
+        "b": 32.83,
+        "luma": 32.5,
+        "darkRatio": 0.8908,
+        "lightRatio": 0.0287,
+        "saturatedRatio": 0.0235
+      }
+    },
+    "rest-mobile.png": {
+      "mode": "metric",
+      "width": 780,
+      "height": 1688,
+      "fileBytes": 635048,
+      "pixelHash": "dbeb7ba7da8f09e88c29ae805adb9daeebecfb6a0c8e4529d7a91aa945b5ae1e",
+      "metrics": {
+        "r": 22.65,
+        "g": 25.3,
+        "b": 29.55,
+        "luma": 25.04,
+        "darkRatio": 0.933,
+        "lightRatio": 0.016,
+        "saturatedRatio": 0.0021
+      }
+    },
+    "boss-fight-mobile.png": {
+      "mode": "metric",
+      "width": 780,
+      "height": 1688,
+      "fileBytes": 733322,
+      "pixelHash": "10a86a8b5bc3b7f827a4f122446381b555ccfb1ad53e36765106f738a2f29d64",
+      "metrics": {
+        "r": 18.2,
+        "g": 17.43,
+        "b": 20.11,
+        "luma": 17.78,
+        "darkRatio": 0.9405,
+        "lightRatio": 0.0149,
+        "saturatedRatio": 0.0207
+      }
+    }
+  }
+}

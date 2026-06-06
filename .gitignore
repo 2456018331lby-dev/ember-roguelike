@@ -14,6 +14,12 @@ build/
 *.zip
 .gradle-home/
 node_modules/
+.playwright-cli/
+.playwright-mcp/
+.tools/
+.omx/
+output/
+*-art-check.png
 
 # OS files
 .DS_Store

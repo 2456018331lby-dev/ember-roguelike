@@ -15,6 +15,7 @@ const DEFAULT_SAVE = {
   tutorialDone: false,
   unlockedCharacters: ['warrior'],
   selectedCharacter: 'warrior',
+  selectedDifficulty: 'standard',
   emberCurrency: 0, // 局外货币
   metaUpgrades: {
     hpBoost: 0,        // 每级 +5 最大生命
@@ -125,6 +126,7 @@ export function recordRun(score, wave, kills, maxCombo, won, character) {
 // ---- 教程/角色 ----
 export function completeTutorial() { updateSave({ tutorialDone: true }); }
 export function selectCharacter(id) { updateSave({ selectedCharacter: id }); }
+export function selectDifficulty(id) { updateSave({ selectedDifficulty: id }); }
 export function isCharacterUnlocked(id) { return load().unlockedCharacters.includes(id); }
 
 // ---- Meta 升级 ----

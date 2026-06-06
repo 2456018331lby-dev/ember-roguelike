@@ -26,6 +26,8 @@ export function buildRunPresentation(run, stats, character) {
     deathWaveLabel: run.deathSummary?.waveLabel || '',
     deathWaveKind: run.deathSummary?.waveKind || '',
     deathBuildTip: run.deathSummary?.buildTip || '',
+    deathPressureLine: buildDeathPressureLine(run.deathSummary, buildAnalysis),
+    deathDecisionLine: buildDeathDecisionLine(run.deathSummary),
     deathDeckSize: run.deathSummary?.deckSize || 0,
     deathFocus: run.deathSummary?.focus || '',
     deathGameTime: run.deathSummary?.gameTime || 0,
@@ -66,7 +68,10 @@ export function buildRewardLine(run) {
     snowball: '滚雪球',
     forge: '锻造升级',
   }[target] || '补构筑';
-  const weaknessText = buildWeaknessSummary(run.buildAnalysis || {}).replace('当前短板：', '');
+  const rawWeaknessText = buildWeaknessSummary(run.buildAnalysis || {});
+  const weaknessText = rawWeaknessText.includes('暂无明显短板')
+    ? ''
+    : rawWeaknessText.replace('当前短板：', '');
   const nextLabel = preview ? ` · 下一波 ${preview.label}` : '';
   return `命运重铸 ${rerolls} 次 · 当前协同 ${synergies} 项 · 本轮建议 ${targetText}${nextLabel}${weaknessText ? ` · 优先处理 ${weaknessText}` : ''}`;
 }
@@ -100,6 +105,7 @@ export function buildRewardSummary(run) {
 function buildWeaknessSummary(analysis) {
   const weaknesses = analysis?.weaknesses || {};
   const pressure = analysis?.pressure || {};
+  const targets = analysis?.pressureTargets || {};
   const tags = [];
   if (weaknesses.singleTarget) tags.push('首领输出不足');
   if (weaknesses.aoe) tags.push('清场偏弱');
@@ -108,10 +114,10 @@ function buildWeaknessSummary(analysis) {
   if (!tags.length) return '当前构筑暂无明显短板';
 
   const detailMap = {
-    singleTarget: pressure.singleTarget ? `当前强度 ${Math.round(pressure.singleTarget)}` : '',
-    aoe: pressure.aoe ? `当前强度 ${Math.round(pressure.aoe)}` : '',
-    sustain: pressure.sustain + pressure.mitigation ? `当前强度 ${Math.round(pressure.sustain + pressure.mitigation)}` : '',
-    safety: pressure.safety ? `当前强度 ${Math.round(pressure.safety)}` : '',
+    singleTarget: formatPressureDetail(pressure.singleTarget, targets.singleTarget),
+    aoe: formatPressureDetail(pressure.aoe, targets.aoe),
+    sustain: formatPressureDetail((pressure.sustain || 0) + (pressure.mitigation || 0), targets.sustain),
+    safety: formatPressureDetail(pressure.safety, targets.safety),
   };
 
   const detailText = [
@@ -124,18 +130,52 @@ function buildWeaknessSummary(analysis) {
   return `当前短板：${tags.join(' / ')}${detailText ? `（${detailText}）` : ''}`;
 }
 
+function formatPressureDetail(current, target) {
+  if (!current && !target) return '';
+  const currentText = `当前强度 ${Math.round(current || 0)}`;
+  return target ? `${currentText}/${Math.round(target)}` : currentText;
+}
+
+function buildDeathPressureLine(summary, analysis = {}) {
+  const pressure = summary?.pressure || analysis?.pressure || {};
+  const targets = summary?.pressureTargets || analysis?.pressureTargets || {};
+  const gaps = summary?.pressureGaps || analysis?.pressureGaps || {};
+  if (!targets || Object.keys(targets).length === 0) return '';
+  const rows = [
+    ['首领输出', pressure.singleTarget || 0, targets.singleTarget, gaps.singleTarget],
+    ['清场', pressure.aoe || 0, targets.aoe, gaps.aoe],
+    ['续航硬度', (pressure.sustain || 0) + (pressure.mitigation || 0), targets.sustain, gaps.sustain],
+    ['安全网', pressure.safety || 0, targets.safety, gaps.safety],
+  ].filter(([, , target]) => target);
+  const missing = rows
+    .filter(([, , , gap]) => (gap || 0) > 0)
+    .sort((a, b) => (b[3] || 0) - (a[3] || 0))
+    .slice(0, 3);
+  if (!missing.length) return '压力目标基本达标，主要问题更可能是站位、冲刺窗口或战斗节奏。';
+  return missing
+    .map(([label, current, target, gap]) => `${label} ${Math.round(current)}/${Math.round(target)}（缺 ${Math.round(gap)}）`)
+    .join(' · ');
+}
+
+function buildDeathDecisionLine(summary) {
+  const decisions = summary?.lastDecisions || [];
+  if (!decisions.length) return '';
+  return decisions.join(' → ');
+}
+
 function buildRewardWhy(run, analysis, profile) {
   const weaknesses = analysis?.weaknesses || {};
   const pressure = analysis?.pressure || {};
+  const targets = analysis?.pressureTargets || {};
   const lines = [];
   if (profile?.kind === 'boss') lines.push('下一波是首领战，优先补能决定成败的短板');
   else if (profile?.kind === 'elite') lines.push('下一波是精英波，补单点容错和压场能力');
   else  if (profile?.kind === 'event') lines.push('锻造波即将到来，弱敌击杀后可选高品质奖励');
   if (profile?.kind === 'onslaught') lines.push('下一波是猛攻潮，优先补清场和控场');
-  if (weaknesses.singleTarget) lines.push(`当前对首领的稳定输出不足（${Math.round(pressure.singleTarget || 0)}）`);
-  if (weaknesses.aoe) lines.push(`当前清场速度偏慢（${Math.round(pressure.aoe || 0)}）`);
-  if (weaknesses.sustain) lines.push(`当前续航与硬抗不够稳（${Math.round((pressure.sustain || 0) + (pressure.mitigation || 0))}）`);
-  if (weaknesses.safety) lines.push(`当前缺安全网，失误后难回正（${Math.round(pressure.safety || 0)}）`);
+  if (weaknesses.singleTarget) lines.push(`当前对首领的稳定输出不足（${formatPressureDetail(pressure.singleTarget, targets.singleTarget)}）`);
+  if (weaknesses.aoe) lines.push(`当前清场速度偏慢（${formatPressureDetail(pressure.aoe, targets.aoe)}）`);
+  if (weaknesses.sustain) lines.push(`当前续航与硬抗不够稳（${formatPressureDetail((pressure.sustain || 0) + (pressure.mitigation || 0), targets.sustain)}）`);
+  if (weaknesses.safety) lines.push(`当前缺安全网，失误后难回正（${formatPressureDetail(pressure.safety, targets.safety)}）`);
   return lines.join(' · ') || '当前奖励更适合继续推进主构筑';
 }
 
