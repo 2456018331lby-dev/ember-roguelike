@@ -1,6 +1,6 @@
 # Ember 下一阶段执行计划
 
-最后更新：2026-06-06（本轮继续推进“中后期奖励短板修复和维护交接”：第 8 波以后奖励池会根据 `singleTarget / aoe / sustain` 的压力缺口挑出最突出的构筑短板，在不破坏生存保底和首个 Boss 输出保底的前提下，替换一张低契合牌为对应修复牌；`safety` 刻意不进入通用奖励保底，继续由 Boss 前生存保底、复活牌评分和营火护符/烟幕链路处理，避免过度挤占输出成长位。Boss 输出识别同步纳入攻速和随卡组增伤牌，避免 `快刃`、`时间扭曲`、`收藏家`、`余烬共鸣` 这类输出牌被保底逻辑漏判。本轮新增回归 `中后期奖励应保底修复最大构筑短板`，并把 `MAINTENANCE.md` 改成下一位 AI 可直接接手的快速交接文档。前序记录中的高波 Boss safety、脆皮 `fragilityDebt`、烟幕残影保命、Boss 读招面板、逐资源 service worker 预缓存、视觉像素回归、核心状态机无出口检查、沉浸式 Android 外壳、模拟器点击 smoke 和 APK 内容校验仍继续成立；下一步继续观察第 10/15/20/25 波 Boss、区域级动态视觉回归和实体真机复测。）
+最后更新：2026-06-06（本轮继续推进“中后期奖励短板修复、Boss 前容错和维护交接”：第 8 波以后奖励池会根据 `singleTarget / aoe / sustain` 的压力缺口挑出最突出的构筑短板，在不破坏生存保底和首个 Boss 输出保底的前提下，替换一张低契合牌为对应修复牌；`safety` 刻意不进入通用奖励保底，继续由 Boss 前生存保底、复活牌评分和营火护符/烟幕链路处理，避免过度挤占输出成长位。Boss 输出识别同步纳入攻速和随卡组增伤牌，避免 `快刃`、`时间扭曲`、`收藏家`、`余烬共鸣` 这类输出牌被保底逻辑漏判。第 10 波 Boss 前如果 safety 缺口极高，现在会提前出现 `余烬护符`，第 15 波以后仍沿用较低门槛；新增回归 `第 10 波 Boss 前安全缺口极高时应提前提供护符`。当前 checkpoint 为 `baseline avgWave 19.12`、`smart avgWave 23.42`，smart 第 5 波 `60/60` 通过，第 20 波到达 `53/60`，第 25 波到达 `48/60`，通关 `45/60`，无 max-tick 卡局。前序记录中的脆皮 `fragilityDebt`、烟幕残影保命、Boss 读招面板、逐资源 service worker 预缓存、视觉像素回归、核心状态机无出口检查、沉浸式 Android 外壳、模拟器点击 smoke 和 APK 内容校验仍继续成立；下一步继续观察第 10/15/20/25 波 Boss、区域级动态视觉回归和实体真机复测。）
 
 这个文件只回答一个问题：下一阶段最值得继续做什么。
 
@@ -13,6 +13,7 @@
 - 波次已经结构化，奖励开始围绕下一波风险与构筑缺口做提示
 - 第 4/9/14/24 波奖励后会进入 Boss 前战前营火；第 19 波事件锻造若下一波是 Boss，也会转入营火
 - 战前营火已支持治疗、冥想、训练、余烬护符、烟幕疾行、豪赌
+- 第 10 波 Boss 前如果 safety 缺口极高，会提前提供 `余烬护符`；第 15 波以后 Boss 前夜如果 safety 缺口明显，会以更低门槛提供护符
 - 第 15 波以后 Boss 前夜如果 safety 缺口明显，会额外提供 `余烬护符`，为下一波提供临时护盾和一次致命伤保底
 - 第 20 波以后如果 safety 缺口极大，或机动性短板明显，会额外提供 `烟幕疾行`，为下一波提供临时移速、闪避和 Boss 开场迟滞；第 25 波等高波脆皮构筑还会附带 1 次 `残影保命`
 - 护符和烟幕残影生效时 HUD 与玩家身上都有来源明确的可见反馈，护符为金色 `护符 1`，残影为蓝色 `残影 1`
@@ -72,18 +73,18 @@
 ### 已验证数据
 
 - `node tests/baseline_sim.mjs`：前序单脚本样本为 `avgWave 18.45`，本轮 checkpoint 口径为 `avgWave 19.12`
-- `node tests/smart_sim.mjs`：前序单脚本样本为 `avgWave 22.68`，本轮 checkpoint 口径为 `avgWave 23.00`
+- `node tests/smart_sim.mjs`：前序单脚本样本为 `avgWave 22.68`，本轮 checkpoint 口径为 `avgWave 23.42`
 - `smart_sim` 第 5 波失败样本：`0 / 60`
 - `baseline_sim` 第 5 波失败样本：`1 / 60`（seed 39，站桩 baseline 仅作保守压力参考）
-- `npm run test:boss-checkpoints`：baseline 第 5 波 `59/60` 通过，第 10/15/20 波 Boss 死亡 `0 / 0 / 10`；smart 第 5 波 `60/60` 通过，第 10/15/20/25 波 Boss 死亡 `3 / 2 / 3 / 3`，第 20 波到达 `51/60`，第 25 波到达 `46/60`，通关 `43/60`；smart 无 max-tick 卡局，短板标签仍以 `safety` 最集中
-- `npm test`：核心逻辑测试全部通过；已覆盖早期卡牌推荐回归、首个 Boss 极大单体缺口双输出保底、普通远程敌人场外卡局回归、Boss 前营火链路、中后期压力目标成长、中后期奖励按 `singleTarget / aoe / sustain` 最大短板保底修复、脆皮烟幕残影保命、死亡复盘缺口/决策展示，以及 `reward / forge / shop / rest` 无出口状态机检查
+- `npm run test:boss-checkpoints`：baseline 第 5 波 `59/60` 通过，第 10/15/20 波 Boss 死亡 `0 / 0 / 10`；smart 第 5 波 `60/60` 通过，第 10/15/20/25 波 Boss 死亡 `2 / 1 / 3 / 3`，第 20 波到达 `53/60`，第 25 波到达 `48/60`，通关 `45/60`；smart 无 max-tick 卡局，短板标签仍以 `safety` 最集中
+- `npm test`：核心逻辑测试全部通过；已覆盖早期卡牌推荐回归、首个 Boss 极大单体缺口双输出保底、普通远程敌人场外卡局回归、Boss 前营火链路、第 10 波极高 safety 缺口提前护符、中后期压力目标成长、中后期奖励按 `singleTarget / aoe / sustain` 最大短板保底修复、脆皮烟幕残影保命、死亡复盘缺口/决策展示，以及 `reward / forge / shop / rest` 无出口状态机检查
 - `npm run test:web-smoke`：资源、缓存清单、UI 状态路由、离线 fallback、本地 MIME 和核心粒子绘制覆盖检查全部通过
 - `npm run test:visual-smoke`：桌面/移动端菜单、角色选择、局内 canvas、奖励选择页、Boss 前营火、第 5 波 Boss 进入、桌面/移动端活跃 Boss 战读招画面，以及固定第 20 波高压桌面样本渲染通过；高波样本已断言 `bossPatternLabel` / `bossCharge`；移动端摇杆与闪避按钮可见；奖励页首选卡、决策标签和风险代价可见；截图已输出到 `output/visual-smoke/`
 - `npm run test:visual-regression`：视觉 smoke 截图像素回归通过；基线文件为 `tests/visual-regression-baseline.json`
 - Playwright MCP：`开始远征 -> 开始战斗 · 标准 -> 局内 HUD/canvas` 交互通过，canvas 非空采样 `1031`，无水平溢出；本轮另用 `?debug=1` 跳转第 20 波高波 Boss，snapshot 返回 `bossPatternLabel = 螺旋弹幕`、`bossCharge ≈ 0.89`、canvas 非空采样 `920`，截图保存到 `output/playwright/boss-readout-highwave-desktop.png`
-- `npm run build:android:debug`：Android debug APK 构建和 APK Web payload 校验通过；当前构建 APK SHA256 为 `000FA7BDC3F7F6B853615238B378C85765778927953CE480706D2931F0A64A06`
+- `npm run build:android:debug`：Android debug APK 构建和 APK Web payload 校验通过；当前构建 APK SHA256 为 `DF1C5AB03EB245D498D63099A07AD2F8852FCA5B587E37DCBF3E0F8620ADBD8A`
 - `npm run verify:android:smoke`：自动启动唯一 AVD `NightRunner35`，模拟器安装/启动通过，焦点窗口属于 `com.ember.roguelike`，点击流已到局内战斗，`output/android-smoke/app-launch.png` / `character-select.png` / `gameplay.png` 已保存，logcat fatal-error scan 通过，验证后自动关闭模拟器
-- 最近一次模拟器点击流验证 APK SHA256：`000FA7BDC3F7F6B853615238B378C85765778927953CE480706D2931F0A64A06`
+- 最近一次模拟器点击流验证 APK SHA256：`DF1C5AB03EB245D498D63099A07AD2F8852FCA5B587E37DCBF3E0F8620ADBD8A`
 - 难度抽样：`steady avgWave 19.00 / standard 18.20 / trial 16.90`
 - 浏览器验证：锻造选择后可进入第 4 波，不再卡在锻造层
 - 浏览器验证：菜单首屏按钮、角色选择页 AI 头像、局内 AI 玩家模型和敌人 spritesheet 已确认渲染

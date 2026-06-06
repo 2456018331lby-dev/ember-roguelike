@@ -1732,7 +1732,11 @@ export function generateRestChoices(run) {
     desc: '下一波攻击 +20，攻速 +15%',
   });
 
-  if (targetProfile?.kind === 'boss' && targetWave >= 15 && targetGaps.safety >= 6) {
+  const shouldOfferWard = targetProfile?.kind === 'boss' && (
+    (targetWave >= 15 && targetGaps.safety >= 6) ||
+    (targetWave >= 10 && targetGaps.safety >= 18)
+  );
+  if (shouldOfferWard) {
     const barrierValue = Math.floor(stats.maxHp * (0.24 + Math.min(0.18, targetGaps.safety * 0.01)));
     choices.push({
       id: 'rest_ward', name: '余烬护符', type: 'rest',

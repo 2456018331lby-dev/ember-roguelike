@@ -1781,6 +1781,34 @@ test('中后期 Boss 前安全网缺口应提供余烬护符', () => {
   assert.equal(ward.deathWard, 1, '余烬护符应提供一次致命伤保护');
 });
 
+test('第 10 波 Boss 前安全缺口极高时应提前提供护符', () => {
+  const run = createRun(17042);
+  run.wave = 9;
+  run.state = 'rest';
+  run.nextWavePreview = {
+    wave: 10,
+    kind: 'boss',
+    label: '第 10 波 Boss 讨伐',
+    rewardTag: 'survival',
+  };
+  run.buildAnalysis = {
+    pressure: {
+      singleTarget: 999,
+      aoe: 999,
+      sustain: 999,
+      mitigation: 999,
+      safety: 0,
+    },
+  };
+
+  const choices = generateRestChoices(run);
+  const train = choices.find(choice => choice.restAction === 'train');
+  const ward = choices.find(choice => choice.restAction === 'ward');
+  assert.ok(train && ward, '第 10 波前极高 safety 缺口应同时保留训练与护符选择');
+  assert.equal(ward.deathWard, 1, '提前护符仍应提供一次临时防死');
+  assert.ok(ward.fitScore > train.fitScore, `极高安全缺口应优先推荐护符，实际 ${ward.fitScore} <= ${train.fitScore}`);
+});
+
 test('第 15 波 Boss 前即使满血，安全缺口明显时营火推荐也应偏向护符而非训练', () => {
   const run = createRun(17041);
   run.wave = 14;
