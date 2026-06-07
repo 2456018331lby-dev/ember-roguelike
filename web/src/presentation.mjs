@@ -6,6 +6,7 @@ export function buildRunPresentation(run, stats, character) {
   const weaknessText = buildWeaknessSummary(buildAnalysis);
   const rewardWhy = buildRewardWhy(run, buildAnalysis, targetProfile);
   const resultPriority = buildResultPriority(run, buildAnalysis);
+  const resultTimeline = buildResultTimeline(run, resultPriority);
   return {
     topLine: `第 ${run.wave} / ${run.totalWaves} 波`,
     scoreLine: `分数 ${Math.floor(run.score)} · 击杀 ${run.kills}`,
@@ -31,6 +32,7 @@ export function buildRunPresentation(run, stats, character) {
     deathDecisionLine: buildDeathDecisionLine(run.deathSummary),
     resultPriorityLabel: resultPriority.label,
     resultNextHint: resultPriority.hint,
+    resultTimeline,
     deathDeckSize: run.deathSummary?.deckSize || 0,
     deathFocus: run.deathSummary?.focus || '',
     deathGameTime: run.deathSummary?.gameTime || 0,
@@ -228,6 +230,101 @@ function buildResultPriority(run, analysis = {}) {
   return {
     label: '战斗节奏',
     hint: '压力目标基本达标，下一把优先复盘站位、冲刺窗口和 Boss 读招节奏。',
+  };
+}
+
+function buildResultTimeline(run, resultPriority) {
+  const summary = run.deathSummary || {};
+  const timeline = [];
+  const decisionLog = Array.isArray(run.decisionLog) ? run.decisionLog : [];
+  const structuredEntries = decisionLog
+    .slice(-5)
+    .map(buildTimelineItemFromDecision)
+    .filter(Boolean);
+
+  if (structuredEntries.length) {
+    timeline.push(...structuredEntries);
+  } else {
+    const fallbackDecisions = Array.isArray(summary.lastDecisions) ? summary.lastDecisions : [];
+    timeline.push(...fallbackDecisions.slice(-4).map(buildTimelineItemFromText).filter(Boolean));
+  }
+
+  const terminal = buildTerminalTimelineItem(run, summary, resultPriority);
+  if (terminal) timeline.push(terminal);
+  return timeline.slice(-6);
+}
+
+function buildTimelineItemFromDecision(entry) {
+  if (!entry) return null;
+  const typeLabels = {
+    reward: '奖励选择',
+    forge: '余烬锻造',
+    shop: '商店取舍',
+    rest: '战前营火',
+  };
+  const actionLabels = {
+    heal: '休整',
+    meditate: '冥想',
+    train: '训练',
+    gamble: '豪赌',
+    upgrade: '升级',
+    purify: '净化',
+    reforge: '重铸',
+    card: '拿牌',
+    pick: '拿牌',
+    skip: '离开',
+  };
+  const type = typeLabels[entry.type] || '关键选择';
+  const action = actionLabels[entry.action] || entry.action || '';
+  const fit = typeof entry.fitScore === 'number' ? `契合 ${entry.fitScore.toFixed(1)}` : '';
+  const cost = entry.cost ? `花费 ${entry.cost}` : '';
+  const detail = [action ? `动作：${action}` : '', fit, cost].filter(Boolean).join(' · ') || '这一步改变了后续路线。';
+  return {
+    marker: `第 ${entry.wave ?? '?'} 波`,
+    title: `${type} · ${entry.name || '未命名选择'}`,
+    detail,
+    tone: entry.type || 'decision',
+  };
+}
+
+function buildTimelineItemFromText(text) {
+  if (!text) return null;
+  const match = String(text).match(/^第\s*(.+?)\s*波\s*(.+?)：(.+)$/);
+  if (!match) {
+    return {
+      marker: '路线',
+      title: String(text),
+      detail: '旧版复盘记录，缺少结构化来源。',
+      tone: 'decision',
+    };
+  }
+  return {
+    marker: `第 ${match[1]} 波`,
+    title: `${match[2].replace('/', ' · ')} · ${match[3].split(' · ')[0]}`,
+    detail: match[3].split(' · ').slice(1).join(' · ') || '关键选择记录。',
+    tone: 'decision',
+  };
+}
+
+function buildTerminalTimelineItem(run, summary, resultPriority) {
+  if (run.state === 'victory') {
+    return {
+      marker: `第 ${run.wave} 波`,
+      title: '远征完成',
+      detail: resultPriority?.hint || '路线已打通，可以提高风险或挑战试炼。',
+      tone: 'victory',
+    };
+  }
+
+  if (!summary.reason && !summary.waveLabel && run.state !== 'gameover') return null;
+  const wave = summary.wave || run.wave || '?';
+  const label = summary.waveLabel || `第 ${wave} 波`;
+  const priority = resultPriority?.label ? `下一把优先处理${resultPriority.label}。` : '';
+  return {
+    marker: `第 ${wave} 波`,
+    title: `崩盘节点 · ${label}`,
+    detail: [summary.reason || '余烬熄灭。', priority].filter(Boolean).join(' '),
+    tone: 'danger',
   };
 }
 

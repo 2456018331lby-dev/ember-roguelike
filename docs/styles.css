@@ -2264,11 +2264,91 @@ body::after {
 
 .build-report .result-section-title,
 .after-action .result-section-title,
+.result-timeline .result-section-title,
 .build-report .wide,
 .after-action .wide,
 .pressure-review,
 .decision-review {
   grid-column: 1 / -1;
+}
+
+.result-timeline {
+  grid-template-columns: 1fr;
+}
+
+.timeline-list {
+  display: grid;
+  gap: 8px;
+}
+
+.timeline-item {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr);
+  gap: 12px;
+  min-height: 74px;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(232, 184, 93, .1);
+  background:
+    linear-gradient(90deg, rgba(232, 184, 93, .06), rgba(5, 7, 11, .38)),
+    rgba(5, 7, 11, .34);
+}
+
+.timeline-marker {
+  display: grid;
+  place-items: center;
+  min-height: 50px;
+  border-radius: 8px;
+  border: 1px solid rgba(232, 184, 93, .14);
+  color: var(--ember-gold-soft);
+  background: rgba(5, 7, 11, .5);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.timeline-copy {
+  min-width: 0;
+  display: grid;
+  align-content: center;
+  gap: 6px;
+}
+
+.timeline-title {
+  color: var(--ember-text);
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.timeline-detail {
+  color: #c9d1dc;
+  font-size: 12px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.timeline-reward,
+.timeline-rest {
+  border-color: rgba(34, 197, 94, .18);
+  background:
+    linear-gradient(90deg, rgba(34, 197, 94, .08), rgba(5, 7, 11, .38)),
+    rgba(5, 7, 11, .34);
+}
+
+.timeline-forge {
+  border-color: rgba(245, 213, 140, .22);
+}
+
+.timeline-danger {
+  border-color: rgba(248, 113, 113, .28);
+  background:
+    linear-gradient(90deg, rgba(184, 70, 50, .16), rgba(5, 7, 11, .42)),
+    rgba(5, 7, 11, .38);
+}
+
+.timeline-victory {
+  border-color: rgba(134, 239, 172, .28);
 }
 
 .result-next {
@@ -2631,6 +2711,17 @@ body::after {
   .result-section,
   .result-next {
     padding: 12px;
+  }
+
+  .timeline-item {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .timeline-marker {
+    place-items: start;
+    min-height: 0;
+    padding: 8px 10px;
   }
 
   .final-stat,

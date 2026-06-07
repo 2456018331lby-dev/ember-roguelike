@@ -738,6 +738,28 @@ function showRest() {
   rewardEl.classList.remove('hidden');
 }
 
+function renderResultTimeline(items = []) {
+  if (!items.length) return '';
+  const toneClass = tone => {
+    const allowed = new Set(['reward', 'forge', 'shop', 'rest', 'danger', 'victory', 'decision']);
+    return allowed.has(tone) ? ` timeline-${tone}` : ' timeline-decision';
+  };
+  return `
+    <div class="result-section result-timeline">
+      <div class="result-section-title">复盘时间线</div>
+      <div class="timeline-list">
+        ${items.map(item => `
+          <div class="timeline-item${toneClass(item.tone)}">
+            <div class="timeline-marker">${escapeHtml(item.marker || '路线')}</div>
+            <div class="timeline-copy">
+              <div class="timeline-title">${escapeHtml(item.title || '关键节点')}</div>
+              <div class="timeline-detail">${escapeHtml(item.detail || '这一步改变了后续路线。')}</div>
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>`;
+}
+
 function showResult(victory) {
   const save = recordRun(run.score, run.wave, run.kills, run.maxCombo, victory, run.characterId);
   const presentation = buildRunPresentation(run, getPlayerStats(run), getCharacter(run.characterId));
@@ -759,6 +781,7 @@ function showResult(victory) {
   const nextRunHint = presentation.resultNextHint || weaknessText || '下一轮优先补最明显的输出、清场或安全网缺口。';
   const synergies = run.synergies || [];
   const extremes = run.extremes || [];
+  const timeline = renderResultTimeline(presentation.resultTimeline);
   gameoverTitle.textContent = panelTitle;
   finalStats.innerHTML = `
     <div class="result-brief ${resultTone}">
@@ -797,6 +820,7 @@ function showResult(victory) {
       ${decisionReview}
       ${deathTip}
     </div>
+    ${timeline}
     <div class="result-next">
       <span>下一把优先级 · ${escapeHtml(nextPriorityLabel)}</span>
       <strong>${escapeHtml(nextRunHint)}</strong>

@@ -2120,6 +2120,9 @@ test('死亡复盘应包含波次上下文和构筑建议', () => {
   assert.match(pres.deathDecisionLine, /治疗光环/);
   assert.equal(pres.resultPriorityLabel, '首领输出');
   assert.match(pres.resultNextHint, /高伤害|暴击|攻速/);
+  assert.ok(pres.resultTimeline.length >= 2, '复盘时间线应包含历史选择和崩盘节点');
+  assert.match(pres.resultTimeline[0].title, /治疗光环/);
+  assert.match(pres.resultTimeline.at(-1).title, /崩盘节点/);
   assert.equal(pres.deathReason, 'Boss 讨伐失败：输出不足，未能在弹幕窗口内击杀首领。');
 });
 
@@ -2138,6 +2141,7 @@ test('死亡复盘下一把优先级应跟随最大压力缺口', () => {
   };
   run.deathSummary = {
     reason: 'Boss 讨伐失败：容错不够，一次失误就再难回正。',
+    wave: 20,
     waveLabel: '第 20 波 Boss 讨伐',
     waveKind: 'boss',
     buildTip: '缺少安全网，凤凰余烬或屏障牌可以救命。',
@@ -2146,10 +2150,20 @@ test('死亡复盘下一把优先级应跟随最大压力缺口', () => {
     pressureGaps: run.buildAnalysis.pressureGaps,
     lastDecisions: ['第 19 波 营火/训练：战斗训练'],
   };
+  run.decisionLog = [
+    { wave: 14, type: 'reward', action: 'pick', name: '加特林', fitScore: 15.4 },
+    { wave: 19, type: 'forge', action: 'upgrade', name: '快刃', fitScore: 11.2 },
+    { wave: 19, type: 'rest', action: 'train', name: '战斗训练', fitScore: 8.1 },
+  ];
 
   const pres = buildRunPresentation(run, getPlayerStats(run), { name: '战士' });
 
   assert.equal(pres.resultPriorityLabel, '安全网');
   assert.match(pres.resultNextHint, /余烬护符|烟幕疾行|凤凰余烬/);
   assert.match(pres.resultNextHint, /安全网缺口最大/);
+  assert.equal(pres.resultTimeline.length, 4, '三次关键选择加一个崩盘节点');
+  assert.deepEqual(pres.resultTimeline.map(item => item.marker), ['第 14 波', '第 19 波', '第 19 波', '第 20 波']);
+  assert.match(pres.resultTimeline[0].detail, /拿牌/);
+  assert.match(pres.resultTimeline[2].title, /战前营火 · 战斗训练/);
+  assert.match(pres.resultTimeline[3].detail, /下一把优先处理安全网/);
 });

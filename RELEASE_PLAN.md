@@ -40,7 +40,7 @@ android/app/build/outputs/apk/debug/app-debug.apk
 当前最近一次验证 APK SHA256：
 
 ```text
-18AB40BBF01C2CA5D6DF776C41857566420CE09CDFB3AC326F419C720B9CF4CC
+1BCDFAF64F2EDEC1C1C1731E353629C4C6F873024C6CA3FC348B8B5204386D51
 ```
 
 ### 安装 / 启动验证
@@ -62,10 +62,10 @@ npm run verify:android:debug
 - 扫描启动后的 WebView / JS / Capacitor 致命错误
 - 如果脚本自动启动了模拟器，验证结束后自动关闭
 
-本机当前 `android/local.properties` 指向的 SDK 缺 `adb.exe`；最近一次安装 / 冷启动验证通过临时把 `C:\Users\24560\Desktop\study\kaoyandemo\.android-sdk\platform-tools` 放入 PATH 完成，验证包 SHA256 为：
+本机当前 `android/local.properties` 指向的 SDK 缺 `adb.exe`；最近一次安装 / 冷启动 / 点击流 smoke 通过临时把 `C:\Users\24560\Desktop\study\kaoyandemo\.android-sdk\platform-tools` 放入 PATH 完成，验证包 SHA256 为：
 
 ```text
-18AB40BBF01C2CA5D6DF776C41857566420CE09CDFB3AC326F419C720B9CF4CC
+1BCDFAF64F2EDEC1C1C1731E353629C4C6F873024C6CA3FC348B8B5204386D51
 ```
 
 完整点击流 smoke：

@@ -444,6 +444,7 @@ const resultReportExpression = `(() => {
   const briefCopy = document.querySelector('.result-brief p');
   const heroCards = [...document.querySelectorAll('.result-hero-card')];
   const sections = [...document.querySelectorAll('.result-section')];
+  const timelineItems = [...document.querySelectorAll('.timeline-item')];
   const next = document.querySelector('.result-next');
   const restart = document.querySelector('#restartBtn');
   const actions = document.querySelector('.result-actions');
@@ -467,9 +468,13 @@ const resultReportExpression = `(() => {
       /下一把优先级/.test(next.textContent || '') &&
       /数值缺口/.test(panel.textContent || '') &&
       /最后决策/.test(panel.textContent || '') &&
+      /复盘时间线/.test(panel.textContent || '') &&
+      timelineItems.length >= 3 &&
+      timelineItems.some(item => /崩盘节点/.test(item.textContent || '')) &&
       noHorizontalOverflow),
     heroCards: heroCards.map(card => card.textContent.trim()),
     sections: sections.map(section => section.textContent.trim().slice(0, 32)),
+    timelineItems: timelineItems.map(item => item.textContent.trim().slice(0, 48)),
     panelRect: panelRect ? { width: Math.round(panelRect.width), height: Math.round(panelRect.height), scrollHeight: panel.scrollHeight } : null,
     briefRect: briefRect ? { height: Math.round(briefRect.height), bottom: Math.round(briefRect.bottom) } : null,
     outcomeRect: outcomeRect ? { bottom: Math.round(outcomeRect.bottom) } : null,
@@ -567,6 +572,9 @@ async function runVisualSmoke() {
     await evaluate(cdp, `window.__EMBER_DEBUG__.showResult(false)`);
     await waitForOk(cdp, resultReportExpression, 'desktop result report');
     const resultShot = await capture(cdp, 'result-desktop.png');
+    await evaluate(cdp, `document.querySelector('.result-timeline')?.scrollIntoView({ block: 'center' }); true`);
+    await waitForOk(cdp, resultReportExpression, 'desktop result timeline report');
+    const resultTimelineShot = await capture(cdp, 'result-timeline-desktop.png');
 
     await cdp.send('Emulation.setDeviceMetricsOverride', {
       width: 390,
@@ -604,12 +612,15 @@ async function runVisualSmoke() {
     await evaluate(cdp, `window.__EMBER_DEBUG__.showResult(false)`);
     await waitForOk(cdp, resultReportExpression, 'mobile result report');
     const mobileResultShot = await capture(cdp, 'result-mobile.png');
+    await evaluate(cdp, `document.querySelector('.result-timeline')?.scrollIntoView({ block: 'center' }); true`);
+    await waitForOk(cdp, resultReportExpression, 'mobile result timeline report');
+    const mobileResultTimelineShot = await capture(cdp, 'result-timeline-mobile.png');
 
     assert(consoleErrors.length === 0, `visual smoke should have no console/runtime errors: ${consoleErrors.join(' | ')}`);
     assert(!serverStderr.trim(), `serve-web.mjs should not write stderr: ${serverStderr.trim()}`);
 
     return {
-      screenshots: [menuShot, charShot, gameplayShot, rewardShot, restShot, bossShot, bossFightShot, highWaveBossShot, resultShot, mobileMenuShot, mobileCharShot, mobileGameplayShot, mobileRewardShot, mobileRestShot, mobileBossFightShot, mobileResultShot],
+      screenshots: [menuShot, charShot, gameplayShot, rewardShot, restShot, bossShot, bossFightShot, highWaveBossShot, resultShot, resultTimelineShot, mobileMenuShot, mobileCharShot, mobileGameplayShot, mobileRewardShot, mobileRestShot, mobileBossFightShot, mobileResultShot, mobileResultTimelineShot],
       chromeWarnings: chromeStderr.trim().split(/\r?\n/).filter(Boolean).slice(0, 3),
     };
   } finally {

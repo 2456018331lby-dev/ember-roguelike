@@ -20,6 +20,7 @@ const requiredScreenshots = [
   'boss-fight-desktop.png',
   'boss-fight-highwave-desktop.png',
   'result-desktop.png',
+  'result-timeline-desktop.png',
   'menu-mobile.png',
   'character-select-mobile.png',
   'gameplay-mobile.png',
@@ -27,6 +28,7 @@ const requiredScreenshots = [
   'rest-mobile.png',
   'boss-fight-mobile.png',
   'result-mobile.png',
+  'result-timeline-mobile.png',
 ];
 
 const strictScreenshots = new Set([
