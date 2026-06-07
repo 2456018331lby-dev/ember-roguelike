@@ -278,14 +278,21 @@ const rewardCheckExpression = `(() => {
   const cards = [...document.querySelectorAll('#choices .card')];
   const first = cards[0];
   const decisions = cards.map(card => card.querySelector('.card-decision')?.textContent.trim() || '');
+  const opportunities = cards.map(card => card.dataset.opportunity || card.querySelector('.card-readout-title')?.textContent.trim() || '');
+  const riskLevels = cards.map(card => Number(card.dataset.riskLevel));
   const scores = cards
     .map(card => Number(card.dataset.fitScore))
     .filter(score => Number.isFinite(score));
   const sorted = scores.every((score, index) => index === 0 || scores[index - 1] >= score - 0.001);
   const noHorizontalOverflow = document.documentElement.scrollWidth <= window.innerWidth + 2;
+  const noCardClipping = cards.every(card => card.scrollHeight <= card.clientHeight + 2);
+  const cardHeights = cards.map(card => ({ scroll: card.scrollHeight, client: card.clientHeight }));
   const completeCards = cards.every(card =>
     card.querySelector('.card-shell') &&
     card.querySelector('.card-foot') &&
+    card.querySelector('.card-readout') &&
+    card.querySelector('.card-readout-title')?.textContent.trim().length >= 3 &&
+    card.querySelector('.card-readout-detail')?.textContent.trim().length >= 8 &&
     card.querySelector('.fit-line')?.textContent.includes('建议') &&
     card.querySelector('.cost')?.textContent.trim().length > 4
   );
@@ -296,10 +303,16 @@ const rewardCheckExpression = `(() => {
       panel && cards.length >= 3 &&
       first?.classList.contains('card-recommended') &&
       decisions[0] && /首选|豪赌/.test(decisions[0]) &&
-      sorted && completeCards && noHorizontalOverflow &&
+      opportunities.every(label => /协同|修复|核心|高危|成长|路线/.test(label)) &&
+      riskLevels.every(level => Number.isFinite(level) && level >= 0 && level <= 3) &&
+      sorted && completeCards && noCardClipping && noHorizontalOverflow &&
       firstRect && firstRect.width >= 240 && firstRect.height >= 220 &&
       panelRect && panelRect.width <= window.innerWidth + 2),
     decisions,
+    opportunities,
+    riskLevels,
+    noCardClipping,
+    cardHeights,
     scores,
     cardCount: cards.length,
     firstRect: firstRect ? { top: Math.round(firstRect.top), width: Math.round(firstRect.width), height: Math.round(firstRect.height) } : null,

@@ -37,10 +37,10 @@ npm run build:android:debug
 android/app/build/outputs/apk/debug/app-debug.apk
 ```
 
-当前最近一次验证 APK SHA256：
+当前最近一次构建 / payload 校验 APK SHA256：
 
 ```text
-1BCDFAF64F2EDEC1C1C1731E353629C4C6F873024C6CA3FC348B8B5204386D51
+6AD68AC5EF6C3D32161795E067C9DEA1AA72CE943EA1834C8C2A16FC296C3B7B
 ```
 
 ### 安装 / 启动验证
@@ -62,7 +62,7 @@ npm run verify:android:debug
 - 扫描启动后的 WebView / JS / Capacitor 致命错误
 - 如果脚本自动启动了模拟器，验证结束后自动关闭
 
-本机当前 `android/local.properties` 指向的 SDK 缺 `adb.exe`；最近一次安装 / 冷启动 / 点击流 smoke 通过临时把 `C:\Users\24560\Desktop\study\kaoyandemo\.android-sdk\platform-tools` 放入 PATH 完成，验证包 SHA256 为：
+本机当前 `android/local.properties` 指向的 SDK 缺 `adb.exe`；临时 PATH 可使用 `C:\Users\24560\Desktop\study\kaoyandemo\.android-sdk\platform-tools` 找到 `adb.exe`。本轮当前 APK 因本机找不到 `emulator.exe` 且无在线设备，未能重跑安装 / 冷启动 / 点击流 smoke。最近一次通过的点击流验证包 SHA256 为：
 
 ```text
 1BCDFAF64F2EDEC1C1C1731E353629C4C6F873024C6CA3FC348B8B5204386D51
@@ -87,15 +87,15 @@ output/android-smoke/character-select.png
 output/android-smoke/gameplay.png
 ```
 
-当前本机 `NightRunner35` Android 模拟器已经完成：
+前序验证包已在本机 `NightRunner35` Android 模拟器完成：
 
 - APK 安装成功
 - 冷启动成功
 - 焦点窗口检查通过
 - 点击进入角色选择和局内战斗通过
 - logcat fatal-error scan 通过
-- 当前验证包已包含第 19 波锻造后转入 Boss 前营火；`烟幕疾行` 现在除了高波极端 safety 缺口，也会在第 20 波以后机动性短板明显时出现
-- 当前验证包也包含战前营火推荐标签与建议文案，且 verifier 会在 AVD `sys.boot_completed` 后额外等待 8 秒再启动检查
+- 前序验证包已包含第 19 波锻造后转入 Boss 前营火；`烟幕疾行` 现在除了高波极端 safety 缺口，也会在第 20 波以后机动性短板明显时出现
+- 前序验证包也包含战前营火推荐标签与建议文案，且 verifier 会在 AVD `sys.boot_completed` 后额外等待 8 秒再启动检查
 - verifier 的 Android 点击 smoke 现在会对菜单和角色选择页使用多候选点击点位，降低 HUD / 按钮布局微调后脚本立刻失效的概率
 
 如果不走这个脚本，再手工执行时要注意：

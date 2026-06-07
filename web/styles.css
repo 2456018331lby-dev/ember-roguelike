@@ -740,6 +740,36 @@ body::after {
 .card.legendary::before { border-left-color: rgba(250,204,21,.95); }
 .card.risk-2::before,
 .card.risk-3::before { border-left-color: rgba(248,113,113,.9); }
+.card.opportunity-synergy {
+  border-color: rgba(34,211,238,.34);
+  box-shadow: inset 0 0 0 1px rgba(34,211,238,.12), 0 18px 42px rgba(8,47,73,.18);
+}
+.card.opportunity-repair {
+  border-color: rgba(74,222,128,.28);
+}
+.card.opportunity-safety {
+  border-color: rgba(45,212,191,.3);
+}
+.card.opportunity-risk {
+  border-color: rgba(248,113,113,.42);
+}
+.card.opportunity-growth,
+.card.opportunity-rare {
+  border-color: rgba(192,132,252,.3);
+}
+.card.legendary {
+  background:
+    linear-gradient(180deg, rgba(250,204,21,.075), rgba(255,255,255,.018)),
+    radial-gradient(circle at top right, rgba(245,158,11,.18), transparent 45%);
+}
+.card.epic {
+  background:
+    linear-gradient(180deg, rgba(168,85,247,.07), rgba(255,255,255,.016)),
+    radial-gradient(circle at top right, rgba(96,165,250,.08), transparent 42%);
+}
+.card.risk-3 {
+  animation: rewardRiskPulse 1.8s ease-in-out infinite;
+}
 .card-shell,
 .card-foot {
   padding: 16px;
@@ -824,6 +854,12 @@ body::after {
 .tone-neutral { color: #dbeafe; background: rgba(59,130,246,.08); }
 .tone-accent { color: #fde68a; background: rgba(245,158,11,.1); }
 .tone-danger { color: #fecaca; background: rgba(239,68,68,.1); }
+.tone-synergy { color: #cffafe; background: rgba(8,145,178,.14); border-color: rgba(34,211,238,.24); }
+.tone-repair { color: #dcfce7; background: rgba(22,163,74,.12); border-color: rgba(74,222,128,.2); }
+.tone-safety { color: #ccfbf1; background: rgba(13,148,136,.14); border-color: rgba(45,212,191,.22); }
+.tone-risk { color: #fecaca; background: rgba(185,28,28,.18); border-color: rgba(248,113,113,.28); }
+.tone-growth { color: #ede9fe; background: rgba(124,58,237,.14); border-color: rgba(196,181,253,.22); }
+.tone-rare { color: #dbeafe; background: rgba(37,99,235,.14); border-color: rgba(96,165,250,.24); }
 .card h3 {
   font-size: 22px;
   letter-spacing: .02em;
@@ -836,8 +872,44 @@ body::after {
   background: rgba(255,255,255,.045);
   color: #fef3c7;
 }
+.card-readout {
+  display: grid;
+  gap: 4px;
+  margin-top: 12px;
+  padding: 10px 11px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.08);
+  min-height: 72px;
+}
+.card-readout-title {
+  color: #f8fafc;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .04em;
+}
+.card-readout-detail {
+  color: #cbd5e1;
+  font-size: 12px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.card-readout-hint {
+  color: #fef3c7;
+  font-size: 11px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
 .card .cost.no-cost {
   color: #86efac;
+}
+
+@keyframes rewardRiskPulse {
+  0%, 100% { box-shadow: inset 0 0 0 1px rgba(248,113,113,.18), 0 18px 46px rgba(0,0,0,.3); }
+  50% { box-shadow: inset 0 0 0 1px rgba(248,113,113,.34), 0 18px 46px rgba(0,0,0,.3), 0 0 28px rgba(248,113,113,.18); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card.risk-3 { animation: none; }
 }
 .reward-panel,
 .result-panel {
@@ -1809,7 +1881,7 @@ body::after {
 }
 
 .card {
-  min-height: 292px;
+  min-height: 382px;
   border-radius: 8px;
   border-color: rgba(232, 184, 93, .18);
   color: var(--ember-text);
@@ -1933,6 +2005,113 @@ body::after {
 .card-foot {
   background: linear-gradient(180deg, rgba(5, 7, 11, .18), rgba(5, 7, 11, .46));
   border-top-color: rgba(232, 184, 93, .1);
+}
+
+.card.opportunity-synergy {
+  border-color: rgba(78, 196, 233, .5);
+  box-shadow:
+    inset 0 0 0 1px rgba(78, 196, 233, .14),
+    0 18px 44px rgba(4, 47, 74, .22);
+}
+
+.card.opportunity-repair {
+  border-color: rgba(111, 214, 133, .36);
+}
+
+.card.opportunity-safety {
+  border-color: rgba(73, 211, 184, .4);
+}
+
+.card.opportunity-risk {
+  border-color: rgba(255, 125, 105, .56);
+}
+
+.card.opportunity-growth,
+.card.opportunity-rare {
+  border-color: rgba(183, 144, 255, .38);
+}
+
+.card.legendary {
+  background:
+    linear-gradient(180deg, rgba(48, 42, 25, .96), rgba(11, 12, 16, .98)),
+    linear-gradient(90deg, rgba(245, 213, 140, .12), transparent 50%, rgba(78, 196, 233, .06));
+}
+
+.card.epic {
+  background:
+    linear-gradient(180deg, rgba(35, 31, 46, .96), rgba(11, 12, 16, .98)),
+    linear-gradient(90deg, rgba(183, 144, 255, .12), transparent 48%, rgba(78, 196, 233, .06));
+}
+
+.card.risk-3 {
+  animation: rewardRiskPulse 1.8s ease-in-out infinite;
+}
+
+.tone-synergy {
+  color: #d8fbff;
+  background: rgba(22, 95, 124, .34);
+  border-color: rgba(78, 196, 233, .28);
+}
+
+.tone-repair {
+  color: #d9ffe0;
+  background: rgba(35, 99, 55, .32);
+  border-color: rgba(111, 214, 133, .24);
+}
+
+.tone-safety {
+  color: #d4fff6;
+  background: rgba(28, 105, 92, .34);
+  border-color: rgba(73, 211, 184, .26);
+}
+
+.tone-risk {
+  color: #ffd2ca;
+  background: rgba(119, 35, 32, .38);
+  border-color: rgba(255, 125, 105, .3);
+}
+
+.tone-growth {
+  color: #eee3ff;
+  background: rgba(83, 55, 130, .34);
+  border-color: rgba(183, 144, 255, .24);
+}
+
+.tone-rare {
+  color: #e0efff;
+  background: rgba(36, 83, 138, .3);
+  border-color: rgba(108, 169, 244, .24);
+}
+
+.card-readout {
+  display: grid;
+  gap: 4px;
+  margin-top: 12px;
+  padding: 10px 11px;
+  min-height: 72px;
+  border-radius: 6px;
+  border: 1px solid rgba(232, 184, 93, .12);
+}
+
+.card-readout-title {
+  color: #fff8e8;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
+.card-readout-detail {
+  color: #c9d2dd;
+  font-size: 12px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.card-readout-hint {
+  color: #ffe6a6;
+  font-size: 11px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
 }
 
 .forge-card {
@@ -2557,7 +2736,7 @@ body::after {
   }
 
   .card {
-    min-height: 272px;
+    min-height: 382px;
   }
 
   .card-shell,
@@ -2652,7 +2831,7 @@ body::after {
 
   .reward-panel {
     max-height: calc(100vh - 20px);
-    padding: 16px;
+    padding: 14px;
   }
 
   @supports (height: 100dvh) {
@@ -2662,6 +2841,35 @@ body::after {
   .reward-header h2,
   .panel-heading h2 {
     font-size: 26px;
+  }
+
+  .reward-header {
+    padding-bottom: 10px;
+  }
+
+  .reward-header p {
+    font-size: 14px;
+    line-height: 1.45;
+  }
+
+  .reward-toolbar {
+    margin: 10px 0;
+    padding: 10px 12px;
+  }
+
+  .reward-meta,
+  .reward-guidance-value,
+  .reward-guidance-subvalue {
+    font-size: 12px;
+    line-height: 1.45;
+  }
+
+  .reward-guidance {
+    margin-bottom: 10px;
+  }
+
+  .reward-guidance-card {
+    padding: 12px;
   }
 
   .result-panel {
@@ -2745,7 +2953,28 @@ body::after {
   }
 
   .card {
-    min-height: 248px;
+    min-height: 390px;
+  }
+
+  .reward-panel .card-shell,
+  .reward-panel .card-foot {
+    padding: 13px;
+  }
+
+  .reward-panel .card h3 {
+    font-size: 22px;
+    margin: 8px 0;
+  }
+
+  .reward-panel .card .desc {
+    min-height: 0;
+    line-height: 1.4;
+  }
+
+  .reward-panel .card-readout {
+    min-height: 0;
+    margin-top: 10px;
+    padding: 9px;
   }
 
   .char-card {

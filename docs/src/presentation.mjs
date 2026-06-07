@@ -1,6 +1,7 @@
 export function buildRunPresentation(run, stats, character) {
   const buildSummary = buildBuildSummary(run);
   const rewardSummary = buildRewardSummary(run);
+  const rewardCardReadouts = buildRewardCardReadouts(run);
   const targetProfile = run.nextWavePreview || run.waveProfile;
   const buildAnalysis = run.buildAnalysis || {};
   const weaknessText = buildWeaknessSummary(buildAnalysis);
@@ -42,6 +43,7 @@ export function buildRunPresentation(run, stats, character) {
     extremes: [...(run.extremes || [])],
     buildSummary,
     rewardSummary,
+    rewardCardReadouts,
     messages: (run.messages || []).slice(0, 3),
     characterName: character?.name || run.characterId,
     doomSeconds: stats.doomTimer > 0 ? Math.ceil(Math.max(0, stats.doomTimer - run.gameTime)) : 0,
@@ -104,6 +106,177 @@ export function buildRewardSummary(run) {
     fitHint: card.fitHint || '提供通用数值',
     fitScore: card.fitScore || 0,
   }));
+}
+
+function buildRewardCardReadouts(run) {
+  const cards = run.rewardChoices || [];
+  if (!cards.length) return [];
+  const scores = cards
+    .map(rewardFitScoreValue)
+    .filter(score => score !== null);
+  const bestScore = scores.length ? Math.max(...scores) : null;
+  return cards.map((card, index) => {
+    const fitScore = rewardFitScoreValue(card);
+    const riskLevel = rewardRiskLevel(card);
+    const isTop = fitScore !== null && bestScore !== null && index === 0 && fitScore >= bestScore - 0.001;
+    const decision = buildRewardDecision(card, fitScore, bestScore, riskLevel, isTop);
+    const opportunity = buildRewardOpportunity(card, run, riskLevel);
+    return {
+      id: card.id,
+      fitScore: fitScore ?? 0,
+      isTop,
+      decisionLabel: decision.label,
+      decisionTone: decision.tone,
+      riskLevel,
+      riskLabel: rewardRiskLabel(riskLevel),
+      riskText: buildRewardRiskText(card, riskLevel),
+      rarityLabel: rewardRarityLabel(card.rarity),
+      opportunityTitle: opportunity.title,
+      opportunityDetail: opportunity.detail,
+      opportunityTone: opportunity.tone,
+    };
+  });
+}
+
+function rewardFitScoreValue(card) {
+  const score = Number(card?.fitScore);
+  return Number.isFinite(score) ? score : null;
+}
+
+function rewardRiskLevel(card) {
+  let level = 0;
+  if (card?.type === 'curse') level += 2;
+  if ((card?.sacrifice?.amount || 0) >= 0.12) level += 1;
+  if (card?.doomTimer || card?.decayRate || card?.selfDamageChance || (card?.armorBonus || 0) < 0) level += 2;
+  if ((card?.damageMultiplier || 1) >= 2 && card?.sacrifice?.stat === 'health') level += 1;
+  return Math.min(3, level);
+}
+
+function buildRewardDecision(card, fitScore, bestScore, riskLevel, isTop) {
+  if (isTop && riskLevel >= 2) return { label: '高分豪赌', tone: 'danger' };
+  if (isTop) return { label: '本轮首选', tone: 'recommended' };
+  if (riskLevel >= 2) return { label: '豪赌', tone: 'danger' };
+  if (isStabilizingReward(card)) return { label: '稳血线', tone: 'safe' };
+  if (fitScore !== null && bestScore !== null && bestScore - fitScore <= 1.2) return { label: '可替代', tone: 'neutral' };
+  return { label: '备选', tone: 'muted' };
+}
+
+function isStabilizingReward(card) {
+  return Boolean(card?.regen || card?.lifesteal || card?.barrier || card?.armorBonus || card?.dodgeChance || card?.reflect || card?.thorns || card?.revive);
+}
+
+function rewardRiskLabel(level) {
+  if (level >= 3) return '死亡赌注';
+  if (level === 2) return '高风险';
+  if (level === 1) return '献祭风险';
+  return '低风险';
+}
+
+function buildRewardRiskText(card, riskLevel) {
+  if (!card?.sacrifice && riskLevel === 0) return '无献祭代价';
+  const parts = [];
+  if (card?.sacrifice) parts.push(rewardSacrificeText(card.sacrifice));
+  if (card?.doomTimer) parts.push(`${Math.round(card.doomTimer)} 秒末日`);
+  if (card?.decayRate) parts.push(`每秒流失 ${card.decayRate}`);
+  if (card?.selfDamageChance) parts.push(`${Math.round(card.selfDamageChance * 100)}% 自伤`);
+  if ((card?.armorBonus || 0) < 0) parts.push(`护甲 ${card.armorBonus}`);
+  return parts.join(' · ') || '低风险';
+}
+
+function rewardSacrificeText(sacrifice) {
+  if (!sacrifice) return '无';
+  const names = {
+    health: '生命',
+    attack: '攻击',
+    speed: '移速',
+    attack_speed: '攻速',
+  };
+  return `${names[sacrifice.stat] || sacrifice.stat} -${Math.round((sacrifice.amount || 0) * 100)}%`;
+}
+
+function rewardRarityLabel(rarity = 'common') {
+  return {
+    common: '普通',
+    rare: '稀有',
+    epic: '史诗',
+    legendary: '传说',
+    special: '特殊',
+  }[rarity] || rarity;
+}
+
+function buildRewardOpportunity(card, run, riskLevel) {
+  const synergy = findPendingSynergy(card, run);
+  if (synergy) {
+    return {
+      title: '协同点亮',
+      detail: `与【${synergy.partnerName}】组成 ${synergy.name}，拿下后会立刻改变构筑轴。`,
+      tone: 'synergy',
+    };
+  }
+
+  const weaknesses = run.buildAnalysis?.weaknesses || {};
+  if (weaknesses.safety && (card.revive || card.barrier || card.dodgeChance)) {
+    return { title: '修复安全网', detail: '补一次失误容错，适合高波 Boss 前保住路线。', tone: 'safety' };
+  }
+  if (weaknesses.aoe && isRewardAoeRepair(card)) {
+    return { title: '修复清场', detail: '提高处理怪群和压场的速度，降低被包围概率。', tone: 'repair' };
+  }
+  if (weaknesses.sustain && isStabilizingReward(card)) {
+    return { title: '修复续航', detail: '补持续回血、护盾或硬度，减少高波换血崩盘。', tone: 'safety' };
+  }
+  if (weaknesses.singleTarget && isRewardSingleTargetRepair(card)) {
+    return { title: '修复首领输出', detail: '直接抬升单体击杀速度，适合 Boss 跑道变短的局。', tone: 'repair' };
+  }
+
+  if (riskLevel >= 2) {
+    return { title: '高危爆发', detail: '收益很高，但会压低容错；除非已有安全网，否则不要只看契合分。', tone: 'risk' };
+  }
+
+  if (card.perCardDamage || card.perCardsDamage || card.rewardDoubleChance || card.sacrificeReduce) {
+    return { title: '成长引擎', detail: '越早拿越容易滚出后续收益，适合路线已经能活下来的局。', tone: 'growth' };
+  }
+
+  if (card.rarity === 'legendary' || card.rarity === 'epic') {
+    return { title: '稀有核心', detail: '高品质铭牌，优先判断它是否服务当前短板而不是只看稀有度。', tone: 'rare' };
+  }
+
+  return { title: '路线补强', detail: card.fitHint || '提供通用数值，适合作为当前构筑的稳定补位。', tone: 'neutral' };
+}
+
+function findPendingSynergy(card, run) {
+  const deck = run.player?.deck || [];
+  const ids = new Set(deck.map(item => item.id));
+  const pairs = [
+    ['flame_sword', 'meteor', '烈焰共鸣'],
+    ['quick_blade', 'gatling', '速射核心'],
+    ['poison_dagger', 'bleed_axe', '腐血瘟疫'],
+    ['dodge_cloak', 'phase_shift', '虚空步'],
+    ['vampire_edge', 'berserker', '血怒汲取'],
+    ['lightning', 'crit_eye', '雷暴视界'],
+    ['heal_aura', 'barrier', '圣愈庇护'],
+    ['shadow_blade', 'crit_eye', '暗影暴击'],
+    ['iron_wall', 'stone_skin', '不破铁壁'],
+    ['reflect_shield', 'thorn_skin', '反弹荆棘'],
+    ['decay', 'doom', '命定之死'],
+    ['frost_staff', 'shock_orb', '冰雷双控'],
+    ['heavy_core', 'swift_feet', '均衡之力'],
+    ['collector', 'greed', '财富即力量'],
+  ];
+  for (const [a, b, name] of pairs) {
+    const partnerId = card.id === a ? b : card.id === b ? a : null;
+    if (!partnerId || !ids.has(partnerId)) continue;
+    const partner = deck.find(item => item.id === partnerId);
+    return { name, partnerName: partner?.name || partnerId };
+  }
+  return null;
+}
+
+function isRewardAoeRepair(card) {
+  return Boolean(card.chain || card.rangeBonus || card.slow || card.attackSpeedBonus || card.onKillExplosion);
+}
+
+function isRewardSingleTargetRepair(card) {
+  return Boolean(card.damage || card.attackBonus || card.damageMultiplier || card.critChance || card.critDamageBonus || card.armorPierce);
 }
 
 

@@ -569,6 +569,7 @@ function showReward() {
   choicesEl.innerHTML = '';
   const stats = getPlayerStats(run);
   const presentation = buildRunPresentation(run, stats, getCharacter(run.characterId));
+  const readouts = presentation.rewardCardReadouts || [];
   if (rewardMeta) rewardMeta.textContent = presentation.rewardLine;
   if (waveSummaryText) waveSummaryText.textContent = presentation.waveSummary || '';
   if (rewardWhyText) rewardWhyText.textContent = presentation.rewardWhy || '';
@@ -590,31 +591,43 @@ function showReward() {
     .reduce((best, score) => best === null ? score : Math.max(best, score), null);
   (run.rewardChoices || []).forEach((card, index) => {
     const el = document.createElement('button');
-    const decision = buildCardDecision(card, index, bestScore);
+    const fallbackDecision = buildCardDecision(card, index, bestScore);
+    const readout = readouts[index]?.id === card.id
+      ? readouts[index]
+      : readouts.find(item => item.id === card.id);
+    const decision = readout
+      ? { label: readout.decisionLabel, tone: readout.decisionTone, risk: readout.riskLevel, isTop: readout.isTop }
+      : fallbackDecision;
+    const opportunityTone = readout?.opportunityTone || 'neutral';
     const score = cardFitScoreValue(card);
     const scoreText = score === null ? '--' : score.toFixed(1);
-    const statsLine = cardStatsLine(card);
-    el.className = `card ${card.rarity || 'common'} ${index === 0 && score !== null ? 'card-recommended' : ''} risk-${decision.risk}`;
+    const isTopChoice = Boolean(readout?.isTop ?? (index === 0 && score !== null));
+    el.className = `card ${card.rarity || 'common'} ${isTopChoice ? 'card-recommended' : ''} risk-${decision.risk} opportunity-${opportunityTone}`;
     el.dataset.fitScore = scoreText;
     el.dataset.decision = decision.label;
+    el.dataset.riskLevel = String(decision.risk);
+    el.dataset.opportunity = readout?.opportunityTitle || '';
     el.innerHTML = `
       <div class="card-shell">
         <div class="card-decision-row">
           <span class="card-decision tone-${decision.tone}">${escapeHtml(decision.label)}</span>
-          <span class="card-rarity">${escapeHtml(rarityName(card.rarity))}</span>
+          <span class="card-rarity">${escapeHtml(readout?.rarityLabel || rarityName(card.rarity))}</span>
         </div>
         <div class="card-topline">
           <div class="type">${typeIcon(card.type)} ${escapeHtml(typeName(card.type))}</div>
-          <div class="card-score ${index === 0 && score !== null ? 'is-top' : ''}">契合 ${scoreText}</div>
+          <div class="card-score ${isTopChoice ? 'is-top' : ''}">契合 ${scoreText}</div>
         </div>
         <h3>${escapeHtml(card.name)}</h3>
         <div class="desc">${escapeHtml(card.desc || '')}</div>
         <div class="card-tags">${buildCardTags(card)}</div>
-        <div class="stats-line">${escapeHtml(statsLine || '无额外数值')}</div>
-        <div class="fit-line">建议：${escapeHtml(card.fitHint || '提供通用数值')}</div>
+        <div class="card-readout fit-line tone-${opportunityTone}">
+          <div class="card-readout-title">${escapeHtml(readout?.opportunityTitle || '路线补强')}</div>
+          <div class="card-readout-detail">${escapeHtml(readout?.opportunityDetail || card.fitHint || '提供通用数值。')}</div>
+          <div class="card-readout-hint">建议：${escapeHtml(card.fitHint || '提供通用数值')}</div>
+        </div>
       </div>
       <div class="card-foot">
-        <div class="cost ${card.sacrifice ? '' : 'no-cost'}">${card.sacrifice ? '代价' : '无献祭'}：${escapeHtml(buildCardRiskText(card, decision.risk))}</div>
+        <div class="cost ${card.sacrifice ? '' : 'no-cost'}">${escapeHtml(readout?.riskLabel || (card.sacrifice ? '代价' : '无献祭'))}：${escapeHtml(readout?.riskText || buildCardRiskText(card, decision.risk))}</div>
         ${run.synergies?.length ? `<div class="combo-hint">当前协同：${escapeHtml(run.synergies.join(' · '))}</div>` : ''}
       </div>`;
     el.onclick = () => {
@@ -2305,30 +2318,6 @@ function costText(s) {
   if (!s) return '无';
   const names = { speed: '移速', attack: '攻击', health: '生命', attack_speed: '攻速' };
   return `${names[s.stat] || s.stat} -${Math.round(s.amount * 100)}%`;
-}
-function cardStatsLine(c) {
-  const parts = [];
-  if (c.damage) parts.push(`伤害+${c.damage}`);
-  if (c.attackBonus) parts.push(`攻击+${c.attackBonus}`);
-  if (c.armorBonus) parts.push(`护甲+${c.armorBonus}`);
-  if (c.speedBonus) parts.push(`移速+${c.speedBonus}`);
-  if (c.attackSpeedBonus) parts.push(`攻速${c.attackSpeedBonus > 0 ? '+' : ''}${Math.round(c.attackSpeedBonus * 100)}%`);
-  if (c.critChance) parts.push(`暴击+${Math.round(c.critChance * 100)}%`);
-  if (c.critDamageBonus) parts.push(`暴伤+${Math.round(c.critDamageBonus * 100)}%`);
-  if (c.lifesteal) parts.push(`吸血${Math.round(c.lifesteal * 100)}%`);
-  if (c.chain) parts.push(`链击${c.chain}`);
-  if (c.regen) parts.push(`回血+${c.regen}/s`);
-  if (c.barrier) parts.push(`护盾+${c.barrier}`);
-  if (c.damageMultiplier) parts.push(`伤害x${c.damageMultiplier}`);
-  if (c.dodgeChance) parts.push(`闪避+${Math.round(c.dodgeChance * 100)}%`);
-  if (c.rangeBonus) parts.push(`射程+${c.rangeBonus}`);
-  if (c.armorPierce) parts.push(`破甲+${c.armorPierce}`);
-  if (c.slow) parts.push(`减速${Math.round(c.slow * 100)}%`);
-  if (c.dot) parts.push(`中毒+${c.dot}/s`);
-  if (c.bleed) parts.push(`流血+${c.bleed}/s`);
-  if (c.thorns) parts.push(`反伤+${c.thorns}`);
-  if (c.revive) parts.push(`复活+${c.revive}`);
-  return parts.join(' · ');
 }
 
 function enableDebugHooks() {

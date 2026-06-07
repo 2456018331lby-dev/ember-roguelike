@@ -164,6 +164,68 @@ test('presentation 会输出短板强度与奖励解释数值', () => {
   assert.match(presentation.rewardWhy, /32/);
 });
 
+test('presentation 奖励读板应标出协同机会和高风险', () => {
+  const run = createRun(3030);
+  run.wave = 4;
+  run.nextWavePreview = {
+    kind: 'boss',
+    wave: 5,
+    label: '首领战',
+    summary: '首领单独入场',
+    risk: '先补输出和安全网',
+    rewardTag: 'burst',
+    rewardGuard: 'survival',
+  };
+  run.player.deck.push({
+    id: 'flame_sword',
+    name: '烈焰剑',
+    type: 'attack',
+    rarity: 'common',
+    damage: 12,
+    desc: '火焰斩击',
+  });
+  run.rewardChoices = enrichRewardChoices(run, [
+    {
+      id: 'meteor',
+      name: '陨石术',
+      type: 'attack',
+      rarity: 'epic',
+      damage: 40,
+      onKillExplosion: 35,
+      desc: '召唤陨石爆破怪群',
+      sacrifice: { stat: 'health', amount: 0.08 },
+    },
+    {
+      id: 'doom',
+      name: '末日',
+      type: 'curse',
+      rarity: 'epic',
+      damageMultiplier: 2.8,
+      doomTimer: 45,
+      desc: '高爆发倒计时',
+      sacrifice: { stat: 'health', amount: 0.2 },
+    },
+    {
+      id: 'barrier',
+      name: '能量屏障',
+      type: 'defense',
+      rarity: 'epic',
+      barrier: 40,
+      desc: '开战护盾',
+      sacrifice: { stat: 'health', amount: 0.1 },
+    },
+  ], run.nextWavePreview);
+
+  const presentation = buildRunPresentation(run, getPlayerStats(run), getCharacter(run.characterId));
+  assert.equal(presentation.rewardCardReadouts.length, run.rewardChoices.length);
+  const meteor = presentation.rewardCardReadouts.find(item => item.id === 'meteor');
+  const doom = presentation.rewardCardReadouts.find(item => item.id === 'doom');
+  assert.equal(meteor.opportunityTitle, '协同点亮');
+  assert.match(meteor.opportunityDetail, /烈焰共鸣/);
+  assert.ok(doom.riskLevel >= 2, `末日应被标为高风险，实际 ${doom.riskLevel}`);
+  assert.match(doom.riskText, /末日|生命/);
+});
+
 test('构筑压力目标应随中后期波次成长', () => {
   const run = createRun(2027);
   run.wave = 15;
