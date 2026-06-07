@@ -741,31 +741,66 @@ function showRest() {
 function showResult(victory) {
   const save = recordRun(run.score, run.wave, run.kills, run.maxCombo, victory, run.characterId);
   const presentation = buildRunPresentation(run, getPlayerStats(run), getCharacter(run.characterId));
-  gameoverTitle.textContent = victory ? '余烬永不熄灭' : '余烬熄灭';
-  const deathTip = presentation.deathBuildTip ? `<div class="final-stat hint"><span>复盘建议</span><span>${presentation.deathBuildTip}</span></div>` : '';
-  const waveContext = presentation.deathWaveLabel ? `<div class="final-stat"><span>阵亡波次</span><span>${presentation.deathWaveLabel}</span></div>` : '';
+  const character = getCharacter(run.characterId);
+  const resultTone = victory ? 'victory' : 'defeat';
+  const resultTitle = victory ? '余烬永不熄灭' : '余烬熄灭';
+  const panelTitle = victory ? '远征完成' : '战报复盘';
+  const resultSubtitle = victory
+    ? '整条远征路线已经打通，下一步可以挑战试炼档或追求更高分。'
+    : (presentation.deathReason || presentation.resultNextHint || '复盘短板、调整下一轮牌序和战前准备。');
+  const deathTip = presentation.deathBuildTip ? `<div class="final-stat hint"><span>复盘建议</span><span>${escapeHtml(presentation.deathBuildTip)}</span></div>` : '';
+  const waveContext = presentation.deathWaveLabel ? `<div class="final-stat"><span>阵亡波次</span><span>${escapeHtml(presentation.deathWaveLabel)}</span></div>` : '';
   const gameTime = presentation.deathGameTime ? `<div class="final-stat"><span>存活时间</span><span>${Math.floor(presentation.deathGameTime / 60)}分${presentation.deathGameTime % 60}秒</span></div>` : '';
-  const pressureReview = presentation.deathPressureLine ? `<div class="final-stat wide"><span>数值缺口</span><span>${escapeHtml(presentation.deathPressureLine)}</span></div>` : '';
-  const decisionReview = presentation.deathDecisionLine ? `<div class="final-stat wide"><span>最后决策</span><span>${escapeHtml(presentation.deathDecisionLine)}</span></div>` : '';
+  const pressureReview = presentation.deathPressureLine ? `<div class="final-stat wide pressure-review"><span>数值缺口</span><span>${escapeHtml(presentation.deathPressureLine)}</span></div>` : '';
+  const decisionReview = presentation.deathDecisionLine ? `<div class="final-stat wide decision-review"><span>最后决策</span><span>${escapeHtml(presentation.deathDecisionLine)}</span></div>` : '';
+  const focusText = presentation.buildSummary || '构筑尚未成型';
+  const weaknessText = presentation.weaknessSummary || '暂无明显短板';
+  const nextPriorityLabel = presentation.resultPriorityLabel || (victory ? '冲分路线' : '路线校准');
+  const nextRunHint = presentation.resultNextHint || weaknessText || '下一轮优先补最明显的输出、清场或安全网缺口。';
+  const synergies = run.synergies || [];
+  const extremes = run.extremes || [];
+  gameoverTitle.textContent = panelTitle;
   finalStats.innerHTML = `
-    <div class="final-stat"><span>角色</span><span>${getCharacter(run.characterId).name}</span></div>
-    <div class="final-stat"><span>难度</span><span>${run.difficulty?.name || '标准'}</span></div>
-    <div class="final-stat"><span>波次</span><span>${run.wave} / ${run.totalWaves}</span></div>
-    ${waveContext}
-    <div class="final-stat"><span>击杀</span><span>${run.kills}</span></div>
-    <div class="final-stat"><span>分数</span><span>${Math.floor(run.score)}</span></div>
-    ${gameTime}
-    <div class="final-stat"><span>最高连击</span><span>${run.maxCombo}</span></div>
-    <div class="final-stat"><span>卡牌数</span><span>${run.player.deck.length}</span></div>
-    <div class="final-stat"><span>协同</span><span>${run.synergies?.join('、') || '无'}</span></div>
-    <div class="final-stat"><span>极端化</span><span>${run.extremes.join('、') || '无'}</span></div>
-    <div class="final-stat"><span>构筑倾向</span><span>${presentation.buildSummary || '未成型'}</span></div>
-    <div class="final-stat"><span>当前短板</span><span>${presentation.weaknessSummary || '暂无'}</span></div>
-    <div class="final-stat reason"><span>失败原因</span><span>${presentation.deathReason || '余烬熄灭'}</span></div>
-    ${pressureReview}
-    ${decisionReview}
-    ${deathTip}
-    <div class="final-stat"><span>余烬奖励</span><span>+${save.emberGain}</span></div>`;
+    <div class="result-brief ${resultTone}">
+      <div class="result-kicker">${victory ? '远征完成' : '战报复盘'}</div>
+      <div class="result-outcome">${escapeHtml(resultTitle)}</div>
+      <p>${escapeHtml(resultSubtitle)}</p>
+    </div>
+    <div class="result-hero-row">
+      <div class="result-hero-card primary"><span>到达波次</span><strong>${run.wave} / ${run.totalWaves}</strong></div>
+      <div class="result-hero-card"><span>本局分数</span><strong>${Math.floor(run.score)}</strong></div>
+      <div class="result-hero-card"><span>击杀</span><strong>${run.kills}</strong></div>
+      <div class="result-hero-card reward"><span>余烬奖励</span><strong>+${save.emberGain}</strong></div>
+    </div>
+    <div class="result-section">
+      <div class="result-section-title">路线概览</div>
+      <div class="result-stat-grid">
+        <div class="final-stat"><span>角色</span><span>${escapeHtml(character.name)}</span></div>
+        <div class="final-stat"><span>难度</span><span>${escapeHtml(run.difficulty?.name || '标准')}</span></div>
+        ${waveContext}
+        ${gameTime}
+        <div class="final-stat"><span>最高连击</span><span>${run.maxCombo}</span></div>
+        <div class="final-stat"><span>卡牌数</span><span>${run.player.deck.length}</span></div>
+      </div>
+    </div>
+    <div class="result-section build-report">
+      <div class="result-section-title">构筑诊断</div>
+      <div class="final-stat wide"><span>构筑倾向</span><span>${escapeHtml(focusText)}</span></div>
+      <div class="final-stat wide"><span>当前短板</span><span>${escapeHtml(weaknessText)}</span></div>
+        <div class="final-stat"><span>协同</span><span>${escapeHtml(synergies.join('、') || '无')}</span></div>
+        <div class="final-stat"><span>极端化</span><span>${escapeHtml(extremes.join('、') || '无')}</span></div>
+    </div>
+    <div class="result-section after-action">
+      <div class="result-section-title">阵亡复盘</div>
+      <div class="final-stat reason wide"><span>失败原因</span><span>${escapeHtml(presentation.deathReason || (victory ? '已完成远征' : '余烬熄灭'))}</span></div>
+      ${pressureReview}
+      ${decisionReview}
+      ${deathTip}
+    </div>
+    <div class="result-next">
+      <span>下一把优先级 · ${escapeHtml(nextPriorityLabel)}</span>
+      <strong>${escapeHtml(nextRunHint)}</strong>
+    </div>`;
   gameoverEl.classList.remove('hidden');
 }
 
@@ -2360,6 +2395,60 @@ function enableDebugHooks() {
       updateHud();
       startBGM();
       return window.__EMBER_DEBUG__.getSnapshot();
+    },
+    showResult(victory = false) {
+      const character = getCharacter('warrior');
+      run = createRun(9001, character, 'standard');
+      selectedCharId = 'warrior';
+      selectedDifficultyId = 'standard';
+      run.wave = 20;
+      run.kills = 276;
+      run.score = 18240;
+      run.maxCombo = 18;
+      run.gameTime = 734;
+      run.player.deck = run.player.deck.concat(getCardPool().filter(card => [
+        'quick_blade',
+        'gatling',
+        'thorn_skin',
+        'phoenix_ember',
+        'time_rift',
+      ].includes(card.id)).map(card => ({ ...card })));
+      run.synergies = ['钢铁防线', '武备压制'];
+      run.extremes = ['巨炮节奏'];
+      run.buildAnalysis = {
+        descriptors: ['壁垒', '速攻', '暴击'],
+        pressure: { singleTarget: 108, aoe: 42, sustain: 82, mitigation: 24, safety: 9 },
+        pressureTargets: { singleTarget: 132, aoe: 44, sustain: 78, safety: 34 },
+        pressureGaps: { singleTarget: 24, aoe: 2, sustain: 0, safety: 25 },
+        weaknesses: { singleTarget: true, aoe: true, sustain: false, safety: true },
+      };
+      run.decisionLog = [
+        { wave: 14, type: 'reward', name: '加特林', action: 'pick' },
+        { wave: 19, type: 'forge', name: '快刃', action: 'upgrade' },
+        { wave: 19, type: 'rest', name: '战斗训练', action: 'train' },
+      ];
+      run.deathSummary = {
+        reason: victory ? '已完成远征。' : 'Boss 讨伐失败：走位和弹幕处理还需优化。',
+        waveLabel: victory ? '第 25 波 · 最终清算' : '第 20 波 Boss 讨伐',
+        waveKind: 'boss',
+        buildTip: victory ? '保留本轮输出节奏，下一次可以尝试更高风险的献祭路线。' : '安全网缺口过大，下次 Boss 前优先选择余烬护符或烟幕疾行。',
+        pressure: run.buildAnalysis.pressure,
+        pressureTargets: run.buildAnalysis.pressureTargets,
+        pressureGaps: run.buildAnalysis.pressureGaps,
+        lastDecisions: ['第14波 奖励：加特林', '第19波 锻造：快刃', '第19波 营火：战斗训练'],
+        deckSize: run.player.deck.length,
+        focus: '壁垒 / 速攻 / 暴击',
+        gameTime: run.gameTime,
+        kills: run.kills,
+        extremes: run.extremes.length,
+      };
+      run.state = victory ? 'victory' : 'gameover';
+      state = 'result';
+      hideOverlays();
+      hud.style.display = 'none';
+      tutorialBox.classList.add('hidden');
+      showResult(Boolean(victory));
+      return { state: run.state, title: gameoverTitle.textContent };
     },
   };
 }

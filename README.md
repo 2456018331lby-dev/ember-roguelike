@@ -33,7 +33,7 @@ https://2456018331lby-dev.github.io/ember-roguelike/
 - 战前营火现在也会基于下一波压力给出推荐标签与建议文案，避免满血时仍无脑偏向训练
 - 构筑短板目标会随波次成长，奖励提示和死亡复盘会显示当前强度 / 目标强度 / 缺口，不再只用开局阈值判断中后期
 - `末日` 等高风险诅咒保留强爆发路线，但倒计时从拿牌时开始结算，不会因中途拿牌立刻判死
-- 结算页会记录最后几次关键选择，帮助判断是输出、清场、续航、安全网还是路线选择导致阵亡
+- 结算页已升级为战报复盘，会记录最后几次关键选择、数值缺口和“下一把优先级”，帮助判断是输出、清场、续航、安全网还是路线选择导致阵亡
 - 第 15 波以后的 Boss 前夜如果安全网缺口明显，会出现 `余烬护符`，为下一波提供临时护盾和一次致命伤保底
 - 第 20 波以后如果 safety 缺口极大，或机动性明显不足，还会出现 `烟幕疾行`，为下一波提供临时移速、闪避和开场控场；第 25 波这类高波脆皮构筑还会附带 `残影保命`，HUD 会用蓝色残影环和 `残影 1` 区分它与金色护符
 - 中后期 Boss / survival 场景下，`末日`、`衰败` 这类高风险诅咒会被更明显地下调推荐权重，减少它们压过安全网牌的误导性推荐
@@ -73,8 +73,8 @@ http://127.0.0.1:5173
 - `npm test` 会验证核心玩法和平衡回归；其中包含奖励 / 锻造 / 商店 / 营火等决策状态不能进入无出口卡死状态的状态机检查。
 - `npm run test:boss-checkpoints` 会跑 baseline / smart 两套 60 seed 模拟，输出第 5/10/15/20/25 波 Boss 检查点、死亡 seed、短板标签和少量死亡样本，方便继续调中后期节奏；当前最近一次结果为 `baseline avgWave 19.12`、`smart avgWave 23.42`，其中 smart 第 5 波 `60/60` 通过、第 20 波到达 `53/60`、第 25 波到达 `48/60`、通关 `45/60`，且没有 max-tick 卡局。
 - `npm run test:web-smoke` 会验证 spritesheet 尺寸/内容、service worker 预缓存清单、本地服务 MIME、UI 状态路由，以及核心逻辑发出的粒子类型是否都被前端绘制，不需要新增浏览器测试依赖。
-- `npm run test:visual-smoke` 会用本机 Chrome/Edge 做桌面和移动端视觉 smoke，覆盖菜单、角色选择、局内 canvas、奖励选择页、Boss 前营火、Boss 波进入、桌面/移动端活跃 Boss 战读招画面，以及固定的第 20 波高波 Boss 桌面场景；高波样本会断言 debug snapshot 中存在 `bossPatternLabel` 与 `bossCharge`，截图输出到 `output/visual-smoke/`，不需要新增 Playwright/Puppeteer 依赖。
-- `npm run test:visual-regression` 会先跑视觉 smoke，再读取 PNG 像素并和 `tests/visual-regression-baseline.json` 对比；角色选择等稳定界面使用严格 RGBA 哈希，动画界面使用像素亮度/色彩比例容差。
+- `npm run test:visual-smoke` 会用本机 Chrome/Edge 做桌面和移动端视觉 smoke，覆盖菜单、角色选择、局内 canvas、奖励选择页、Boss 前营火、Boss 波进入、桌面/移动端活跃 Boss 战读招画面、固定的第 20 波高波 Boss 桌面场景，以及桌面/移动端结算复盘；结果页会检查摘要未被裁切、底部按钮可见，截图输出到 `output/visual-smoke/`，不需要新增 Playwright/Puppeteer 依赖。
+- `npm run test:visual-regression` 会先跑视觉 smoke，再读取 PNG 像素并和 `tests/visual-regression-baseline.json` 对比；角色选择等稳定界面使用严格 RGBA 哈希，动画界面使用像素亮度/色彩比例容差，当前基线已包含结算页桌面/移动端截图。
 - 如果要构建 Android，优先使用仓库脚本 `npm run build:android:debug`；它会同步资源、构建 APK，并校验 APK 内的关键 Web 资源与代码标记。
 - `npm run verify:android:debug` 会用 `adb` 安装并启动 debug APK，检查应用进程、首屏截图和启动后的 WebView/JS 致命错误；没有在线设备且本机只有一个 AVD 时会自动启动并在结束后关闭。
 - 自动启动 AVD 时，验证脚本会在 `sys.boot_completed` 后额外等待一小段时间再开始安装与启动，减少冷启动期误报 ANR。
@@ -85,7 +85,9 @@ http://127.0.0.1:5173
 
 当前仓库已经验证过可在本机生成 debug APK，并在本机 `NightRunner35` Android 模拟器完成安装、冷启动、焦点窗口、点击进入角色选择、点击进入局内战斗、截图和 logcat 致命错误扫描。
 
-最近一次构建 APK SHA256：`DF1C5AB03EB245D498D63099A07AD2F8852FCA5B587E37DCBF3E0F8620ADBD8A`
+最近一次构建 APK SHA256：`18AB40BBF01C2CA5D6DF776C41857566420CE09CDFB3AC326F419C720B9CF4CC`
+
+最近一次安装 / 冷启动验证 APK SHA256：`18AB40BBF01C2CA5D6DF776C41857566420CE09CDFB3AC326F419C720B9CF4CC`
 
 最近一次模拟器点击流验证 APK SHA256：`DF1C5AB03EB245D498D63099A07AD2F8852FCA5B587E37DCBF3E0F8620ADBD8A`
 
@@ -106,7 +108,7 @@ android/app/build/outputs/apk/debug/app-debug.apk
 - 构建脚本会优先寻找 `.tools/microsoft-jdk-21/` 下的完整 JDK 21。
 - 若系统 `JAVA_HOME` 已经指向带 `jlink` 的 JDK 21+，也可直接使用系统环境。
 - 构建成功后脚本会检查 APK 内是否包含当前 `index.html`、样式、核心 `.mjs`、PWA 缓存清单和关键美术资源，并输出 APK SHA256。
-- 真机或模拟器启动验证依赖 Android SDK `platform-tools`。脚本会从 PATH、`android/local.properties`、`ANDROID_HOME`、`ANDROID_SDK_ROOT` 和常见本机 SDK 目录自动查找 `adb.exe`；如果没有在线设备但只有一个 AVD，npm 验证脚本会自动启动它。
+- 真机或模拟器启动验证依赖 Android SDK `platform-tools`。脚本会从 PATH、`android/local.properties`、`ANDROID_HOME`、`ANDROID_SDK_ROOT` 和常见本机 SDK 目录自动查找 `adb.exe`；如果没有在线设备但只有一个 AVD，npm 验证脚本会自动启动它。本机当前 `android/local.properties` 指向的 SDK 缺 `adb.exe`，最近一次验证通过临时把 `C:\Users\24560\Desktop\study\kaoyandemo\.android-sdk\platform-tools` 放入 PATH 完成。
 - Android 外壳已改成沉浸式游戏窗口，启动主题和窗口背景使用游戏黑色，避免模拟器/真机顶部残留浅色系统栏。
 - 如果当前没有在线设备，可以先手动启动模拟器，或直接运行：
 

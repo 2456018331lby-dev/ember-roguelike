@@ -163,6 +163,28 @@ async function capture(cdp, name) {
   return filePath;
 }
 
+async function terminateProcessTree(child) {
+  if (!child || !child.pid) return;
+  if (child.exitCode !== null || child.signalCode !== null) return;
+
+  if (process.platform === 'win32') {
+    await new Promise(resolveTerminate => {
+      const killer = spawn('taskkill', ['/PID', String(child.pid), '/T', '/F'], {
+        stdio: 'ignore',
+      });
+      killer.once('error', resolveTerminate);
+      killer.once('exit', resolveTerminate);
+    });
+    return;
+  }
+
+  child.kill('SIGTERM');
+  await Promise.race([
+    new Promise(resolveExit => child.once('exit', resolveExit)),
+    sleep(1500).then(() => child.kill('SIGKILL')),
+  ]);
+}
+
 function menuCheckExpression({ mobile = false } = {}) {
   return `(() => {
     const menu = document.querySelector('#menu');
@@ -245,7 +267,9 @@ const gameplayCheckExpression = `(() => new Promise(resolve => {
 }))()`;
 
 const rewardDebugReadyExpression = `(() => ({
-  ok: Boolean(window.__EMBER_DEBUG__ && typeof window.__EMBER_DEBUG__.showReward === 'function')
+  ok: Boolean(window.__EMBER_DEBUG__ &&
+    typeof window.__EMBER_DEBUG__.showReward === 'function' &&
+    typeof window.__EMBER_DEBUG__.showResult === 'function')
 }))()`;
 
 const rewardCheckExpression = `(() => {
@@ -412,6 +436,51 @@ const highWaveBossActiveExpression = `(() => new Promise(resolve => {
   });
 }))()`;
 
+const resultReportExpression = `(() => {
+  const overlay = document.querySelector('#gameover');
+  const panel = document.querySelector('.result-panel');
+  const brief = document.querySelector('.result-brief');
+  const outcome = document.querySelector('.result-outcome');
+  const briefCopy = document.querySelector('.result-brief p');
+  const heroCards = [...document.querySelectorAll('.result-hero-card')];
+  const sections = [...document.querySelectorAll('.result-section')];
+  const next = document.querySelector('.result-next');
+  const restart = document.querySelector('#restartBtn');
+  const actions = document.querySelector('.result-actions');
+  const panelRect = panel?.getBoundingClientRect();
+  const briefRect = brief?.getBoundingClientRect();
+  const outcomeRect = outcome?.getBoundingClientRect();
+  const copyRect = briefCopy?.getBoundingClientRect();
+  const restartRect = restart?.getBoundingClientRect();
+  const actionsRect = actions?.getBoundingClientRect();
+  const noHorizontalOverflow = document.documentElement.scrollWidth <= window.innerWidth + 2;
+  return {
+    ok: Boolean(overlay && !overlay.classList.contains('hidden') &&
+      panel && brief && outcome && briefCopy && heroCards.length === 4 && sections.length >= 3 && next &&
+      briefRect && outcomeRect && copyRect &&
+      outcomeRect.bottom <= briefRect.bottom + 1 &&
+      copyRect.bottom <= briefRect.bottom + 1 &&
+      restart && restartRect && restartRect.width >= 90 && restartRect.height >= 34 &&
+      actions && actionsRect && actionsRect.bottom <= window.innerHeight + 2 &&
+      restartRect.top >= 0 && restartRect.bottom <= window.innerHeight + 2 &&
+      panelRect && panelRect.width <= window.innerWidth + 2 &&
+      /下一把优先级/.test(next.textContent || '') &&
+      /数值缺口/.test(panel.textContent || '') &&
+      /最后决策/.test(panel.textContent || '') &&
+      noHorizontalOverflow),
+    heroCards: heroCards.map(card => card.textContent.trim()),
+    sections: sections.map(section => section.textContent.trim().slice(0, 32)),
+    panelRect: panelRect ? { width: Math.round(panelRect.width), height: Math.round(panelRect.height), scrollHeight: panel.scrollHeight } : null,
+    briefRect: briefRect ? { height: Math.round(briefRect.height), bottom: Math.round(briefRect.bottom) } : null,
+    outcomeRect: outcomeRect ? { bottom: Math.round(outcomeRect.bottom) } : null,
+    copyRect: copyRect ? { bottom: Math.round(copyRect.bottom) } : null,
+    restartRect: restartRect ? { width: Math.round(restartRect.width), height: Math.round(restartRect.height), top: Math.round(restartRect.top) } : null,
+    actionsRect: actionsRect ? { bottom: Math.round(actionsRect.bottom), height: Math.round(actionsRect.height) } : null,
+    scrollWidth: document.documentElement.scrollWidth,
+    width: window.innerWidth
+  };
+})()`;
+
 async function runVisualSmoke() {
   const chromePath = findChrome();
   assert(Boolean(chromePath), 'Chrome or Edge executable should exist for visual smoke');
@@ -493,6 +562,11 @@ async function runVisualSmoke() {
     assert(highWaveBoss?.wave >= 20, `high-wave boss debug hook should jump to wave 20+: ${JSON.stringify(highWaveBoss)}`);
     await waitForOk(cdp, highWaveBossActiveExpression, 'desktop high-wave boss fight cues', 10000);
     const highWaveBossShot = await capture(cdp, 'boss-fight-highwave-desktop.png');
+    await cdp.send('Page.navigate', { url: `${baseUrl}?debug=1` });
+    await waitForOk(cdp, rewardDebugReadyExpression, 'desktop result debug hook');
+    await evaluate(cdp, `window.__EMBER_DEBUG__.showResult(false)`);
+    await waitForOk(cdp, resultReportExpression, 'desktop result report');
+    const resultShot = await capture(cdp, 'result-desktop.png');
 
     await cdp.send('Emulation.setDeviceMetricsOverride', {
       width: 390,
@@ -525,18 +599,23 @@ async function runVisualSmoke() {
     await evaluate(cdp, `(document.querySelector('#choices .rest-card') || document.querySelector('#choices .card'))?.click(); true`);
     await waitForOk(cdp, bossFightActiveExpression, 'mobile active boss fight cues', 10000);
     const mobileBossFightShot = await capture(cdp, 'boss-fight-mobile.png');
+    await cdp.send('Page.navigate', { url: `${baseUrl}?debug=1` });
+    await waitForOk(cdp, rewardDebugReadyExpression, 'mobile result debug hook');
+    await evaluate(cdp, `window.__EMBER_DEBUG__.showResult(false)`);
+    await waitForOk(cdp, resultReportExpression, 'mobile result report');
+    const mobileResultShot = await capture(cdp, 'result-mobile.png');
 
     assert(consoleErrors.length === 0, `visual smoke should have no console/runtime errors: ${consoleErrors.join(' | ')}`);
     assert(!serverStderr.trim(), `serve-web.mjs should not write stderr: ${serverStderr.trim()}`);
 
     return {
-      screenshots: [menuShot, charShot, gameplayShot, rewardShot, restShot, bossShot, bossFightShot, highWaveBossShot, mobileMenuShot, mobileCharShot, mobileGameplayShot, mobileRewardShot, mobileRestShot, mobileBossFightShot],
+      screenshots: [menuShot, charShot, gameplayShot, rewardShot, restShot, bossShot, bossFightShot, highWaveBossShot, resultShot, mobileMenuShot, mobileCharShot, mobileGameplayShot, mobileRewardShot, mobileRestShot, mobileBossFightShot, mobileResultShot],
       chromeWarnings: chromeStderr.trim().split(/\r?\n/).filter(Boolean).slice(0, 3),
     };
   } finally {
     if (cdp) cdp.close();
-    chrome.kill();
-    server.kill();
+    await terminateProcessTree(chrome);
+    await terminateProcessTree(server);
     await sleep(200);
     await rm(userDataDir, { recursive: true, force: true });
   }
@@ -550,7 +629,7 @@ if (failures.length) {
   process.exit(1);
 }
 
-console.log('Visual smoke check passed: desktop/mobile menu, character select, gameplay canvases, reward choices, boss prep rest, boss wave transition, active boss fight cues, and desktop high-wave boss cues render.');
+console.log('Visual smoke check passed: desktop/mobile menu, character select, gameplay canvases, reward choices, boss prep rest, boss wave transition, active boss fight cues, high-wave boss cues, and result reports render.');
 if (result?.screenshots?.length) {
   for (const file of result.screenshots) console.log(`Screenshot: ${file}`);
 }

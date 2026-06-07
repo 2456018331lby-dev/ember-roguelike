@@ -1,6 +1,6 @@
 # 余烬 Ember - 维护与接手文档
 
-最后更新：2026-06-06（本轮继续补中后期奖励推荐、Boss 前容错和维护交接：奖励池现在会在第 8 波以后检查 `singleTarget / aoe / sustain` 最大压力缺口，若缺口足够突出，会保底替换一张不破坏生存/Boss 输出保底的低契合牌，避免玩家因为随机奖励完全拿不到输出、清场或续航修复方向；`safety` 仍由 Boss 前生存保底、复活牌评分和营火护符/烟幕链路处理，避免通用奖励保底过度抢占输出成长位。Boss 输出识别同步补上攻速和随卡组增伤类牌。第 10 波 Boss 前如果 safety 缺口极高，现在会提前出现 `余烬护符`，第 15 波以后仍沿用较低门槛，新增回归覆盖“第 10 波 Boss 前安全缺口极高时应提前提供护符”。本轮也把维护文档改成先给下一位 AI 的快速交接，再保留详细历史证据。当前 checkpoint 为 `baseline avgWave 19.12`、`smart avgWave 23.42`，smart 第 5 波 `60/60` 通过，第 20 波到达 `53/60`，第 25 波到达 `48/60`，通关 `45/60`，无 max-tick 卡局。前序记录中的脆皮 `fragilityDebt`、烟幕残影保命、Boss 读招面板、逐资源 service worker 预缓存、视觉回归、Android debug APK 构建和模拟器点击 smoke 仍继续成立。）
+最后更新：2026-06-07（本轮推进结算复盘、结果页视觉回归和交付证据更新：结算页现在是“战报复盘”，会展示关键数值、路线概览、构筑诊断、阵亡复盘和 `下一把优先级`；`presentation.mjs` 会根据最大压力缺口输出 `resultPriorityLabel/resultNextHint`，例如安全网最大缺口会指向 `余烬护符 / 烟幕疾行 / 凤凰余烬 / 屏障牌`，首领输出、清场、续航硬度也会给出对应建议。visual smoke 新增桌面/移动端结果页截图、摘要卡裁切断言和底部按钮可见性断言；visual regression 基线新增 `result-desktop.png` / `result-mobile.png`。PWA cache 已提升到 `ember-v16`，并已同步 `web -> docs -> android`。当前 checkpoint 仍为 `baseline avgWave 19.12`、`smart avgWave 23.42`，smart 第 5 波 `60/60` 通过，第 20 波到达 `53/60`，第 25 波到达 `48/60`，通关 `45/60`，无 max-tick 卡局。Android debug APK 构建和 payload 校验通过，当前 APK SHA256 为 `18AB40BBF01C2CA5D6DF776C41857566420CE09CDFB3AC326F419C720B9CF4CC`；安装/冷启动/logcat fatal scan 也通过，但本机当前 `android/local.properties` 指向的 SDK 缺 `adb.exe`，验证时临时把 `C:\Users\24560\Desktop\study\kaoyandemo\.android-sdk\platform-tools` 放进 PATH。前序记录中的中后期奖励短板修复、Boss 前容错、脆皮 `fragilityDebt`、烟幕残影保命、Boss 读招面板、逐资源 service worker 预缓存、视觉回归、Android 点击流 smoke 仍继续成立。）
 
 本文件给下一个继续维护的人或 AI，用来快速判断三件事：
 
@@ -23,6 +23,11 @@
 
 本轮新增的核心改动位置：
 
+- `web/src/presentation.mjs`：新增 `resultPriorityLabel/resultNextHint`，把“下一把优先级”从 UI 里抽成结构化展示逻辑，并按 `singleTarget / aoe / sustain / safety` 最大压力缺口给出下一轮建议。
+- `web/src/main.mjs`：`showResult()` 改成战报复盘结构，分区展示关键数值、路线概览、构筑诊断、阵亡复盘和下一把优先级；本地 `?debug=1` 新增 `showResult()` 钩子用于稳定生成结算页截图。
+- `web/styles.css`：结算页改为标题、可滚动复盘内容和底部固定操作区的布局，移动端关键数值两列显示，摘要卡显式防裁切。
+- `scripts/visual-smoke.mjs` / `scripts/visual-regression.mjs`：新增桌面/移动端结算页覆盖，断言摘要标题/说明未被裁切、底部按钮在视口内，并把结果页截图纳入视觉回归基线。
+- `web/sw.js`：PWA cache 提升到 `ember-v16`；`docs/` 镜像已由 `node scripts/sync-web.mjs` 同步。
 - `web/src/game_core.mjs`：`isAoeRepairCard()`、`isSustainRepairCard()`、`isPressureRepairCard()` 和 `getPriorityPressureRepairKey()` 共同负责中后期奖励短板修复保底；通用奖励保底刻意不覆盖 `safety`。
 - `web/src/game_core.mjs`：`generateRestChoices()` 会在第 10 波 Boss 前 safety 极高时提前提供 `余烬护符`，第 15 波以后仍使用较低 safety 门槛。
 - `tests/game_core.test.mjs`：`中后期奖励应保底修复最大构筑短板` 锁定清场缺口必须至少出现一张修复牌；`第 10 波 Boss 前安全缺口极高时应提前提供护符` 锁定 Boss 前容错窗口。
@@ -31,7 +36,7 @@
 本轮以后最值得继续做的事情：
 
 - 继续用 `npm run test:boss-checkpoints` 观察第 10/15/20/25 波，不要只优化第 5 波。
-- 继续强化 `构筑缺口 -> 奖励推荐 -> 战前准备 -> 波次风险提示 -> 死亡复盘` 这一条闭环。
+- 继续强化 `构筑缺口 -> 奖励推荐 -> 战前准备 -> 波次风险提示 -> 死亡复盘 -> 下一把优先级` 这一条闭环。
 - 继续补区域级视觉回归和实体 Android 真机复测；目前已有模拟器点击流证据，但真机仍是剩余平台风险。
 
 ---
@@ -147,6 +152,7 @@ roguelike-game/
 - 构筑短板阈值已从固定开局阈值升级为随波次成长的压力目标；`singleTarget / aoe / sustain / safety` 会保存当前强度、目标和缺口，奖励提示与死亡复盘共用这套解释
 - 奖励、锻造、商店和 Boss 前营火选择会写入 `decisionLog`，结算页显示最后几次关键选择，方便回看阵亡前路线是否误选
 - 主菜单、角色选择页、结算页已有更明确的视觉层次
+- 结算页已从统计列表升级为战报复盘：关键数值、路线概览、构筑诊断、阵亡复盘和下一把优先级分区展示；底部操作区固定可见，移动端复盘内容独立滚动
 - 移动端主菜单首屏已压缩信息密度，`开始远征` 按钮在 390x844 视口下无需滚动即可点击
 - 角色选择页和战斗内玩家模型已改用 AI 生成的 4 角色 x 2 动作帧 spritesheet，不再使用圆形/豆形占位角色
 - 角色选择页现在会直接展示职业职责、武器、战斗备注和起手流派，锁定职业不再被压到几乎不可读
@@ -168,11 +174,11 @@ roguelike-game/
 - 之前 Python 静态服务的 `.mjs` MIME 问题已绕开
 - `scripts/serve-web.mjs` 已提供正确的本地 Node 静态服务
 - `scripts/web-smoke.mjs` 已建立无依赖 smoke test，可验证 spritesheet 尺寸/内容、敌人图集格子、service worker 预缓存覆盖和离线 fallback、本地 MIME、UI 状态路由，以及 `game_core.mjs` 发出的粒子类型是否都有 `drawParticles` 覆盖
-- `scripts/visual-smoke.mjs` 已建立无 npm 依赖视觉 smoke，可用本机 Chrome/Edge 验证桌面/移动端菜单、角色选择、战斗 canvas 非空、奖励选择页推荐卡渲染、Boss 前奖励点击后进入营火、营火选择后进入第 5 波 Boss，并额外保存桌面和移动端活跃首领战 `boss-fight-*.png`，以及固定的高波桌面场景 `boss-fight-highwave-desktop.png`；高波样本会断言 debug snapshot 中存在当前 `bossPatternLabel` 和 `bossCharge`
-- `scripts/visual-regression.mjs` 已建立 PNG 解码后的像素回归：角色选择等稳定界面使用严格 RGBA 哈希，菜单和动画界面使用亮度、RGB 均值、暗/亮/饱和像素比例容差；基线在 `tests/visual-regression-baseline.json`，包含桌面/移动端活跃 Boss 战截图和高波桌面样本
+- `scripts/visual-smoke.mjs` 已建立无 npm 依赖视觉 smoke，可用本机 Chrome/Edge 验证桌面/移动端菜单、角色选择、战斗 canvas 非空、奖励选择页推荐卡渲染、Boss 前奖励点击后进入营火、营火选择后进入第 5 波 Boss、桌面/移动端结算复盘，并额外保存桌面和移动端活跃首领战 `boss-fight-*.png`，以及固定的高波桌面场景 `boss-fight-highwave-desktop.png`；高波样本会断言 debug snapshot 中存在当前 `bossPatternLabel` 和 `bossCharge`，结果页样本会断言摘要未裁切、底部按钮可见
+- `scripts/visual-regression.mjs` 已建立 PNG 解码后的像素回归：角色选择等稳定界面使用严格 RGBA 哈希，菜单和动画界面使用亮度、RGB 均值、暗/亮/饱和像素比例容差；基线在 `tests/visual-regression-baseline.json`，包含桌面/移动端活跃 Boss 战截图、高波桌面样本和桌面/移动端结算复盘
 - `scripts/generate-art-assets.mjs` 默认保留现有角色 spritesheet，避免误运行后覆盖 AI 人物资源；同时会重生成参考图风格竞技场背景和敌人 / Boss spritesheet
 - `web/src/main.mjs` 会按背景图原始比例居中裁切绘制竞技场 PNG，因此后续直接替换 `web/assets/arena-ember-fortress.png` 不会被拉伸；它也会优先使用敌人 spritesheet，加载失败时仍回退到 SVG 符号和圆形占位
-- `web/sw.js` 已预缓存 `main.mjs` 的静态模块依赖和核心美术资源；替换同名 PNG 或修改核心脚本后必须提升 `CACHE` 版本，避免 PWA/Android WebView 继续命中旧缓存；预缓存必须逐资源容错，不能使用 `cache.addAll()`，否则 Android WebView 可能因单个 Cache 内部错误产生启动期 fatal log；fetch handler 只拦截同源 GET，离线 cache miss 会返回明确 Response，避免 WebView console 噪声
+- `web/sw.js` 已预缓存 `main.mjs` 的静态模块依赖和核心美术资源；当前 `CACHE = ember-v16`；替换同名 PNG 或修改核心脚本后必须继续提升 `CACHE` 版本，避免 PWA/Android WebView 继续命中旧缓存；预缓存必须逐资源容错，不能使用 `cache.addAll()`，否则 Android WebView 可能因单个 Cache 内部错误产生启动期 fatal log；fetch handler 只拦截同源 GET，离线 cache miss 会返回明确 Response，避免 WebView console 噪声
 - `web/index.html` 不再依赖 Google Fonts 外链，Android / PWA 离线环境不会因为外部字体请求污染 logcat 或首屏加载
 - Android `assembleDebug` 已在本机成功跑通过一次
 - `scripts/build-android-debug.ps1` 已建立，负责选择可用 JDK 21、同步资源、构建 APK，并校验 APK 内关键 Web 资源和代码标记
@@ -218,6 +224,7 @@ npm run serve
   - 当前最集中的短板标签仍是 `safety`；第 20/25 波 Boss 仍是下一轮主要平衡对象，不建议为站桩 baseline 的单个第 5 波失败继续削弱首个 Boss
 - `npm test`：
   - `tests/game_core.test.mjs` 全部通过
+  - 本轮新增覆盖：`死亡复盘下一把优先级应跟随最大压力缺口`，锁定结算页下一步建议必须来自 `presentation.mjs` 的最大压力缺口推导，而不是 UI 硬编码
   - 已新增覆盖：高压 `aimed_burst` 必须先出现预警，再延迟发射弹幕
   - 已覆盖 `末日` 诅咒从拿牌时开始倒计时，中后期拿牌不会因整局时间已超过 45 秒而立刻判死
   - 已覆盖中后期 Boss 前 safety 缺口会生成 `余烬护符`，并验证护符能抵消一次致命伤且触发后会消耗
@@ -244,8 +251,9 @@ npm run serve
   - `game_core.mjs` 发出的核心战斗粒子类型均有 `drawParticles` case 覆盖
   - 本地 Node 服务 MIME 返回通过
 - `npm run test:visual-smoke`：
-  - 桌面菜单、角色选择、局内 canvas、奖励选择页、Boss 前营火、第 5 波 Boss 进入、桌面/移动端活跃 Boss 读招画面，以及固定第 20 波高波 Boss 桌面场景渲染通过
+  - 桌面菜单、角色选择、局内 canvas、奖励选择页、Boss 前营火、第 5 波 Boss 进入、桌面/移动端活跃 Boss 读招画面、固定第 20 波高波 Boss 桌面场景，以及桌面/移动端结算复盘渲染通过
   - 固定第 20 波高波样本会断言 debug snapshot 中存在 `bossPatternLabel` 和 `bossCharge`
+  - 结算页样本会断言摘要标题和说明未被裁切、底部 `再来一把 / 返回菜单` 按钮在视口内、无水平溢出
   - 移动端菜单、角色选择、局内 canvas、奖励选择页和 Boss 前营火渲染通过，无水平溢出
   - 移动端局内摇杆与闪避按钮可见
   - 参考图风格竞技场背景已在桌面/移动端局内截图中渲染；移动端角色选择底部按钮不再在“标准”中间断行
@@ -253,7 +261,7 @@ npm run serve
   - 已输出截图到 `output/visual-smoke/`
 - `npm run test:visual-regression`：
   - 会先执行视觉 smoke 生成截图，再读取 PNG 像素与 `tests/visual-regression-baseline.json` 对比
-  - 当前结果通过；稳定界面用严格像素哈希，动态界面用像素指标容差以避免动画帧误报
+  - 当前结果通过；稳定界面用严格像素哈希，动态界面用像素指标容差以避免动画帧误报；基线已包含 `result-desktop.png` 和 `result-mobile.png`
 - `npm run assets:generate`：
   - 默认保留 `web/assets/ember-characters-spritesheet.png`
   - 生成 `web/assets/ember-enemies-spritesheet.png`
@@ -284,7 +292,7 @@ npm run serve
 - Android 构建：
   - `npm run build:android:debug` 当前返回成功
   - APK 路径：`android/app/build/outputs/apk/debug/app-debug.apk`
-  - 当前构建 APK SHA256：`DF1C5AB03EB245D498D63099A07AD2F8852FCA5B587E37DCBF3E0F8620ADBD8A`
+  - 当前构建 APK SHA256：`18AB40BBF01C2CA5D6DF776C41857566420CE09CDFB3AC326F419C720B9CF4CC`
   - 构建脚本会自动验证 APK 内容，避免 Web 修复没有同步进 Android 包
   - 已验证 APK 内包含当前 Web 资源关键标记：
     - `assets/public/index.html` 含 `Arena Roguelike`
@@ -296,6 +304,9 @@ npm run serve
     - `assets/public/sw.js` 含同源 fetch guard、runtime cache write 容错和离线 504 fallback
     - `assets/public/assets/ember-enemies-spritesheet.png` 存在
 - Android 模拟器安装 / 启动 / 点击流：
+  - 本轮命令：临时把 `C:\Users\24560\Desktop\study\kaoyandemo\.android-sdk\platform-tools` 放入 PATH 后运行 `npm run verify:android:debug`
+  - 本轮结果：自动启动唯一 AVD `NightRunner35`，APK 安装、冷启动、焦点窗口、首屏截图和 logcat fatal-error scan 通过，验证后自动关闭模拟器
+  - 本轮安装 / 冷启动验证 APK SHA256：`18AB40BBF01C2CA5D6DF776C41857566420CE09CDFB3AC326F419C720B9CF4CC`
   - 命令：`npm run verify:android:smoke`
   - 最近一次模拟器点击流验证 APK SHA256：`DF1C5AB03EB245D498D63099A07AD2F8852FCA5B587E37DCBF3E0F8620ADBD8A`
   - 结果：APK 安装成功，`com.ember.roguelike/.MainActivity` 冷启动成功
@@ -312,7 +323,7 @@ npm run serve
 ### 当前明确未作为完成证据的项
 
 - 已有 Android 模拟器安装 / 启动 / 点击流证据，但还没有实体真机复测
-- 浏览器视觉 smoke 和初版像素回归都已接入；后续可继续把更多动态界面收紧成更细粒度的区域基线
+- 浏览器视觉 smoke 和初版像素回归都已接入，并已覆盖结算复盘；后续可继续把更多动态界面收紧成更细粒度的区域基线
 
 ---
 
@@ -391,7 +402,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify-android-debug
 ### 高优先级
 
 1. 继续用 `npm run test:boss-checkpoints` 观察第 10/15/20/25 波 Boss 和中后期构筑失控，不要再把第 5 波当成唯一问题
-2. 继续增强“构筑解释力 -> 奖励推荐 -> 死亡复盘”的闭环
+2. 继续增强“构筑解释力 -> 奖励推荐 -> 死亡复盘 -> 下一把优先级”的闭环
 3. 继续扩展 `npm run test:visual-regression` 的区域级基线；现阶段它已覆盖视觉 smoke 截图的严格哈希和像素指标回归
 4. 在实体真机上复测 APK 安装启动和点击进入局内战斗；模拟器点击流 smoke 已接入
 5. 后续如果再新增覆盖层或决策状态，先补 `game_core.test.mjs` 的无出口状态机检查，再接 `web-smoke` 的 UI 路由静态守卫
@@ -399,7 +410,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify-android-debug
 ### 中优先级
 
 1. 继续提高奖励页稀有卡、协同触发和高风险高回报选择的动态反馈
-2. 让结算页更像复盘，不只是结果罗列
+2. 继续把结算页从“结果复盘”推进到“死亡时间线”，解释关键选择与战斗处理如何导致路线崩盘
 3. 扩更多非 Boss 岔路，而不是继续补基础框架
 4. 让图鉴从数据列表升级为内容页
 

@@ -2118,5 +2118,38 @@ test('死亡复盘应包含波次上下文和构筑建议', () => {
   assert.ok(pres.deathBuildTip.length > 0, `应有构筑建议，实际 "${pres.deathBuildTip}"`);
   assert.match(pres.deathPressureLine, /首领输出 30\/80/);
   assert.match(pres.deathDecisionLine, /治疗光环/);
+  assert.equal(pres.resultPriorityLabel, '首领输出');
+  assert.match(pres.resultNextHint, /高伤害|暴击|攻速/);
   assert.equal(pres.deathReason, 'Boss 讨伐失败：输出不足，未能在弹幕窗口内击杀首领。');
+});
+
+test('死亡复盘下一把优先级应跟随最大压力缺口', () => {
+  const run = createRun(101);
+  run.state = 'gameover';
+  run.wave = 20;
+  run.waveProfile = { kind: 'boss', label: '第 20 波 Boss 讨伐' };
+  run.buildAnalysis = {
+    primaryFocus: 'fortress',
+    weaknesses: { singleTarget: false, sustain: true, aoe: false, safety: true },
+    pressure: { singleTarget: 112, aoe: 48, sustain: 50, mitigation: 18, safety: 4 },
+    pressureTargets: { singleTarget: 110, aoe: 44, sustain: 82, safety: 36 },
+    pressureGaps: { singleTarget: 0, aoe: 0, sustain: 14, safety: 32 },
+    summary: '壁垒',
+  };
+  run.deathSummary = {
+    reason: 'Boss 讨伐失败：容错不够，一次失误就再难回正。',
+    waveLabel: '第 20 波 Boss 讨伐',
+    waveKind: 'boss',
+    buildTip: '缺少安全网，凤凰余烬或屏障牌可以救命。',
+    pressure: run.buildAnalysis.pressure,
+    pressureTargets: run.buildAnalysis.pressureTargets,
+    pressureGaps: run.buildAnalysis.pressureGaps,
+    lastDecisions: ['第 19 波 营火/训练：战斗训练'],
+  };
+
+  const pres = buildRunPresentation(run, getPlayerStats(run), { name: '战士' });
+
+  assert.equal(pres.resultPriorityLabel, '安全网');
+  assert.match(pres.resultNextHint, /余烬护符|烟幕疾行|凤凰余烬/);
+  assert.match(pres.resultNextHint, /安全网缺口最大/);
 });

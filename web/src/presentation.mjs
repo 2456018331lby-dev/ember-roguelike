@@ -5,6 +5,7 @@ export function buildRunPresentation(run, stats, character) {
   const buildAnalysis = run.buildAnalysis || {};
   const weaknessText = buildWeaknessSummary(buildAnalysis);
   const rewardWhy = buildRewardWhy(run, buildAnalysis, targetProfile);
+  const resultPriority = buildResultPriority(run, buildAnalysis);
   return {
     topLine: `第 ${run.wave} / ${run.totalWaves} 波`,
     scoreLine: `分数 ${Math.floor(run.score)} · 击杀 ${run.kills}`,
@@ -28,6 +29,8 @@ export function buildRunPresentation(run, stats, character) {
     deathBuildTip: run.deathSummary?.buildTip || '',
     deathPressureLine: buildDeathPressureLine(run.deathSummary, buildAnalysis),
     deathDecisionLine: buildDeathDecisionLine(run.deathSummary),
+    resultPriorityLabel: resultPriority.label,
+    resultNextHint: resultPriority.hint,
     deathDeckSize: run.deathSummary?.deckSize || 0,
     deathFocus: run.deathSummary?.focus || '',
     deathGameTime: run.deathSummary?.gameTime || 0,
@@ -161,6 +164,71 @@ function buildDeathDecisionLine(summary) {
   const decisions = summary?.lastDecisions || [];
   if (!decisions.length) return '';
   return decisions.join(' → ');
+}
+
+function buildResultPriority(run, analysis = {}) {
+  const summary = run.deathSummary || {};
+  if (run.state === 'victory') {
+    return {
+      label: '冲分路线',
+      hint: '保留本轮成型路线，下一把可以提高献祭风险或切到试炼难度追求更高分。',
+    };
+  }
+
+  const pressure = summary.pressure || analysis.pressure || {};
+  const targets = summary.pressureTargets || analysis.pressureTargets || {};
+  const gaps = summary.pressureGaps || analysis.pressureGaps || {};
+  const weaknesses = analysis.weaknesses || {};
+  const candidates = [
+    {
+      key: 'singleTarget',
+      label: '首领输出',
+      gap: Number(gaps.singleTarget) || (weaknesses.singleTarget ? 1 : 0),
+      hint: '首领输出缺口最大，下一把优先拿高伤害、暴击或攻速牌，Boss 前避免再用高风险自毁牌挤掉输出位。',
+    },
+    {
+      key: 'aoe',
+      label: '清场',
+      gap: Number(gaps.aoe) || (weaknesses.aoe ? 1 : 0),
+      hint: '清场缺口最大，下一把优先拿链击、范围、减速或召唤压场牌，先把怪群处理速度补起来。',
+    },
+    {
+      key: 'sustain',
+      label: '续航硬度',
+      gap: Number(gaps.sustain) || (weaknesses.sustain ? 1 : 0),
+      hint: '续航硬度缺口最大，下一把优先补回血、护盾、护甲或闪避，减少高波持续消耗后的血线崩盘。',
+    },
+    {
+      key: 'safety',
+      label: '安全网',
+      gap: Number(gaps.safety) || (weaknesses.safety ? 1 : 0),
+      hint: '安全网缺口最大，下一把 Boss 前优先拿余烬护符、烟幕疾行、凤凰余烬或屏障牌，别只继续堆输出。',
+    },
+  ].sort((a, b) => b.gap - a.gap);
+
+  const top = candidates[0];
+  if (top?.gap > 0) {
+    const currentPressure = top.key === 'sustain'
+      ? (pressure.sustain || 0) + (pressure.mitigation || 0)
+      : pressure[top.key];
+    const pressureText = formatPressureDetail(currentPressure, targets[top.key]);
+    return {
+      label: top.label,
+      hint: `${top.hint}${pressureText ? ` 当前${top.label}${pressureText}。` : ''}`,
+    };
+  }
+
+  if (summary.buildTip) {
+    return {
+      label: '路线校准',
+      hint: summary.buildTip,
+    };
+  }
+
+  return {
+    label: '战斗节奏',
+    hint: '压力目标基本达标，下一把优先复盘站位、冲刺窗口和 Boss 读招节奏。',
+  };
 }
 
 function buildRewardWhy(run, analysis, profile) {
