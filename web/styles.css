@@ -2327,7 +2327,8 @@ body::after {
   margin-top: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding-right: 4px;
+  padding: 0 4px 18px 0;
+  scroll-padding-block: 16px 96px;
 }
 
 .result-brief {
@@ -2517,6 +2518,42 @@ body::after {
 
 .timeline-forge {
   border-color: rgba(245, 213, 140, .22);
+}
+
+.timeline-combat {
+  border-color: rgba(96, 165, 250, .24);
+  background:
+    linear-gradient(90deg, rgba(37, 99, 235, .13), rgba(5, 7, 11, .4)),
+    rgba(5, 7, 11, .36);
+}
+
+.timeline-survival {
+  border-color: rgba(45, 212, 191, .25);
+  background:
+    linear-gradient(90deg, rgba(20, 184, 166, .12), rgba(5, 7, 11, .4)),
+    rgba(5, 7, 11, .36);
+}
+
+.timeline-boss {
+  border-color: rgba(251, 146, 60, .3);
+  background:
+    linear-gradient(90deg, rgba(194, 65, 12, .16), rgba(5, 7, 11, .42)),
+    rgba(5, 7, 11, .38);
+}
+
+.timeline-combat .timeline-marker {
+  border-color: rgba(96, 165, 250, .22);
+  color: #bfdbfe;
+}
+
+.timeline-survival .timeline-marker {
+  border-color: rgba(45, 212, 191, .24);
+  color: #99f6e4;
+}
+
+.timeline-boss .timeline-marker {
+  border-color: rgba(251, 146, 60, .24);
+  color: #fed7aa;
 }
 
 .timeline-danger {

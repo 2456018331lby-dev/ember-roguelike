@@ -1,6 +1,6 @@
 # 余烬 Ember - 维护与接手文档
 
-最后更新：2026-06-07（本轮继续推进奖励页可解释性和前端完成度：`presentation.mjs` 新增 `rewardCardReadouts`，把每张奖励牌的决策标签、风险等级、风险文案、稀有度文案、协同机会和短板修复说明集中在展示边界生成；`main.mjs` 的奖励卡只消费这些结构化读板，卡面新增 `card-readout`，可显示“协同点亮 / 修复续航 / 修复首领输出 / 高危爆发 / 成长引擎”等机会说明和“低风险 / 献祭风险 / 死亡赌注”风险脚注，并删除不再使用的 `cardStatsLine()`。`styles.css` 补了稀有度、协同、修复、安全网和高风险卡面状态，移动端奖励卡恢复稳定高度，避免新增读板后内部文字被裁切；visual smoke 现在断言奖励卡存在读板、机会标签、风险等级，并检查 `scrollHeight <= clientHeight` 防止卡面内容被隐藏。Playwright 本地浏览器打开 `?debug=1` 后触发奖励调试钩子，snapshot 已确认三张奖励卡完整展示结构化读板。PWA cache 已提升到 `ember-v18`，并已同步 `web -> docs -> android`。当前 checkpoint 仍为 `baseline avgWave 19.12`、`smart avgWave 23.42`，smart 第 5 波 `60/60` 通过，第 20 波到达 `53/60`，第 25 波到达 `48/60`，通关 `45/60`，无 max-tick 卡局。本轮 Android debug APK 构建和 payload 校验通过，当前 APK SHA256 为 `6AD68AC5EF6C3D32161795E067C9DEA1AA72CE943EA1834C8C2A16FC296C3B7B`；本轮模拟器点击流 smoke 因本机找不到 `emulator.exe` 未能重跑，`adb devices` 无在线设备，最近一次通过的模拟器点击流仍是前序 APK `1BCDFAF64F2EDEC1C1C1731E353629C4C6F873024C6CA3FC348B8B5204386D51`。前序记录中的结算复盘时间线、下一把优先级、中后期奖励短板修复、Boss 前容错、脆皮 `fragilityDebt`、烟幕残影保命、Boss 读招面板、逐资源 service worker 预缓存和视觉回归仍继续成立。）
+最后更新：2026-06-07（本轮继续推进“波中战斗事件 -> 复盘时间线”的解释闭环：`game_core.mjs` 新增有界 `combatLog`，记录低血线、余烬护符/烟幕残影救场、凤凰余烬复活、Boss 终局弹幕和首领倒下等关键战斗事件，不改变任何战斗数值；`deathSummary` 会携带最近战斗事件。`presentation.mjs` 会把 `decisionLog` 和 `combatLog` 合并成有序 `resultTimeline`，让“路线选择 -> 波中转折 -> 崩盘节点/胜利节点”出现在同一条复盘时间线里；`main.mjs` 和 `styles.css` 新增 `combat / survival / boss` 时间线色调，结果内容滚动区补了底部 scroll padding，避免移动端最后节点贴住操作区。`scripts/visual-smoke.mjs` 现在断言结果时间线含有战斗事件；Playwright 本地浏览器通过 `?debug=1` 触发 `showResult(false)`，确认 6 个时间线节点中包含“首领进入终局弹幕”和“血线跌入危险区”，截图保存为 `output/playwright/ember-combat-timeline-result.png`。PWA cache 已提升到 `ember-v19`，visual regression 基线已同步。当前 checkpoint 仍为 `baseline avgWave 19.12`、`smart avgWave 23.42`，smart 第 5 波 `60/60` 通过，第 20 波到达 `53/60`，第 25 波到达 `48/60`，通关 `45/60`，无 max-tick 卡局。本轮 Android debug APK 构建和 payload 校验通过，当前 APK SHA256 为 `27376DE6BB3827B264693AE1C78E582136D7534CC16F1AE99ABD3E755A7FA9B7`；本机仍找不到 `emulator.exe` 且 `adb devices` 无在线设备，当前 APK 的模拟器点击流 smoke 仍需恢复 Android Emulator 或接入真机后重跑，最近一次通过的模拟器点击流仍是前序 APK `1BCDFAF64F2EDEC1C1C1731E353629C4C6F873024C6CA3FC348B8B5204386D51`。前序记录中的奖励读板、下一把优先级、中后期奖励短板修复、Boss 前容错、脆皮 `fragilityDebt`、烟幕残影保命、Boss 读招面板、逐资源 service worker 预缓存和视觉回归仍继续成立。）
 
 本文件给下一个继续维护的人或 AI，用来快速判断三件事：
 
@@ -24,14 +24,15 @@
 本轮新增的核心改动位置：
 
 - `web/src/presentation.mjs`：新增 `resultPriorityLabel/resultNextHint`，把“下一把优先级”从 UI 里抽成结构化展示逻辑，并按 `singleTarget / aoe / sustain / safety` 最大压力缺口给出下一轮建议。
-- `web/src/presentation.mjs`：新增 `resultTimeline`，把结构化 `decisionLog` 转成复盘时间线，并追加崩盘/胜利终点；没有结构化日志时兼容旧版 `lastDecisions` 字符串。
+- `web/src/presentation.mjs`：新增 `resultTimeline`，把结构化 `decisionLog` 和 `combatLog` 合并成复盘时间线，并追加崩盘/胜利终点；没有结构化日志时兼容旧版 `lastDecisions` 字符串。
+- `web/src/game_core.mjs`：新增有界 `combatLog`，只记录低血线、救场、复活、Boss 终局弹幕和首领倒下等高信号事件；`deathSummary` 会携带最近事件供结算页复盘。
 - `web/src/presentation.mjs`：新增 `rewardCardReadouts`，集中输出奖励卡决策标签、风险等级、稀有度、协同触发机会和短板修复解释；`tests/game_core.test.mjs` 已覆盖协同机会和高风险读板。
 - `web/src/main.mjs`：`showResult()` 改成战报复盘结构，分区展示关键数值、路线概览、构筑诊断、阵亡复盘和下一把优先级；本地 `?debug=1` 新增 `showResult()` 钩子用于稳定生成结算页截图。
 - `web/src/main.mjs`：新增 `renderResultTimeline()`，只消费展示层给出的 timeline 节点。
 - `web/src/main.mjs`：奖励卡现在渲染 `card-readout`，展示协同/修复/风险机会说明；不再保留只在奖励卡里使用的 `cardStatsLine()`。
-- `web/styles.css`：结算页改为标题、可滚动复盘内容和底部固定操作区的布局，移动端关键数值两列显示，摘要卡显式防裁切；本轮新增时间线卡片样式、奖励卡读板样式、协同/修复/安全网/高风险状态边框，并恢复移动端奖励卡稳定高度防裁切。
-- `scripts/visual-smoke.mjs` / `scripts/visual-regression.mjs`：新增桌面/移动端结算页、时间线区域和奖励卡读板覆盖，断言摘要标题/说明未被裁切、底部按钮在视口内、时间线包含崩盘节点、奖励卡有机会标签/风险等级且卡面内容不被内部裁切，并把结果页、时间线和奖励卡变化纳入视觉回归基线。
-- `web/sw.js`：PWA cache 提升到 `ember-v18`；`docs/` 镜像已由 `node scripts/sync-web.mjs` 同步。
+- `web/styles.css`：结算页改为标题、可滚动复盘内容和底部固定操作区的布局，移动端关键数值两列显示，摘要卡显式防裁切；本轮新增时间线卡片样式、战斗事件色调、奖励卡读板样式、协同/修复/安全网/高风险状态边框，并恢复移动端奖励卡稳定高度防裁切。
+- `scripts/visual-smoke.mjs` / `scripts/visual-regression.mjs`：新增桌面/移动端结算页、时间线区域和奖励卡读板覆盖，断言摘要标题/说明未被裁切、底部按钮在视口内、时间线包含崩盘节点和战斗事件、奖励卡有机会标签/风险等级且卡面内容不被内部裁切，并把结果页、时间线和奖励卡变化纳入视觉回归基线。
+- `web/sw.js`：PWA cache 提升到 `ember-v19`；`docs/` 镜像已由 `node scripts/sync-web.mjs` 同步。
 - `web/src/game_core.mjs`：`isAoeRepairCard()`、`isSustainRepairCard()`、`isPressureRepairCard()` 和 `getPriorityPressureRepairKey()` 共同负责中后期奖励短板修复保底；通用奖励保底刻意不覆盖 `safety`。
 - `web/src/game_core.mjs`：`generateRestChoices()` 会在第 10 波 Boss 前 safety 极高时提前提供 `余烬护符`，第 15 波以后仍使用较低 safety 门槛。
 - `tests/game_core.test.mjs`：`中后期奖励应保底修复最大构筑短板` 锁定清场缺口必须至少出现一张修复牌；`第 10 波 Boss 前安全缺口极高时应提前提供护符` 锁定 Boss 前容错窗口。
@@ -40,7 +41,7 @@
 本轮以后最值得继续做的事情：
 
 - 继续用 `npm run test:boss-checkpoints` 观察第 10/15/20/25 波，不要只优化第 5 波。
-- 继续强化 `构筑缺口 -> 奖励推荐 -> 战前准备 -> 波次风险提示 -> 死亡复盘时间线 -> 下一把优先级` 这一条闭环。
+- 继续强化 `构筑缺口 -> 奖励推荐 -> 战前准备 -> 波次风险提示 -> 战斗转折复盘 -> 下一把优先级` 这一条闭环。
 - 继续补区域级视觉回归和实体 Android 真机复测；当前本机 Android Emulator 组件缺失导致自动模拟器 smoke 不能重跑，需要先恢复 `emulator.exe` 或接入在线设备。
 
 ---
@@ -183,7 +184,7 @@ roguelike-game/
 - `scripts/visual-regression.mjs` 已建立 PNG 解码后的像素回归：角色选择等稳定界面使用严格 RGBA 哈希，菜单和动画界面使用亮度、RGB 均值、暗/亮/饱和像素比例容差；基线在 `tests/visual-regression-baseline.json`，包含桌面/移动端奖励页读板、活跃 Boss 战截图、高波桌面样本、桌面/移动端结算复盘和桌面/移动端时间线区域
 - `scripts/generate-art-assets.mjs` 默认保留现有角色 spritesheet，避免误运行后覆盖 AI 人物资源；同时会重生成参考图风格竞技场背景和敌人 / Boss spritesheet
 - `web/src/main.mjs` 会按背景图原始比例居中裁切绘制竞技场 PNG，因此后续直接替换 `web/assets/arena-ember-fortress.png` 不会被拉伸；它也会优先使用敌人 spritesheet，加载失败时仍回退到 SVG 符号和圆形占位
-- `web/sw.js` 已预缓存 `main.mjs` 的静态模块依赖和核心美术资源；当前 `CACHE = ember-v18`；替换同名 PNG 或修改核心脚本后必须继续提升 `CACHE` 版本，避免 PWA/Android WebView 继续命中旧缓存；预缓存必须逐资源容错，不能使用 `cache.addAll()`，否则 Android WebView 可能因单个 Cache 内部错误产生启动期 fatal log；fetch handler 只拦截同源 GET，离线 cache miss 会返回明确 Response，避免 WebView console 噪声
+- `web/sw.js` 已预缓存 `main.mjs` 的静态模块依赖和核心美术资源；当前 `CACHE = ember-v19`；替换同名 PNG 或修改核心脚本后必须继续提升 `CACHE` 版本，避免 PWA/Android WebView 继续命中旧缓存；预缓存必须逐资源容错，不能使用 `cache.addAll()`，否则 Android WebView 可能因单个 Cache 内部错误产生启动期 fatal log；fetch handler 只拦截同源 GET，离线 cache miss 会返回明确 Response，避免 WebView console 噪声
 - `web/index.html` 不再依赖 Google Fonts 外链，Android / PWA 离线环境不会因为外部字体请求污染 logcat 或首屏加载
 - Android `assembleDebug` 已在本机成功跑通过一次
 - `scripts/build-android-debug.ps1` 已建立，负责选择可用 JDK 21、同步资源、构建 APK，并校验 APK 内关键 Web 资源和代码标记
@@ -301,7 +302,7 @@ npm run serve
 - Android 构建：
   - `npm run build:android:debug` 当前返回成功
   - APK 路径：`android/app/build/outputs/apk/debug/app-debug.apk`
-  - 当前构建 APK SHA256：`6AD68AC5EF6C3D32161795E067C9DEA1AA72CE943EA1834C8C2A16FC296C3B7B`
+  - 当前构建 APK SHA256：`27376DE6BB3827B264693AE1C78E582136D7534CC16F1AE99ABD3E755A7FA9B7`
   - 构建脚本会自动验证 APK 内容，避免 Web 修复没有同步进 Android 包
   - 已验证 APK 内包含当前 Web 资源关键标记：
     - `assets/public/index.html` 含 `Arena Roguelike`

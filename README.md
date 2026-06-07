@@ -73,7 +73,7 @@ http://127.0.0.1:5173
 - `npm test` 会验证核心玩法和平衡回归；其中包含奖励 / 锻造 / 商店 / 营火等决策状态不能进入无出口卡死状态的状态机检查。
 - `npm run test:boss-checkpoints` 会跑 baseline / smart 两套 60 seed 模拟，输出第 5/10/15/20/25 波 Boss 检查点、死亡 seed、短板标签和少量死亡样本，方便继续调中后期节奏；当前最近一次结果为 `baseline avgWave 19.12`、`smart avgWave 23.42`，其中 smart 第 5 波 `60/60` 通过、第 20 波到达 `53/60`、第 25 波到达 `48/60`、通关 `45/60`，且没有 max-tick 卡局。
 - `npm run test:web-smoke` 会验证 spritesheet 尺寸/内容、service worker 预缓存清单、本地服务 MIME、UI 状态路由，以及核心逻辑发出的粒子类型是否都被前端绘制，不需要新增浏览器测试依赖。
-- `npm run test:visual-smoke` 会用本机 Chrome/Edge 做桌面和移动端视觉 smoke，覆盖菜单、角色选择、局内 canvas、奖励选择页读板、Boss 前营火、Boss 波进入、桌面/移动端活跃 Boss 战读招画面、固定的第 20 波高波 Boss 桌面场景、桌面/移动端结算复盘，以及桌面/移动端时间线区域；奖励页会检查每张卡有读板、机会标签、风险等级且无内部裁切，结果页会检查摘要未被裁切、底部按钮可见、时间线存在崩盘节点，截图输出到 `output/visual-smoke/`，不需要新增 Playwright/Puppeteer 依赖。
+- `npm run test:visual-smoke` 会用本机 Chrome/Edge 做桌面和移动端视觉 smoke，覆盖菜单、角色选择、局内 canvas、奖励选择页读板、Boss 前营火、Boss 波进入、桌面/移动端活跃 Boss 战读招画面、固定的第 20 波高波 Boss 桌面场景、桌面/移动端结算复盘，以及桌面/移动端时间线区域；奖励页会检查每张卡有读板、机会标签、风险等级且无内部裁切，结果页会检查摘要未被裁切、底部按钮可见、时间线存在战斗事件和崩盘节点，截图输出到 `output/visual-smoke/`，不需要新增 Playwright/Puppeteer 依赖。
 - `npm run test:visual-regression` 会先跑视觉 smoke，再读取 PNG 像素并和 `tests/visual-regression-baseline.json` 对比；角色选择等稳定界面使用严格 RGBA 哈希，动画界面使用像素亮度/色彩比例容差，当前基线已包含奖励页读板、结算页和时间线区域的桌面/移动端截图。
 - 如果要构建 Android，优先使用仓库脚本 `npm run build:android:debug`；它会同步资源、构建 APK，并校验 APK 内的关键 Web 资源与代码标记。
 - `npm run verify:android:debug` 会用 `adb` 安装并启动 debug APK，检查应用进程、首屏截图和启动后的 WebView/JS 致命错误；没有在线设备且本机只有一个 AVD 时会自动启动并在结束后关闭。
@@ -85,7 +85,7 @@ http://127.0.0.1:5173
 
 当前仓库已经验证过可在本机生成 debug APK，并且前序版本已在本机 `NightRunner35` Android 模拟器完成安装、冷启动、焦点窗口、点击进入角色选择、点击进入局内战斗、截图和 logcat 致命错误扫描。本轮当前 APK 已完成构建和 payload 校验，但本机当前缺 `emulator.exe` 且无在线设备，点击流 smoke 需要恢复 Android Emulator 或接入设备后重跑。
 
-最近一次构建 APK SHA256：`6AD68AC5EF6C3D32161795E067C9DEA1AA72CE943EA1834C8C2A16FC296C3B7B`
+最近一次构建 APK SHA256：`27376DE6BB3827B264693AE1C78E582136D7534CC16F1AE99ABD3E755A7FA9B7`
 
 最近一次安装 / 冷启动 / 点击流验证 APK SHA256：`1BCDFAF64F2EDEC1C1C1731E353629C4C6F873024C6CA3FC348B8B5204386D51`（前序通过；本轮当前 APK 因本机缺 `emulator.exe` 且无在线设备，未能重跑点击流 smoke）
 

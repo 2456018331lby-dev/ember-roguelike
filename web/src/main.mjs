@@ -754,7 +754,7 @@ function showRest() {
 function renderResultTimeline(items = []) {
   if (!items.length) return '';
   const toneClass = tone => {
-    const allowed = new Set(['reward', 'forge', 'shop', 'rest', 'danger', 'victory', 'decision']);
+    const allowed = new Set(['reward', 'forge', 'shop', 'rest', 'combat', 'survival', 'boss', 'danger', 'victory', 'decision']);
     return allowed.has(tone) ? ` timeline-${tone}` : ' timeline-decision';
   };
   return `
@@ -2440,6 +2440,28 @@ function enableDebugHooks() {
         { wave: 19, type: 'forge', name: '快刃', action: 'upgrade' },
         { wave: 19, type: 'rest', name: '战斗训练', action: 'train' },
       ];
+      run.combatLog = [
+        {
+          type: 'boss_late_phase',
+          wave: 20,
+          waveKind: 'boss',
+          waveLabel: '第 20 波 Boss 讨伐',
+          time: 726,
+          title: '首领进入终局弹幕',
+          detail: '恶魔领主·混沌 被压到 38%，但弹幕密度也进入最高段。',
+          tone: 'boss',
+        },
+        {
+          type: 'low_hp',
+          wave: 20,
+          waveKind: 'boss',
+          waveLabel: '第 20 波 Boss 讨伐',
+          time: 731,
+          title: '血线跌入危险区',
+          detail: '连续弹幕后只剩 18/128，安全网缺口开始兑现。',
+          tone: 'combat',
+        },
+      ];
       run.deathSummary = {
         reason: victory ? '已完成远征。' : 'Boss 讨伐失败：走位和弹幕处理还需优化。',
         waveLabel: victory ? '第 25 波 · 最终清算' : '第 20 波 Boss 讨伐',
@@ -2454,6 +2476,7 @@ function enableDebugHooks() {
         gameTime: run.gameTime,
         kills: run.kills,
         extremes: run.extremes.length,
+        combatLog: run.combatLog,
       };
       run.state = victory ? 'victory' : 'gameover';
       state = 'result';

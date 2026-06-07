@@ -408,23 +408,25 @@ function buildResultPriority(run, analysis = {}) {
 
 function buildResultTimeline(run, resultPriority) {
   const summary = run.deathSummary || {};
-  const timeline = [];
   const decisionLog = Array.isArray(run.decisionLog) ? run.decisionLog : [];
   const structuredEntries = decisionLog
     .slice(-5)
     .map(buildTimelineItemFromDecision)
     .filter(Boolean);
+  let routeEntries = [];
 
   if (structuredEntries.length) {
-    timeline.push(...structuredEntries);
+    routeEntries = structuredEntries;
   } else {
     const fallbackDecisions = Array.isArray(summary.lastDecisions) ? summary.lastDecisions : [];
-    timeline.push(...fallbackDecisions.slice(-4).map(buildTimelineItemFromText).filter(Boolean));
+    routeEntries = fallbackDecisions.slice(-4).map(buildTimelineItemFromText).filter(Boolean);
   }
 
+  const combatEntries = buildTimelineItemsFromCombatLog(run, summary).slice(-3);
+  const timeline = [...routeEntries, ...combatEntries].sort(compareTimelineItems);
   const terminal = buildTerminalTimelineItem(run, summary, resultPriority);
-  if (terminal) timeline.push(terminal);
-  return timeline.slice(-6);
+  if (!terminal) return timeline.slice(-6);
+  return [...timeline.slice(-5), terminal];
 }
 
 function buildTimelineItemFromDecision(entry) {
@@ -457,6 +459,9 @@ function buildTimelineItemFromDecision(entry) {
     title: `${type} · ${entry.name || '未命名选择'}`,
     detail,
     tone: entry.type || 'decision',
+    sortWave: Number(entry.wave) || 0,
+    sortTime: Number(entry.time) || 0,
+    sortRank: 10,
   };
 }
 
@@ -469,6 +474,9 @@ function buildTimelineItemFromText(text) {
       title: String(text),
       detail: '旧版复盘记录，缺少结构化来源。',
       tone: 'decision',
+      sortWave: 0,
+      sortTime: 0,
+      sortRank: 10,
     };
   }
   return {
@@ -476,7 +484,50 @@ function buildTimelineItemFromText(text) {
     title: `${match[2].replace('/', ' · ')} · ${match[3].split(' · ')[0]}`,
     detail: match[3].split(' · ').slice(1).join(' · ') || '关键选择记录。',
     tone: 'decision',
+    sortWave: Number(match[1]) || 0,
+    sortTime: 0,
+    sortRank: 10,
   };
+}
+
+function buildTimelineItemsFromCombatLog(run, summary) {
+  const log = Array.isArray(summary.combatLog) && summary.combatLog.length
+    ? summary.combatLog
+    : Array.isArray(run.combatLog) ? run.combatLog : [];
+  return log.map(buildTimelineItemFromCombatMoment).filter(Boolean);
+}
+
+function buildTimelineItemFromCombatMoment(moment) {
+  if (!moment) return null;
+  const wave = moment.wave ?? '?';
+  const timePrefix = typeof moment.time === 'number' && moment.time > 0
+    ? `${formatTimelineTime(moment.time)} · `
+    : '';
+  const allowedTones = new Set(['combat', 'survival', 'boss', 'danger', 'victory']);
+  return {
+    marker: `第 ${wave} 波`,
+    title: moment.title || '战斗转折',
+    detail: `${timePrefix}${moment.detail || '这一刻改变了战斗走向。'}`,
+    tone: allowedTones.has(moment.tone) ? moment.tone : 'combat',
+    sortWave: Number(wave) || 0,
+    sortTime: Number(moment.time) || 0,
+    sortRank: moment.tone === 'survival' ? 25 : moment.tone === 'boss' ? 22 : 20,
+  };
+}
+
+function compareTimelineItems(a, b) {
+  const waveDiff = (Number(a.sortWave) || 0) - (Number(b.sortWave) || 0);
+  if (waveDiff) return waveDiff;
+  const timeDiff = (Number(a.sortTime) || 0) - (Number(b.sortTime) || 0);
+  if (timeDiff) return timeDiff;
+  return (Number(a.sortRank) || 0) - (Number(b.sortRank) || 0);
+}
+
+function formatTimelineTime(seconds) {
+  const safe = Math.max(0, Math.floor(seconds));
+  const minutes = Math.floor(safe / 60);
+  const rest = safe % 60;
+  return minutes > 0 ? `${minutes}分${rest}秒` : `${rest}秒`;
 }
 
 function buildTerminalTimelineItem(run, summary, resultPriority) {

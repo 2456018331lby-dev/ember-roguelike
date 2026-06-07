@@ -169,6 +169,10 @@ const DEBUG_HIGH_WAVE_CARD_IDS = [
   'soul_drain',
 ];
 
+const MAX_COMBAT_LOG = 8;
+const LOW_HP_MOMENT_RATIO = 0.35;
+const BOSS_LATE_PHASE_RATIO = 0.4;
+
 // ---- 随机数 ----
 function mulberry32(seed) {
   let t = seed >>> 0;
@@ -361,6 +365,8 @@ export function createRun(seed = Date.now(), character = null, difficultyKey = '
     shopChoices: [],       // Boss后商店选项
     restChoices: [],       // Boss前休息选项
     decisionLog: [],       // 决策记录（用于死亡回顾）
+    combatLog: [],         // 波中关键战斗事件（用于结果时间线）
+    combatMomentFlags: { lowHpWaves: {}, bossLatePhase: {}, bossDefeated: {} },
     rewardRerolls: meta.rerollCount,
     rewardContext: { choiceCount: 3, rarityBonus: 0 },
     waveProfile: null,
@@ -456,6 +462,8 @@ export function createDebugBossFight(seed = 2048, options = {}) {
   run.restChoices = [];
   run.nextWavePreview = null;
   run.decisionLog = [];
+  run.combatLog = [];
+  run.combatMomentFlags = { lowHpWaves: {}, bossLatePhase: {}, bossDefeated: {} };
   run.waveHistory = [];
   run.enemies = [];
   run.projectiles = [];
@@ -3279,11 +3287,94 @@ export function resolveAutoAttack(run, dt) {
   run.events.push(packet.isCrit ? 'crit' : 'attack');
 }
 
+function ensureCombatMomentFlags(run) {
+  if (!run.combatMomentFlags) run.combatMomentFlags = {};
+  if (!run.combatMomentFlags.lowHpWaves) run.combatMomentFlags.lowHpWaves = {};
+  if (!run.combatMomentFlags.bossLatePhase) run.combatMomentFlags.bossLatePhase = {};
+  if (!run.combatMomentFlags.bossDefeated) run.combatMomentFlags.bossDefeated = {};
+  return run.combatMomentFlags;
+}
+
+function recordCombatMoment(run, moment) {
+  if (!run || !moment) return;
+  if (!Array.isArray(run.combatLog)) run.combatLog = [];
+  const wave = moment.wave ?? run.wave ?? 0;
+  const entry = {
+    type: moment.type || 'combat',
+    wave,
+    waveKind: moment.waveKind || run.waveProfile?.kind || '',
+    waveLabel: moment.waveLabel || run.waveProfile?.label || (wave ? `第 ${wave} 波` : '当前波次'),
+    time: Math.max(0, Math.floor(moment.time ?? run.gameTime ?? 0)),
+    title: String(moment.title || '关键战斗事件'),
+    detail: String(moment.detail || '这一刻改变了战斗走向。'),
+    tone: moment.tone || 'combat',
+  };
+  run.combatLog.push(entry);
+  if (run.combatLog.length > MAX_COMBAT_LOG) {
+    run.combatLog.splice(0, run.combatLog.length - MAX_COMBAT_LOG);
+  }
+}
+
+function maybeRecordLowHpMoment(run, amount, stats) {
+  const maxHp = Math.max(1, stats?.maxHp || run.player.maxHp || 1);
+  const hp = Math.max(0, run.player.hp);
+  if (hp <= 0 || hp / maxHp > LOW_HP_MOMENT_RATIO) return;
+  const flags = ensureCombatMomentFlags(run);
+  const key = String(run.wave || 0);
+  if (flags.lowHpWaves[key]) return;
+  flags.lowHpWaves[key] = true;
+  recordCombatMoment(run, {
+    type: 'low_hp',
+    title: '血线跌入危险区',
+    detail: `承受 ${Math.round(amount)} 伤害后只剩 ${Math.ceil(hp)}/${maxHp}，这一波已经进入容错断层。`,
+    tone: 'combat',
+  });
+}
+
+function recordSurvivalMoment(run, title, detail) {
+  recordCombatMoment(run, {
+    type: 'survival',
+    title,
+    detail,
+    tone: 'survival',
+  });
+}
+
+function maybeRecordBossLatePhase(run, boss, previousHp) {
+  if (!boss?.isBoss || boss.hp <= 0 || !boss.maxHp) return;
+  const previousRatio = previousHp / boss.maxHp;
+  const currentRatio = boss.hp / boss.maxHp;
+  if (previousRatio <= BOSS_LATE_PHASE_RATIO || currentRatio > BOSS_LATE_PHASE_RATIO) return;
+  const flags = ensureCombatMomentFlags(run);
+  if (flags.bossLatePhase[boss.id]) return;
+  flags.bossLatePhase[boss.id] = true;
+  recordCombatMoment(run, {
+    type: 'boss_late_phase',
+    title: '首领进入终局弹幕',
+    detail: `${boss.name} 被压到 ${Math.ceil(Math.max(0, boss.hp))}/${boss.maxHp}，但弹幕密度也进入最高段。`,
+    tone: 'boss',
+  });
+}
+
+function recordBossDefeatMoment(run, boss) {
+  if (!boss?.isBoss) return;
+  const flags = ensureCombatMomentFlags(run);
+  if (flags.bossDefeated[boss.id]) return;
+  flags.bossDefeated[boss.id] = true;
+  recordCombatMoment(run, {
+    type: 'boss_defeated',
+    title: '首领倒下',
+    detail: `${boss.name} 被击败，当前路线撑过了第 ${run.wave} 波的主压场点。`,
+    tone: 'boss',
+  });
+}
+
 // ============================================================
 // 伤害系统
 // ============================================================
 function damageEnemy(run, enemy, amount, stats, isCrit) {
   const finalDmg = Math.max(1, amount - Math.max(0, (enemy.armor || 0) - stats.armorPierce));
+  const previousHp = enemy.hp;
   enemy.hp -= finalDmg;
   enemy.hitFlash = 1;
   run.score += Math.max(1, scaledScore(run, finalDmg * (1 + stats.scoreBonus)));
@@ -3291,8 +3382,10 @@ function damageEnemy(run, enemy, amount, stats, isCrit) {
   run.comboTimer = 2.5;
   run.maxCombo = Math.max(run.maxCombo, run.combo);
   if (run.combo > 0 && run.combo % 5 === 0) run.events.push('combo');
+  maybeRecordBossLatePhase(run, enemy, previousHp);
 
   if (enemy.hp <= 0) {
+    recordBossDefeatMoment(run, enemy);
     run.kills += 1;
     const bonus = enemy.isBoss ? 800 : enemy.isElite ? 160 : 40;
     run.score += scaledScore(run, bonus * (1 + stats.scoreBonus));
@@ -3351,8 +3444,10 @@ function takeDamage(run, amount) {
   run.particles.push({ type: 'hit', x: run.player.x, y: run.player.y, life: 0.4, maxLife: 0.4, damage: Math.round(amount) });
   run.events.push('hit');
 
+  const stats = getPlayerStats(run);
+  maybeRecordLowHpMoment(run, amount, stats);
+
   if (run.player.hp <= 0) {
-    const stats = getPlayerStats(run);
     if ((run.player.tempDeathWard || 0) > 0) {
       const source = run.player.tempDeathWardSource;
       run.player.tempDeathWard -= 1;
@@ -3364,6 +3459,9 @@ function takeDamage(run, amount) {
       pushMessage(run, source === 'smoke'
         ? '🌫 烟幕残影散尽，保住最后一息。'
         : '🛡 余烬护符碎裂，保住最后一息。');
+      recordSurvivalMoment(run,
+        source === 'smoke' ? '烟幕残影救场' : '余烬护符救场',
+        '致命伤被保到 1 生命，后续路线必须优先补安全网。');
       run.events.push('revive');
       run.particles.push({ type: 'revive', x: run.player.x, y: run.player.y, life: 1.4, maxLife: 1.4 });
     } else if (stats.revive > 0 && !run.reviveUsed) {
@@ -3374,6 +3472,9 @@ function takeDamage(run, amount) {
       run.screenShake = 0.8;
       run.screenFlash = 0.6;
       pushMessage(run, '🔥 凤凰余烬燃烧！复活一次。');
+      recordSurvivalMoment(run,
+        '凤凰余烬复燃',
+        `致命伤后以 ${Math.ceil(run.player.hp)}/${stats.maxHp} 回场，本局安全网已经消耗。`);
       run.events.push('revive');
       // 标记卡牌为已使用
       const reviveCard = run.player.deck.find(c => c.revive && !c.used);
@@ -3473,6 +3574,7 @@ function die(run, msg) {
     pressureTargets: clone(pressureTargets),
     pressureGaps: clone(pressureGaps),
     lastDecisions,
+    combatLog: clone((run.combatLog || []).slice(-5)),
   };
   pushMessage(run, msg);
   pushMessage(run, `☠ ${reason}`);

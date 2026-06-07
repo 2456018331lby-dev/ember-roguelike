@@ -1,4 +1,4 @@
-const CACHE = 'ember-v18';
+const CACHE = 'ember-v19';
 const ASSETS = [
   './', './index.html', './styles.css', './manifest.webmanifest', './sw.js',
   './src/main.mjs', './src/game_core.mjs', './src/audio.mjs', './src/save.mjs',

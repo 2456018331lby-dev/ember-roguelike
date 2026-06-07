@@ -2188,6 +2188,106 @@ test('死亡复盘应包含波次上下文和构筑建议', () => {
   assert.equal(pres.deathReason, 'Boss 讨伐失败：输出不足，未能在弹幕窗口内击杀首领。');
 });
 
+test('核心战斗应记录低血线和救场事件', () => {
+  const lowHpRun = createRun(110);
+  lowHpRun.waveTransitionTimer = 0;
+  updateRun(lowHpRun, { x: 0, y: 0 }, 0.001);
+  lowHpRun.player.hp = 100;
+  lowHpRun.player.invuln = 0;
+  lowHpRun.projectiles.push({
+    x: lowHpRun.player.x,
+    y: lowHpRun.player.y,
+    vx: 0,
+    vy: 0,
+    damage: 70,
+    life: 1,
+    radius: 30,
+    color: '#fff',
+    fromEnemy: true,
+  });
+  updateRun(lowHpRun, { x: 0, y: 0 }, 0.016);
+
+  assert.ok(lowHpRun.combatLog.some(item => item.type === 'low_hp'), '低血线应写入战斗事件');
+  assert.match(lowHpRun.combatLog.find(item => item.type === 'low_hp')?.detail || '', /只剩/);
+
+  const wardRun = createRun(111);
+  wardRun.waveTransitionTimer = 0;
+  updateRun(wardRun, { x: 0, y: 0 }, 0.001);
+  wardRun.player.hp = 8;
+  wardRun.player.invuln = 0;
+  wardRun.player.tempDeathWard = 1;
+  wardRun.player.tempDeathWardSource = 'ward';
+  wardRun.projectiles.push({
+    x: wardRun.player.x,
+    y: wardRun.player.y,
+    vx: 0,
+    vy: 0,
+    damage: 90,
+    life: 1,
+    radius: 30,
+    color: '#fff',
+    fromEnemy: true,
+  });
+  updateRun(wardRun, { x: 0, y: 0 }, 0.016);
+
+  assert.equal(wardRun.state, 'playing');
+  assert.equal(wardRun.player.hp, 1);
+  assert.ok(wardRun.combatLog.some(item => item.tone === 'survival' && /余烬护符/.test(item.title)), '救场应写入生存事件');
+});
+
+test('复盘时间线应合并波中战斗事件', () => {
+  const run = createRun(112);
+  run.state = 'gameover';
+  run.wave = 20;
+  run.waveProfile = { kind: 'boss', label: '第 20 波 Boss 讨伐' };
+  run.buildAnalysis = {
+    primaryFocus: 'fortress',
+    weaknesses: { singleTarget: false, sustain: true, aoe: false, safety: true },
+    pressure: { singleTarget: 112, aoe: 48, sustain: 50, mitigation: 18, safety: 4 },
+    pressureTargets: { singleTarget: 110, aoe: 44, sustain: 82, safety: 36 },
+    pressureGaps: { singleTarget: 0, aoe: 0, sustain: 14, safety: 32 },
+    summary: '壁垒',
+  };
+  run.decisionLog = [
+    { wave: 19, type: 'rest', action: 'train', name: '战斗训练', fitScore: 8.1 },
+  ];
+  run.combatLog = [
+    {
+      type: 'boss_late_phase',
+      wave: 20,
+      time: 240,
+      title: '首领进入终局弹幕',
+      detail: '首领低血后进入最高压弹幕。',
+      tone: 'boss',
+    },
+    {
+      type: 'low_hp',
+      wave: 20,
+      time: 246,
+      title: '血线跌入危险区',
+      detail: '连续命中后只剩 18/128。',
+      tone: 'combat',
+    },
+  ];
+  run.deathSummary = {
+    reason: 'Boss 讨伐失败：容错不够，一次失误就再难回正。',
+    wave: 20,
+    waveLabel: '第 20 波 Boss 讨伐',
+    waveKind: 'boss',
+    pressure: run.buildAnalysis.pressure,
+    pressureTargets: run.buildAnalysis.pressureTargets,
+    pressureGaps: run.buildAnalysis.pressureGaps,
+    combatLog: run.combatLog,
+  };
+
+  const pres = buildRunPresentation(run, getPlayerStats(run), { name: '战士' });
+
+  assert.deepEqual(pres.resultTimeline.map(item => item.tone), ['rest', 'boss', 'combat', 'danger']);
+  assert.match(pres.resultTimeline[1].title, /首领进入终局弹幕/);
+  assert.match(pres.resultTimeline[2].detail, /4分6秒/);
+  assert.match(pres.resultTimeline.at(-1).title, /崩盘节点/);
+});
+
 test('死亡复盘下一把优先级应跟随最大压力缺口', () => {
   const run = createRun(101);
   run.state = 'gameover';
