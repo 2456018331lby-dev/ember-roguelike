@@ -411,7 +411,7 @@ function buildResultTimeline(run, resultPriority) {
   const decisionLog = Array.isArray(run.decisionLog) ? run.decisionLog : [];
   const structuredEntries = decisionLog
     .slice(-5)
-    .map(buildTimelineItemFromDecision)
+    .map(entry => buildTimelineItemFromDecision(entry, run, summary, resultPriority))
     .filter(Boolean);
   let routeEntries = [];
 
@@ -429,7 +429,7 @@ function buildResultTimeline(run, resultPriority) {
   return [...timeline.slice(-5), terminal];
 }
 
-function buildTimelineItemFromDecision(entry) {
+function buildTimelineItemFromDecision(entry, run, summary, resultPriority) {
   if (!entry) return null;
   const typeLabels = {
     reward: '奖励选择',
@@ -454,15 +454,223 @@ function buildTimelineItemFromDecision(entry) {
   const fit = typeof entry.fitScore === 'number' ? `契合 ${entry.fitScore.toFixed(1)}` : '';
   const cost = entry.cost ? `花费 ${entry.cost}` : '';
   const detail = [action ? `动作：${action}` : '', fit, cost].filter(Boolean).join(' · ') || '这一步改变了后续路线。';
+  const impact = buildDecisionImpact(entry, run, summary, resultPriority);
   return {
     marker: `第 ${entry.wave ?? '?'} 波`,
     title: `${type} · ${entry.name || '未命名选择'}`,
     detail,
     tone: entry.type || 'decision',
+    impactLabel: impact.label,
+    impactDetail: impact.detail,
+    impactTone: impact.tone,
     sortWave: Number(entry.wave) || 0,
     sortTime: Number(entry.time) || 0,
     sortRank: 10,
   };
+}
+
+function buildDecisionImpact(entry, run, summary, resultPriority) {
+  const priorityKey = priorityKeyFromResult(resultPriority);
+  if (entry.type === 'reward') return buildRewardDecisionImpact(entry, run, priorityKey);
+  if (entry.type === 'rest') return buildRestDecisionImpact(entry, priorityKey);
+  if (entry.type === 'forge') return buildForgeDecisionImpact(entry, priorityKey);
+  if (entry.type === 'shop') return buildShopDecisionImpact(entry, summary, priorityKey);
+  return {
+    label: '路线记录',
+    detail: '这一步进入了最后几次关键选择，但缺少更细的因果来源。',
+    tone: 'neutral',
+  };
+}
+
+function buildRewardDecisionImpact(entry, run, priorityKey) {
+  const card = findDecisionCard(run, entry);
+  const cardKey = card ? classifyDecisionCard(card) : null;
+  const priorityLabel = priorityKey ? PRESSURE_LABELS[priorityKey] : '';
+  const riskLevel = card ? rewardRiskLevel(card) : 0;
+  const hint = entry.fitHint || card?.fitHint || '';
+  const fit = Number(entry.fitScore);
+
+  if (riskLevel >= 2) {
+    return {
+      label: '风险放大',
+      detail: priorityLabel
+        ? `这张牌收益高但会压低容错；最终仍要面对${priorityLabel}问题。`
+        : '这张牌收益高但会压低容错，适合已有安全网时再赌。',
+      tone: 'risk',
+    };
+  }
+
+  if (cardKey) {
+    const label = `${PRESSURE_LABELS[cardKey]}补强`;
+    if (cardKey === priorityKey) {
+      return {
+        label,
+        detail: `直接处理了本局复盘里的最大缺口，但后续强度仍未完全达标。`,
+        tone: 'repair',
+      };
+    }
+    return {
+      label,
+      detail: priorityLabel
+        ? `补了${PRESSURE_LABELS[cardKey]}，但最终最大缺口落在${priorityLabel}。`
+        : `补了${PRESSURE_LABELS[cardKey]}，属于路线稳定项。`,
+      tone: 'neutral',
+    };
+  }
+
+  if (Number.isFinite(fit)) {
+    if (fit >= 12) {
+      return { label: '高契合推进', detail: hint || '当时评分较高，说明它贴合当前路线。', tone: 'repair' };
+    }
+    if (fit <= 5) {
+      return {
+        label: '低契合信号',
+        detail: priorityLabel ? `这步没有直接处理最终的${priorityLabel}缺口。` : '这步和当时构筑短板的关系偏弱。',
+        tone: 'missed',
+      };
+    }
+  }
+
+  return {
+    label: '路线意图',
+    detail: hint || '提供通用数值，具体因果需要结合后续战斗事件判断。',
+    tone: 'neutral',
+  };
+}
+
+function buildRestDecisionImpact(entry, priorityKey) {
+  const priorityLabel = priorityKey ? PRESSURE_LABELS[priorityKey] : '';
+  const hint = entry.fitHint || '';
+  const action = entry.action;
+  if (action === 'ward' || action === 'smoke') {
+    return {
+      label: '安全网补强',
+      detail: priorityKey === 'safety'
+        ? '这一步直接补了最终最大缺口，但后续仍被高压窗口继续追问容错。'
+        : '用保命或机动换下一波走位窗口。',
+      tone: 'repair',
+    };
+  }
+  if (action === 'heal') {
+    return {
+      label: '血线回正',
+      detail: priorityKey === 'sustain'
+        ? '这一步补了续航硬度方向，适合避免下一波开局低血。'
+        : '先把当前生命拉回可战状态。',
+      tone: 'repair',
+    };
+  }
+  if (action === 'train') {
+    return {
+      label: '输出取向',
+      detail: priorityLabel
+        ? `选择压缩战斗时长；如果最终缺口是${priorityLabel}，说明单靠训练没有补齐全部短板。`
+        : '用临时输出换更短的下一波战斗时间。',
+      tone: priorityKey === 'singleTarget' ? 'repair' : 'neutral',
+    };
+  }
+  if (action === 'gamble') {
+    return {
+      label: '风险放大',
+      detail: '用生命换高品质牌，会提高爆发但明显压低下一波容错。',
+      tone: 'risk',
+    };
+  }
+  if (action === 'meditate') {
+    return {
+      label: '长期减负',
+      detail: hint || '降低献祭负担，更偏后续路线而不是立即解压。',
+      tone: 'growth',
+    };
+  }
+  return {
+    label: entry.decisionLabel || '战前准备',
+    detail: hint || '这一步改变了下一波开局条件。',
+    tone: 'neutral',
+  };
+}
+
+function buildForgeDecisionImpact(entry, priorityKey) {
+  const priorityLabel = priorityKey ? PRESSURE_LABELS[priorityKey] : '';
+  if (entry.action === 'upgrade') {
+    return {
+      label: '核心强化',
+      detail: priorityLabel ? `强化已有牌位；最终仍需确认是否覆盖${priorityLabel}缺口。` : '提高既有路线强度。',
+      tone: 'growth',
+    };
+  }
+  if (entry.action === 'purify') {
+    return {
+      label: '代价修复',
+      detail: '移除献祭代价，降低路线长期副作用。',
+      tone: 'repair',
+    };
+  }
+  if (entry.action === 'reforge') {
+    return {
+      label: '路线换血',
+      detail: '用低价值牌位换更高上限，也会改变后续短板结构。',
+      tone: 'growth',
+    };
+  }
+  return {
+    label: '锻造调整',
+    detail: '这一步改变了已有牌组的质量或代价。',
+    tone: 'neutral',
+  };
+}
+
+function buildShopDecisionImpact(entry, summary, priorityKey) {
+  const priorityLabel = priorityKey ? PRESSURE_LABELS[priorityKey] : '';
+  if (entry.action === 'heal') return { label: '补给回血', detail: '用余烬换血线，减少下一段连续消耗风险。', tone: 'repair' };
+  if (entry.action === 'remove') return { label: '牌组瘦身', detail: '移除低价值牌，降低构筑噪声。', tone: 'growth' };
+  if (entry.action === 'upgrade') return { label: '商店强化', detail: priorityLabel ? `强化已有路线，但仍要看是否能覆盖${priorityLabel}。` : '用余烬提高核心牌质量。', tone: 'growth' };
+  if (entry.action === 'rare') return { label: '高稀有补位', detail: '抽高品质牌提高上限，但方向取决于落牌。', tone: 'growth' };
+  if (entry.action === 'purify_all') return { label: '全局减负', detail: '降低献祭副作用，帮助长线稳定。', tone: 'repair' };
+  if (entry.action === 'skip' && priorityLabel) {
+    return {
+      label: '资源保留',
+      detail: `没有在商店直接处理最终的${priorityLabel}缺口。`,
+      tone: 'missed',
+    };
+  }
+  return {
+    label: summary?.reason ? '商店取舍' : '路线取舍',
+    detail: '商店决策影响后续资源和牌组质量。',
+    tone: 'neutral',
+  };
+}
+
+const PRESSURE_LABELS = {
+  singleTarget: '首领输出',
+  aoe: '清场',
+  sustain: '续航硬度',
+  safety: '安全网',
+};
+
+function priorityKeyFromResult(resultPriority) {
+  const label = resultPriority?.label || '';
+  return Object.entries(PRESSURE_LABELS).find(([, value]) => value === label)?.[0] || null;
+}
+
+function findDecisionCard(run, entry) {
+  const deck = run.player?.deck || [];
+  if (entry.cardId) {
+    const byId = [...deck].reverse().find(card => card.id === entry.cardId);
+    if (byId) return byId;
+  }
+  if (entry.name) {
+    return [...deck].reverse().find(card => card.name === entry.name || card.name?.replace(/[+·净]+$/u, '') === entry.name) || null;
+  }
+  return null;
+}
+
+function classifyDecisionCard(card) {
+  if (card.revive || card.barrier || card.dodgeChance) return 'safety';
+  if (card.regen || card.lifesteal || card.armorBonus || card.reflect || card.thorns) return 'sustain';
+  if (isRewardAoeRepair(card)) return 'aoe';
+  if (isRewardSingleTargetRepair(card)) return 'singleTarget';
+  return null;
 }
 
 function buildTimelineItemFromText(text) {

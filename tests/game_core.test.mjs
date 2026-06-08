@@ -2288,6 +2288,66 @@ test('复盘时间线应合并波中战斗事件', () => {
   assert.match(pres.resultTimeline.at(-1).title, /崩盘节点/);
 });
 
+test('复盘时间线应标出关键选择的路线影响', () => {
+  const run = createRun(113);
+  run.state = 'gameover';
+  run.wave = 20;
+  run.waveProfile = { kind: 'boss', label: '第 20 波 Boss 讨伐' };
+  run.player.deck.push({
+    id: 'phoenix_ember',
+    name: '凤凰余烬',
+    type: 'joker',
+    rarity: 'legendary',
+    revive: 1,
+    desc: '仅限一次：死亡时以 30% 生命复活',
+  });
+  run.buildAnalysis = {
+    primaryFocus: 'fortress',
+    weaknesses: { singleTarget: false, sustain: false, aoe: false, safety: true },
+    pressure: { singleTarget: 120, aoe: 48, sustain: 88, mitigation: 20, safety: 6 },
+    pressureTargets: { singleTarget: 110, aoe: 44, sustain: 82, safety: 36 },
+    pressureGaps: { singleTarget: 0, aoe: 0, sustain: 0, safety: 30 },
+    summary: '壁垒',
+  };
+  run.decisionLog = [
+    {
+      wave: 19,
+      type: 'reward',
+      action: 'pick',
+      name: '凤凰余烬',
+      cardId: 'phoenix_ember',
+      fitScore: 18.2,
+      fitHint: '补高波安全网',
+    },
+    {
+      wave: 19,
+      type: 'rest',
+      action: 'train',
+      name: '战斗训练',
+      fitScore: 8.1,
+      fitHint: '输出缺口更明显，适合压缩 Boss 战时长。',
+    },
+  ];
+  run.deathSummary = {
+    reason: 'Boss 讨伐失败：走位和弹幕处理还需优化。',
+    wave: 20,
+    waveLabel: '第 20 波 Boss 讨伐',
+    waveKind: 'boss',
+    pressure: run.buildAnalysis.pressure,
+    pressureTargets: run.buildAnalysis.pressureTargets,
+    pressureGaps: run.buildAnalysis.pressureGaps,
+  };
+
+  const pres = buildRunPresentation(run, getPlayerStats(run), { name: '战士' });
+
+  assert.equal(pres.resultPriorityLabel, '安全网');
+  assert.equal(pres.resultTimeline[0].impactLabel, '安全网补强');
+  assert.equal(pres.resultTimeline[0].impactTone, 'repair');
+  assert.match(pres.resultTimeline[0].impactDetail, /最大缺口/);
+  assert.equal(pres.resultTimeline[1].impactLabel, '输出取向');
+  assert.match(pres.resultTimeline[1].impactDetail, /安全网/);
+});
+
 test('死亡复盘下一把优先级应跟随最大压力缺口', () => {
   const run = createRun(101);
   run.state = 'gameover';

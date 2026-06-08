@@ -459,6 +459,7 @@ const resultReportExpression = `(() => {
   const sections = [...document.querySelectorAll('.result-section')];
   const timelineItems = [...document.querySelectorAll('.timeline-item')];
   const combatTimelineItems = [...document.querySelectorAll('.timeline-combat, .timeline-survival, .timeline-boss')];
+  const impactItems = [...document.querySelectorAll('.timeline-impact')];
   const next = document.querySelector('.result-next');
   const restart = document.querySelector('#restartBtn');
   const actions = document.querySelector('.result-actions');
@@ -487,11 +488,14 @@ const resultReportExpression = `(() => {
       timelineItems.some(item => /崩盘节点/.test(item.textContent || '')) &&
       combatTimelineItems.length >= 1 &&
       timelineItems.some(item => /血线跌入危险区|首领进入终局弹幕|凤凰余烬复燃|余烬护符救场/.test(item.textContent || '')) &&
+      impactItems.length >= 2 &&
+      impactItems.some(item => /路线影响/.test(item.textContent || '')) &&
       noHorizontalOverflow),
     heroCards: heroCards.map(card => card.textContent.trim()),
     sections: sections.map(section => section.textContent.trim().slice(0, 32)),
     timelineItems: timelineItems.map(item => item.textContent.trim().slice(0, 48)),
     combatTimelineItems: combatTimelineItems.map(item => item.textContent.trim().slice(0, 48)),
+    impactItems: impactItems.map(item => item.textContent.trim().slice(0, 48)),
     panelRect: panelRect ? { width: Math.round(panelRect.width), height: Math.round(panelRect.height), scrollHeight: panel.scrollHeight } : null,
     briefRect: briefRect ? { height: Math.round(briefRect.height), bottom: Math.round(briefRect.bottom) } : null,
     outcomeRect: outcomeRect ? { bottom: Math.round(outcomeRect.bottom) } : null,

@@ -757,6 +757,10 @@ function renderResultTimeline(items = []) {
     const allowed = new Set(['reward', 'forge', 'shop', 'rest', 'combat', 'survival', 'boss', 'danger', 'victory', 'decision']);
     return allowed.has(tone) ? ` timeline-${tone}` : ' timeline-decision';
   };
+  const impactClass = tone => {
+    const allowed = new Set(['repair', 'risk', 'growth', 'missed', 'neutral']);
+    return allowed.has(tone) ? ` impact-${tone}` : ' impact-neutral';
+  };
   return `
     <div class="result-section result-timeline">
       <div class="result-section-title">复盘时间线</div>
@@ -767,6 +771,11 @@ function renderResultTimeline(items = []) {
             <div class="timeline-copy">
               <div class="timeline-title">${escapeHtml(item.title || '关键节点')}</div>
               <div class="timeline-detail">${escapeHtml(item.detail || '这一步改变了后续路线。')}</div>
+              ${item.impactLabel ? `
+                <div class="timeline-impact${impactClass(item.impactTone)}">
+                  <span>路线影响 · ${escapeHtml(item.impactLabel)}</span>
+                  <em>${escapeHtml(item.impactDetail || '这一步改变了后续路线。')}</em>
+                </div>` : ''}
             </div>
           </div>`).join('')}
       </div>
@@ -2436,9 +2445,9 @@ function enableDebugHooks() {
         weaknesses: { singleTarget: true, aoe: true, sustain: false, safety: true },
       };
       run.decisionLog = [
-        { wave: 14, type: 'reward', name: '加特林', action: 'pick' },
+        { wave: 14, type: 'reward', name: '加特林', action: 'pick', cardId: 'gatling', fitScore: 15.4, fitHint: '补清场和攻速节奏' },
         { wave: 19, type: 'forge', name: '快刃', action: 'upgrade' },
-        { wave: 19, type: 'rest', name: '战斗训练', action: 'train' },
+        { wave: 19, type: 'rest', name: '战斗训练', action: 'train', fitScore: 8.1, fitHint: '输出缺口更明显，适合压缩 Boss 战时长。', decisionLabel: '可替代' },
       ];
       run.combatLog = [
         {

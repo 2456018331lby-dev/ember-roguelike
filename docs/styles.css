@@ -2508,6 +2508,51 @@ body::after {
   overflow-wrap: anywhere;
 }
 
+.timeline-impact {
+  display: grid;
+  gap: 4px;
+  margin-top: 2px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(232, 184, 93, .12);
+  background: rgba(3, 6, 10, .34);
+}
+
+.timeline-impact span {
+  color: var(--ember-gold-soft);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
+.timeline-impact em {
+  color: #d6dde8;
+  font-size: 12px;
+  font-style: normal;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.impact-repair {
+  border-color: rgba(45, 212, 191, .22);
+  background: rgba(8, 47, 73, .22);
+}
+
+.impact-risk {
+  border-color: rgba(248, 113, 113, .24);
+  background: rgba(69, 10, 10, .22);
+}
+
+.impact-growth {
+  border-color: rgba(245, 213, 140, .22);
+  background: rgba(64, 41, 8, .2);
+}
+
+.impact-missed {
+  border-color: rgba(148, 163, 184, .22);
+  background: rgba(15, 23, 42, .28);
+}
+
 .timeline-reward,
 .timeline-rest {
   border-color: rgba(34, 197, 94, .18);

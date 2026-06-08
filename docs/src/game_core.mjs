@@ -1880,6 +1880,9 @@ export function applyRestChoice(run, choice) {
     action: choice.restAction,
     name: choice.name,
     rewardCardId: choice.rewardCard?.id || null,
+    fitScore: typeof choice.fitScore === 'number' ? choice.fitScore : null,
+    fitHint: choice.fitHint || '',
+    decisionLabel: choice.decisionLabel || '',
   });
 
   run.state = 'playing';
@@ -1920,6 +1923,7 @@ export function applyCardChoice(run, card) {
       name: card.name,
       cardId: card.id,
       fitScore: typeof card.fitScore === 'number' ? card.fitScore : null,
+      fitHint: card.fitHint || '',
     });
   }
 
