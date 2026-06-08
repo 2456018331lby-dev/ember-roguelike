@@ -1,6 +1,6 @@
 # 余烬 Ember - 维护与接手文档
 
-最后更新：2026-06-08（本轮继续推进“命中来源 -> 崩盘诱因 -> 复盘时间线”的解释闭环：`presentation.mjs` 新增 `resultCollapseLabel/resultCollapseDetail/resultCollapseTone`，会从 `deathSummary.combatLog` / `run.combatLog` 中按高伤害命中、低血线、救场、Boss 终局弹幕等优先级提炼最关键的崩盘诱因。`main.mjs` 在阵亡复盘区新增 `崩盘诱因` 卡片，debug 结果样本可显示“崩盘诱因 · 高伤害命中：被瞄准连射命中”，并解释“恶魔领主·混沌造成 31 伤害，剩余 49/128”如何兑现安全网缺口；`styles.css` 为 danger / boss / combat / survival / victory 诱因补齐独立视觉状态。`scripts/visual-smoke.mjs` 现在断言结果页存在具体高伤害崩盘诱因，同时继续要求路线影响、具体命中来源、战斗事件和崩盘节点；Playwright 本地浏览器通过 `?debug=1` 触发 `showResult(false)`，确认崩盘诱因、无水平溢出且底部操作可见。`npm test`、`npm run test:web-smoke`、`npm run test:visual-smoke` 和 `npm run test:visual-regression` 均通过。PWA cache 已提升到 `ember-v22`，并已同步 `web -> docs -> android`。当前 checkpoint 仍为 `baseline avgWave 19.12`、`smart avgWave 23.42`，smart 第 5 波 `60/60` 通过，第 20 波到达 `53/60`，第 25 波到达 `48/60`，通关 `45/60`，无 max-tick 卡局。本轮 Android debug APK 构建和 payload 校验通过，当前 APK SHA256 为 `330A647F98842BDDA4B0A13759A77A176A0F521213F4831552C3CE348808E83D`；临时 PATH 可解析 `adb.exe`，但本机仍找不到 `emulator.exe` 且无在线设备，当前 APK 的模拟器点击流 smoke 仍需恢复 Android Emulator 或接入真机后重跑，最近一次通过的模拟器点击流仍是前序 APK `1BCDFAF64F2EDEC1C1C1731E353629C4C6F873024C6CA3FC348B8B5204386D51`。前序记录中的路线影响、奖励读板、下一把优先级、中后期奖励短板修复、Boss 前容错、脆皮 `fragilityDebt`、烟幕残影保命、Boss 读招面板、逐资源 service worker 预缓存和视觉回归仍继续成立。）
+最后更新：2026-06-08（本轮继续推进“构筑缺口 -> 奖励推荐 -> 战前准备”的前置解释闭环：`presentation.mjs` 新增 `decisionPlanLabel/decisionPlanPriority/decisionPlanDetail/decisionPlanTone/decisionPlanChips`，会按下一波类型、危险度和 `singleTarget / aoe / sustain / safety` 最大压力缺口输出“下一波作战计划”。`main.mjs` 新增 `renderDecisionPlan()`，奖励页和 Boss 前营火会在玩家选择前显示下一波标签、危险度 chip、最大缺口和具体建议，例如 Boss 前安全网不足会提示优先拿余烬护符、烟幕疾行、凤凰余烬、屏障或闪避；锻造/商店复用同一 overlay 时会清空该读板，避免旧计划残留。`styles.css` 为 plan strip 补齐 boss/danger/event/elite/normal 状态和移动端堆叠，`scripts/visual-smoke.mjs` 现在断言奖励页与营火页存在作战计划、压力优先级、chips、无水平溢出，并继续检查奖励卡读板、结果页崩盘诱因和时间线。`npm test`、`npm run test:web-smoke`、`npm run test:visual-smoke`、`npm run test:visual-regression` 和 `npm run test:boss-checkpoints` 均通过。PWA cache 已提升到 `ember-v23`，并已同步 `web -> docs -> android`。当前 checkpoint 仍为 `baseline avgWave 19.12`、`smart avgWave 23.42`，smart 第 5 波 `60/60` 通过，第 20 波到达 `53/60`，第 25 波到达 `48/60`，通关 `45/60`，无 max-tick 卡局；本轮未改平衡，只把既有压力模型前置到决策界面。本轮 Android debug APK 构建和 payload 校验通过，当前 APK SHA256 为 `7C2C952857949CBBD3CDBDFC1D0D8DE64C48AC43D3BB238DAA8C7B91CE2F97EB`；临时 PATH 可解析 `adb.exe`，但本机仍找不到 `emulator.exe` 且无在线设备，当前 APK 的模拟器点击流 smoke 仍需恢复 Android Emulator 或接入真机后重跑，最近一次通过的模拟器点击流仍是前序 APK `1BCDFAF64F2EDEC1C1C1731E353629C4C6F873024C6CA3FC348B8B5204386D51`。前序记录中的路线影响、命中来源、崩盘诱因、下一把优先级、中后期奖励短板修复、Boss 前容错、脆皮 `fragilityDebt`、烟幕残影保命、Boss 读招面板、逐资源 service worker 预缓存和视觉回归仍继续成立。）
 
 本文件给下一个继续维护的人或 AI，用来快速判断三件事：
 
@@ -24,6 +24,7 @@
 本轮新增的核心改动位置：
 
 - `web/src/presentation.mjs`：新增 `resultPriorityLabel/resultNextHint`，把“下一把优先级”从 UI 里抽成结构化展示逻辑，并按 `singleTarget / aoe / sustain / safety` 最大压力缺口给出下一轮建议。
+- `web/src/presentation.mjs`：新增 `decisionPlan*` 作战计划读板，按下一波 profile、危险度和最大压力缺口输出奖励/营火选择前的优先级、建议和 chips。
 - `web/src/presentation.mjs`：新增 `resultTimeline`，把结构化 `decisionLog` 和 `combatLog` 合并成复盘时间线，并追加崩盘/胜利终点；没有结构化日志时兼容旧版 `lastDecisions` 字符串。
 - `web/src/presentation.mjs`：新增 `resultCollapseLabel/resultCollapseDetail/resultCollapseTone`，把复盘里最关键的波中崩盘诱因提炼成独立读板；高伤害命中优先级最高，其次是低血线、救场和 Boss 终局弹幕。
 - `web/src/presentation.mjs`：本轮新增 `buildDecisionImpact()` 路线影响推导，会按最终最大缺口给奖励、营火、锻造和商店节点补 `impactLabel / impactDetail / impactTone`，让关键选择说明自己补了什么、漏了什么。
@@ -32,10 +33,10 @@
 - `web/src/presentation.mjs`：新增 `rewardCardReadouts`，集中输出奖励卡决策标签、风险等级、稀有度、协同触发机会和短板修复解释；`tests/game_core.test.mjs` 已覆盖协同机会和高风险读板。
 - `web/src/main.mjs`：`showResult()` 改成战报复盘结构，分区展示关键数值、路线概览、构筑诊断、阵亡复盘、崩盘诱因和下一把优先级；本地 `?debug=1` 新增 `showResult()` 钩子用于稳定生成结算页截图。
 - `web/src/main.mjs`：新增 `renderResultTimeline()`，只消费展示层给出的 timeline 节点；本轮 debug 结果样本加入“被瞄准连射命中”危险节点，用于稳定视觉验证。
-- `web/src/main.mjs`：奖励卡现在渲染 `card-readout`，展示协同/修复/风险机会说明；不再保留只在奖励卡里使用的 `cardStatsLine()`。
+- `web/src/main.mjs`：奖励卡现在渲染 `card-readout`，展示协同/修复/风险机会说明；本轮新增 `renderDecisionPlan()`，奖励页和 Boss 前营火会显示下一波作战计划，锻造/商店复用 overlay 时会清空该读板；不再保留只在奖励卡里使用的 `cardStatsLine()`。
 - `web/styles.css`：结算页改为标题、可滚动复盘内容和底部固定操作区的布局，移动端关键数值两列显示，摘要卡显式防裁切；本轮补齐 `collapse-review` 与 `timeline-danger` 的危险读法，具体命中来源会在崩盘诱因和时间线里同时可见。
-- `scripts/visual-smoke.mjs` / `scripts/visual-regression.mjs`：新增桌面/移动端结算页、时间线区域和奖励卡读板覆盖，断言摘要标题/说明未被裁切、底部按钮在视口内、崩盘诱因包含具体高伤害命中、时间线包含路线影响、具体高伤害命中来源、崩盘节点和战斗事件、奖励卡有机会标签/风险等级且卡面内容不被内部裁切，并把结果页、时间线和奖励卡变化纳入视觉回归基线。
-- `web/sw.js`：PWA cache 提升到 `ember-v22`；`docs/` 镜像已由 `node scripts/sync-web.mjs` 同步。
+- `scripts/visual-smoke.mjs` / `scripts/visual-regression.mjs`：新增桌面/移动端结算页、时间线区域和奖励卡读板覆盖，断言摘要标题/说明未被裁切、底部按钮在视口内、崩盘诱因包含具体高伤害命中、时间线包含路线影响、具体高伤害命中来源、崩盘节点和战斗事件、奖励卡有机会标签/风险等级且卡面内容不被内部裁切；本轮新增奖励/营火作战计划断言，并把结果页、时间线、奖励卡和作战计划变化纳入视觉回归基线。
+- `web/sw.js`：PWA cache 提升到 `ember-v23`；`docs/` 镜像已由 `node scripts/sync-web.mjs` 同步。
 - `web/src/game_core.mjs`：`isAoeRepairCard()`、`isSustainRepairCard()`、`isPressureRepairCard()` 和 `getPriorityPressureRepairKey()` 共同负责中后期奖励短板修复保底；通用奖励保底刻意不覆盖 `safety`。
 - `web/src/game_core.mjs`：`generateRestChoices()` 会在第 10 波 Boss 前 safety 极高时提前提供 `余烬护符`，第 15 波以后仍使用较低 safety 门槛。
 - `tests/game_core.test.mjs`：`中后期奖励应保底修复最大构筑短板` 锁定清场缺口必须至少出现一张修复牌；`第 10 波 Boss 前安全缺口极高时应提前提供护符` 锁定 Boss 前容错窗口。
@@ -187,7 +188,7 @@ roguelike-game/
 - `scripts/visual-regression.mjs` 已建立 PNG 解码后的像素回归：角色选择等稳定界面使用严格 RGBA 哈希，菜单和动画界面使用亮度、RGB 均值、暗/亮/饱和像素比例容差；基线在 `tests/visual-regression-baseline.json`，包含桌面/移动端奖励页读板、活跃 Boss 战截图、高波桌面样本、桌面/移动端结算复盘和桌面/移动端时间线区域
 - `scripts/generate-art-assets.mjs` 默认保留现有角色 spritesheet，避免误运行后覆盖 AI 人物资源；同时会重生成参考图风格竞技场背景和敌人 / Boss spritesheet
 - `web/src/main.mjs` 会按背景图原始比例居中裁切绘制竞技场 PNG，因此后续直接替换 `web/assets/arena-ember-fortress.png` 不会被拉伸；它也会优先使用敌人 spritesheet，加载失败时仍回退到 SVG 符号和圆形占位
-- `web/sw.js` 已预缓存 `main.mjs` 的静态模块依赖和核心美术资源；当前 `CACHE = ember-v22`；替换同名 PNG 或修改核心脚本后必须继续提升 `CACHE` 版本，避免 PWA/Android WebView 继续命中旧缓存；预缓存必须逐资源容错，不能使用 `cache.addAll()`，否则 Android WebView 可能因单个 Cache 内部错误产生启动期 fatal log；fetch handler 只拦截同源 GET，离线 cache miss 会返回明确 Response，避免 WebView console 噪声
+- `web/sw.js` 已预缓存 `main.mjs` 的静态模块依赖和核心美术资源；当前 `CACHE = ember-v23`；替换同名 PNG 或修改核心脚本后必须继续提升 `CACHE` 版本，避免 PWA/Android WebView 继续命中旧缓存；预缓存必须逐资源容错，不能使用 `cache.addAll()`，否则 Android WebView 可能因单个 Cache 内部错误产生启动期 fatal log；fetch handler 只拦截同源 GET，离线 cache miss 会返回明确 Response，避免 WebView console 噪声
 - `web/index.html` 不再依赖 Google Fonts 外链，Android / PWA 离线环境不会因为外部字体请求污染 logcat 或首屏加载
 - Android `assembleDebug` 已在本机成功跑通过一次
 - `scripts/build-android-debug.ps1` 已建立，负责选择可用 JDK 21、同步资源、构建 APK，并校验 APK 内关键 Web 资源和代码标记
@@ -310,7 +311,7 @@ npm run serve
 - Android 构建：
   - `npm run build:android:debug` 当前返回成功
   - APK 路径：`android/app/build/outputs/apk/debug/app-debug.apk`
-  - 当前构建 APK SHA256：`330A647F98842BDDA4B0A13759A77A176A0F521213F4831552C3CE348808E83D`
+  - 当前构建 APK SHA256：`7C2C952857949CBBD3CDBDFC1D0D8DE64C48AC43D3BB238DAA8C7B91CE2F97EB`
   - 构建脚本会自动验证 APK 内容，避免 Web 修复没有同步进 Android 包
   - 已验证 APK 内包含当前 Web 资源关键标记：
     - `assets/public/index.html` 含 `Arena Roguelike`
@@ -322,7 +323,7 @@ npm run serve
     - `assets/public/sw.js` 含同源 fetch guard、runtime cache write 容错和离线 504 fallback
     - `assets/public/assets/ember-enemies-spritesheet.png` 存在
 - Android 模拟器安装 / 启动 / 点击流：
-  - 本轮命令：临时把 `C:\Users\24560\Desktop\study\kaoyandemo\.android-sdk\platform-tools` 放入 PATH 后运行 `npm run verify:android:smoke`，再直接运行 `scripts/verify-android-debug.ps1 -AutoStartSingleAvd -SmokeTapFlow -ShutdownStartedEmulator` 获取错误文本
+  - 本轮命令：临时把 `C:\Users\24560\Desktop\study\kaoyandemo\.android-sdk\platform-tools` 放入 PATH 后运行 `npm run verify:android:smoke`
   - 本轮结果：未能启动验证；脚本解析到可用 `adb.exe`，但当前本机找不到 `emulator.exe`，且 `adb devices` 无在线设备。需要恢复 Android Emulator 组件或接入在线设备后重跑当前 APK
   - 最近一次模拟器点击流验证 APK SHA256：`1BCDFAF64F2EDEC1C1C1731E353629C4C6F873024C6CA3FC348B8B5204386D51`
   - 最近一次通过结果：APK 安装成功，`com.ember.roguelike/.MainActivity` 冷启动成功，点击流已到局内战斗，logcat fatal-error scan 通过

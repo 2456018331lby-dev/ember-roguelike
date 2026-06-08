@@ -1,6 +1,6 @@
 # Ember 下一阶段执行计划
 
-最后更新：2026-06-08（本轮继续推进“命中来源 -> 崩盘诱因 -> 结果时间线视觉回归”：`presentation.mjs` 新增 `resultCollapseLabel/resultCollapseDetail/resultCollapseTone`，会从 `combatLog` 中按高伤害命中、低血线、救场、Boss 终局弹幕等优先级提炼最关键崩盘诱因。`main.mjs` 在阵亡复盘区新增 `崩盘诱因` 卡片，debug 结果样本会显示“崩盘诱因 · 高伤害命中：被瞄准连射命中”，并解释“恶魔领主·混沌造成 31 伤害，剩余 49/128”如何兑现安全网缺口；`styles.css` 补齐 collapse danger / boss / combat / survival / victory 视觉状态。visual smoke 现在断言结果页含具体高伤害崩盘诱因，同时继续要求时间线含路线影响、具体命中来源、战斗事件和崩盘节点；visual regression 通过。Playwright 本地浏览器打开 `?debug=1` 并触发 `showResult(false)`，确认崩盘诱因、无水平溢出且底部操作可见。PWA cache 提升到 `ember-v22`，并已同步 `web -> docs -> android`。当前 checkpoint 仍为 `baseline avgWave 19.12`、`smart avgWave 23.42`，smart 第 5 波 `60/60` 通过，第 20 波到达 `53/60`，第 25 波到达 `48/60`，通关 `45/60`，无 max-tick 卡局。本轮 Android debug APK 构建和 payload 校验通过，当前 APK SHA256 为 `330A647F98842BDDA4B0A13759A77A176A0F521213F4831552C3CE348808E83D`；临时 PATH 可解析 `adb.exe`，但本机仍找不到 `emulator.exe` 且无在线设备，当前 APK 点击流 smoke 需要恢复 Android Emulator 或接入真机后重跑，最近一次通过的模拟器点击流仍是前序 APK `1BCDFAF64F2EDEC1C1C1731E353629C4C6F873024C6CA3FC348B8B5204386D51`。下一步继续补更多波中事件类型、受击/走位来源统计和卡组路线对比，并恢复 Android Emulator 或接入真机后重跑安装/启动/点击流验证。）
+最后更新：2026-06-08（本轮继续推进“构筑缺口 -> 奖励推荐 -> 战前准备”的前置解释闭环：`presentation.mjs` 新增 `decisionPlanLabel/decisionPlanPriority/decisionPlanDetail/decisionPlanTone/decisionPlanChips`，按下一波类型、危险度和 `singleTarget / aoe / sustain / safety` 最大压力缺口输出“下一波作战计划”。`main.mjs` 新增 `renderDecisionPlan()`，奖励页和 Boss 前营火会在玩家选择前显示下一波标签、危险度 chip、最大缺口和具体建议；Boss 前安全网不足会提示优先拿余烬护符、烟幕疾行、凤凰余烬、屏障或闪避。`styles.css` 补齐 boss/danger/event/elite/normal 状态和移动端堆叠；visual smoke 现在断言奖励页与营火页存在作战计划、压力优先级、chips、无水平溢出，并继续覆盖奖励卡读板、结果页崩盘诱因和时间线；visual regression 通过。PWA cache 提升到 `ember-v23`，并已同步 `web -> docs -> android`。当前 checkpoint 仍为 `baseline avgWave 19.12`、`smart avgWave 23.42`，smart 第 5 波 `60/60` 通过，第 20 波到达 `53/60`，第 25 波到达 `48/60`，通关 `45/60`，无 max-tick 卡局；本轮未改平衡，只把既有压力模型前置到决策界面。本轮 Android debug APK 构建和 payload 校验通过，当前 APK SHA256 为 `7C2C952857949CBBD3CDBDFC1D0D8DE64C48AC43D3BB238DAA8C7B91CE2F97EB`；临时 PATH 可解析 `adb.exe`，但本机仍找不到 `emulator.exe` 且无在线设备，当前 APK 点击流 smoke 需要恢复 Android Emulator 或接入真机后重跑，最近一次通过的模拟器点击流仍是前序 APK `1BCDFAF64F2EDEC1C1C1731E353629C4C6F873024C6CA3FC348B8B5204386D51`。下一步继续补更多波中事件类型、受击/走位来源统计和卡组路线对比，并恢复 Android Emulator 或接入真机后重跑安装/启动/点击流验证。）
 
 这个文件只回答一个问题：下一阶段最值得继续做什么。
 
@@ -33,6 +33,7 @@
 - 第 8 波以后奖励会额外检查最大压力缺口；当 `singleTarget / aoe / sustain` 的某个短板足够突出时，奖励池会保底出现一张对应修复牌，同时不挤掉已要求的生存牌或首个 Boss 输出保底
 - 极低最大生命现在会形成 `fragilityDebt`，降低续航和 safety 评估，避免高闪避/护盾构筑掩盖高波被斩杀风险
 - 奖励、锻造、商店和 Boss 前营火选择已进入 `decisionLog`，死亡复盘会显示最后几次关键路线选择；本轮路线影响会解释这些选择补了什么、最终又漏了什么短板
+- 奖励页和 Boss 前营火现在会在选择前显示“下一波作战计划”，把下一波标签、危险度、最大压力缺口和具体行动建议直接前置到奖励/营火决策界面
 - 低血线、救场、复活、Boss 终局弹幕、首领倒下和高伤害命中来源会进入有界 `combatLog`，结算页会把这些波中转折和路线选择一起展示，并用独立的崩盘诱因卡片前置最关键的一次转折
 - 战前营火卡片现在也会显示基于压力模型的推荐标签与建议文案，方便玩家区分补输出、补容错和高风险豪赌
 
@@ -62,7 +63,7 @@
 - `scripts/sync-web.mjs` 已可同步 `web -> docs -> android`
 - `scripts/serve-web.mjs` 已能正确以 `text/javascript` 提供 `.mjs`
 - `scripts/web-smoke.mjs` 已可验证 spritesheet、service worker 预缓存清单、UI 状态路由、离线 fallback 和本地 MIME
-- `scripts/visual-smoke.mjs` 已可用本机 Chrome/Edge 做桌面/移动端视觉 smoke 并输出截图，覆盖菜单、角色选择、局内 canvas、奖励选择页读板、Boss 前营火、第 5 波 Boss 进入、桌面/移动端活跃 Boss 战读招画面、固定的第 20 波高压桌面样本、桌面/移动端结算复盘，以及桌面/移动端时间线区域；高波样本还会断言 debug snapshot 中存在当前 `bossPatternLabel` 和 `bossCharge`，奖励样本会断言每张卡有 `card-readout`、机会标签、风险等级且没有内部裁切，结果页样本会断言崩盘诱因包含具体高伤害命中，结果时间线样本会断言存在路线影响、具体高伤害命中来源、战斗事件和崩盘节点
+- `scripts/visual-smoke.mjs` 已可用本机 Chrome/Edge 做桌面/移动端视觉 smoke 并输出截图，覆盖菜单、角色选择、局内 canvas、奖励选择页读板、Boss 前营火、第 5 波 Boss 进入、桌面/移动端活跃 Boss 战读招画面、固定的第 20 波高压桌面样本、桌面/移动端结算复盘，以及桌面/移动端时间线区域；高波样本还会断言 debug snapshot 中存在当前 `bossPatternLabel` 和 `bossCharge`，奖励/营火样本会断言存在“下一波作战计划”、压力优先级和 chips，每张奖励卡有 `card-readout`、机会标签、风险等级且没有内部裁切，结果页样本会断言崩盘诱因包含具体高伤害命中，结果时间线样本会断言存在路线影响、具体高伤害命中来源、战斗事件和崩盘节点
 - `scripts/visual-regression.mjs` 已可解码 visual-smoke PNG，稳定界面做严格 RGBA 哈希，动画界面做像素指标容差回归，当前基线包含 `reward-desktop.png`、`reward-mobile.png`、`boss-fight-desktop.png`、`boss-fight-mobile.png`、`boss-fight-highwave-desktop.png`、`result-desktop.png`、`result-mobile.png`、`result-timeline-desktop.png` 和 `result-timeline-mobile.png`
 - `tests/sim_harness.mjs` 已抽出 baseline / smart 共用模拟 harness；`npm run test:boss-checkpoints` 会输出第 5/10/15/20/25 波 Boss 检查点与死亡短板
 - `npm run build:android:debug` 当前已可在本机返回成功
@@ -86,7 +87,7 @@
 - `npm run test:visual-smoke`：桌面/移动端菜单、角色选择、局内 canvas、奖励选择页、Boss 前营火、第 5 波 Boss 进入、桌面/移动端活跃 Boss 战读招画面、固定第 20 波高压桌面样本、桌面/移动端结算复盘，以及桌面/移动端时间线区域渲染通过；高波样本已断言 `bossPatternLabel` / `bossCharge`；结果页会断言摘要标题/说明未被裁切、底部按钮在视口内、崩盘诱因显示具体高伤害命中；时间线会断言存在路线影响、具体高伤害命中来源、战斗事件和崩盘节点；截图已输出到 `output/visual-smoke/`
 - `npm run test:visual-regression`：视觉 smoke 截图像素回归通过；基线文件为 `tests/visual-regression-baseline.json`
 - Playwright MCP：`开始远征 -> 开始战斗 · 标准 -> 局内 HUD/canvas` 交互通过，canvas 非空采样 `1031`，无水平溢出；前序另用 `?debug=1` 跳转第 20 波高波 Boss，snapshot 返回 `bossPatternLabel = 螺旋弹幕`、`bossCharge ≈ 0.89`、canvas 非空采样 `920`，截图保存到 `output/playwright/boss-readout-highwave-desktop.png`；本轮用 `?debug=1` 触发 `showResult(false)`，确认结果时间线含 2 条路线影响、具体“被瞄准连射命中”危险节点、低血线事件、无水平溢出且底部操作可见
-- `npm run build:android:debug`：Android debug APK 构建和 APK Web payload 校验通过；当前构建 APK SHA256 为 `330A647F98842BDDA4B0A13759A77A176A0F521213F4831552C3CE348808E83D`
+- `npm run build:android:debug`：Android debug APK 构建和 APK Web payload 校验通过；当前构建 APK SHA256 为 `7C2C952857949CBBD3CDBDFC1D0D8DE64C48AC43D3BB238DAA8C7B91CE2F97EB`
 - `npm run verify:android:debug`：前序曾通过临时 PATH 使用 `C:\Users\24560\Desktop\study\kaoyandemo\.android-sdk\platform-tools\adb.exe`，自动启动唯一 AVD `NightRunner35`，APK 安装、冷启动、焦点窗口、首屏截图和 logcat fatal-error scan 通过；本轮当前 APK 未能重跑 debug/smoke，因为缺 `emulator.exe` 且无在线设备
 - `npm run verify:android:smoke`：本轮用临时 PATH 解析到可用 `adb.exe` 后仍未能启动模拟器；当前本机缺 `emulator.exe` 且 `adb devices` 无在线设备。最近一次通过记录仍为前序 APK：自动启动唯一 AVD `NightRunner35`，模拟器安装/启动通过，焦点窗口属于 `com.ember.roguelike`，点击流已到局内战斗，`output/android-smoke/app-launch.png` / `character-select.png` / `gameplay.png` 已保存，logcat fatal-error scan 通过，验证后自动关闭模拟器
 - 最近一次模拟器点击流验证 APK SHA256：`1BCDFAF64F2EDEC1C1C1731E353629C4C6F873024C6CA3FC348B8B5204386D51`

@@ -280,6 +280,10 @@ const rewardCheckExpression = `(() => {
   const decisions = cards.map(card => card.querySelector('.card-decision')?.textContent.trim() || '');
   const opportunities = cards.map(card => card.dataset.opportunity || card.querySelector('.card-readout-title')?.textContent.trim() || '');
   const riskLevels = cards.map(card => Number(card.dataset.riskLevel));
+  const plan = document.querySelector('#decisionPlan');
+  const planText = plan?.textContent.replace(/\\s+/g, ' ').trim() || '';
+  const planChips = [...(plan?.querySelectorAll('.decision-plan-chips span') || [])].map(chip => chip.textContent.trim());
+  const noPlanOverflow = Boolean(plan && plan.scrollWidth <= plan.clientWidth + 2);
   const scores = cards
     .map(card => Number(card.dataset.fitScore))
     .filter(score => Number.isFinite(score));
@@ -305,6 +309,10 @@ const rewardCheckExpression = `(() => {
       decisions[0] && /首选|豪赌/.test(decisions[0]) &&
       opportunities.every(label => /协同|修复|核心|高危|成长|路线/.test(label)) &&
       riskLevels.every(level => Number.isFinite(level) && level >= 0 && level <= 3) &&
+      plan && !plan.classList.contains('hidden') &&
+      /作战计划/.test(planText) &&
+      /安全网|首领输出|清场|续航硬度|压力目标/.test(planText) &&
+      planChips.length >= 2 && noPlanOverflow &&
       sorted && completeCards && noCardClipping && noHorizontalOverflow &&
       firstRect && firstRect.width >= 240 && firstRect.height >= 220 &&
       panelRect && panelRect.width <= window.innerWidth + 2),
@@ -312,6 +320,9 @@ const rewardCheckExpression = `(() => {
     opportunities,
     riskLevels,
     noCardClipping,
+    planText,
+    planChips,
+    noPlanOverflow,
     cardHeights,
     scores,
     cardCount: cards.length,
@@ -327,16 +338,27 @@ const restCheckExpression = `(() => {
   const meta = document.querySelector('#rewardMeta')?.textContent || '';
   const cards = [...document.querySelectorAll('#choices .card')];
   const restCards = cards.filter(card => card.classList.contains('rest-card') || card.classList.contains('risk-card'));
+  const plan = document.querySelector('#decisionPlan');
+  const planText = plan?.textContent.replace(/\\s+/g, ' ').trim() || '';
+  const planChips = [...(plan?.querySelectorAll('.decision-plan-chips span') || [])].map(chip => chip.textContent.trim());
+  const noPlanOverflow = Boolean(plan && plan.scrollWidth <= plan.clientWidth + 2);
   const noHorizontalOverflow = document.documentElement.scrollWidth <= window.innerWidth + 2;
   return {
     ok: Boolean(reward && !reward.classList.contains('hidden') &&
       /前夜|战前营火/.test(meta) &&
       restCards.length >= 3 &&
+      plan && !plan.classList.contains('hidden') &&
+      /作战计划/.test(planText) &&
+      /首领|Boss|安全网|首领输出|清场|续航硬度|压力目标/.test(planText) &&
+      planChips.length >= 2 && noPlanOverflow &&
       cards.every(card => card.querySelector('.card-topline') && card.querySelector('h3')) &&
       noHorizontalOverflow),
     meta,
     cardCount: cards.length,
     restCount: restCards.length,
+    planText,
+    planChips,
+    noPlanOverflow,
     labels: cards.map(card => card.querySelector('h3')?.textContent.trim() || ''),
     scrollWidth: document.documentElement.scrollWidth,
     width: window.innerWidth

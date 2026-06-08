@@ -40,6 +40,11 @@ const buildFocusText = document.querySelector('#buildFocusText');
 const buildRiskText = document.querySelector('#buildRiskText');
 const waveSummaryText = document.querySelector('#waveSummaryText');
 const rewardWhyText = document.querySelector('#rewardWhyText');
+const decisionPlanEl = document.querySelector('#decisionPlan');
+const decisionPlanLabel = document.querySelector('#decisionPlanLabel');
+const decisionPlanPriority = document.querySelector('#decisionPlanPriority');
+const decisionPlanDetail = document.querySelector('#decisionPlanDetail');
+const decisionPlanChips = document.querySelector('#decisionPlanChips');
 
 let run = null;
 let gameTime = 0;
@@ -308,6 +313,36 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
+function renderDecisionPlan(presentation, fallback = {}) {
+  if (!decisionPlanEl) return;
+  const chips = Array.isArray(presentation?.decisionPlanChips) && presentation.decisionPlanChips.length
+    ? presentation.decisionPlanChips
+    : Array.isArray(fallback.chips) ? fallback.chips : [];
+  const plan = {
+    label: presentation?.decisionPlanLabel || fallback.label || '',
+    priority: presentation?.decisionPlanPriority || fallback.priority || '',
+    detail: presentation?.decisionPlanDetail || fallback.detail || '',
+    tone: presentation?.decisionPlanTone || fallback.tone || 'normal',
+    chips,
+  };
+  const hasPlan = Boolean(plan.label || plan.priority || plan.detail || plan.chips.length);
+  decisionPlanEl.classList.toggle('hidden', !hasPlan);
+  if (!hasPlan) return;
+
+  const allowed = new Set(['normal', 'danger', 'boss', 'event', 'elite']);
+  const tone = allowed.has(plan.tone) ? plan.tone : 'normal';
+  decisionPlanEl.className = `decision-plan decision-plan-${tone}`;
+  if (decisionPlanLabel) decisionPlanLabel.textContent = plan.label || '下一波作战计划';
+  if (decisionPlanPriority) decisionPlanPriority.textContent = plan.priority || '压力目标基本达标';
+  if (decisionPlanDetail) decisionPlanDetail.textContent = plan.detail || '按当前路线补强或选择成长牌。';
+  if (decisionPlanChips) {
+    decisionPlanChips.innerHTML = plan.chips
+      .slice(0, 4)
+      .map(chip => `<span>${escapeHtml(chip)}</span>`)
+      .join('');
+  }
+}
+
 function renderStatPills(stats, synergies = [], activeRun = null) {
   const pills = [
     `${stats.attackStyleLabel || '自动攻击'}`,
@@ -573,6 +608,7 @@ function showReward() {
   if (rewardMeta) rewardMeta.textContent = presentation.rewardLine;
   if (waveSummaryText) waveSummaryText.textContent = presentation.waveSummary || '';
   if (rewardWhyText) rewardWhyText.textContent = presentation.rewardWhy || '';
+  renderDecisionPlan(presentation);
   if (rerollBtn) {
     rerollBtn.style.display = '';
     rerollBtn.disabled = (run.rewardRerolls ?? 0) <= 0;
@@ -646,6 +682,7 @@ function showForge() {
   if (rewardMeta) rewardMeta.textContent = '余烬锻造 — 选择一项强化';
   if (waveSummaryText) waveSummaryText.textContent = '升级已有铭牌、净化献祭代价、或重铸弱牌';
   if (rewardWhyText) rewardWhyText.textContent = '';
+  renderDecisionPlan(null);
   if (rerollBtn) rerollBtn.style.display = 'none';
   for (const choice of run.forgeChoices) {
     const el = document.createElement('button');
@@ -676,6 +713,7 @@ function showShop() {
   if (rewardMeta) rewardMeta.textContent = `余烬商人 — 余烬 ${embers}`;
   if (waveSummaryText) waveSummaryText.textContent = '花费余烬购买增益，或直接离开';
   if (rewardWhyText) rewardWhyText.textContent = '';
+  renderDecisionPlan(null);
   if (rerollBtn) rerollBtn.style.display = 'none';
   for (const choice of run.shopChoices) {
     const el = document.createElement('button');
@@ -703,10 +741,12 @@ function showShop() {
 
 function showRest() {
   choicesEl.innerHTML = '';
+  const presentation = buildRunPresentation(run, getPlayerStats(run), getCharacter(run.characterId));
   const preview = run.nextWavePreview;
   if (rewardMeta) rewardMeta.textContent = preview?.kind === 'boss' ? `${preview.label} 前夜` : '战前营火';
   if (waveSummaryText) waveSummaryText.textContent = '先稳住血线与献祭，或用一次豪赌强行补短板';
   if (rewardWhyText) rewardWhyText.textContent = preview?.risk || '下一波会更危险，先做战前抉择。';
+  renderDecisionPlan(presentation);
   if (rerollBtn) rerollBtn.style.display = 'none';
   const bestScore = Math.max(...(run.restChoices || []).map(choice => Number(choice.fitScore) || -Infinity));
 

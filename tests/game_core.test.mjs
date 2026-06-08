@@ -164,6 +164,56 @@ test('presentation 会输出短板强度与奖励解释数值', () => {
   assert.match(presentation.rewardWhy, /32/);
 });
 
+test('presentation 奖励/营火应输出下一波作战计划', () => {
+  const run = createRun(2028);
+  run.wave = 19;
+  run.state = 'reward';
+  run.nextWavePreview = {
+    kind: 'boss',
+    wave: 20,
+    label: '第 20 波 Boss 讨伐',
+    summary: 'Boss 前的最后一次构筑修正。',
+    risk: 'Boss 会同时追问安全网和单体输出。',
+    danger: 5,
+  };
+  run.buildAnalysis = {
+    descriptors: ['速攻'],
+    weaknesses: {
+      singleTarget: true,
+      aoe: false,
+      sustain: true,
+      safety: true,
+    },
+    pressure: {
+      singleTarget: 42,
+      aoe: 54,
+      sustain: 35,
+      mitigation: 8,
+      safety: 8,
+    },
+    pressureTargets: {
+      singleTarget: 58,
+      aoe: 48,
+      sustain: 52,
+      safety: 36,
+    },
+    pressureGaps: {
+      singleTarget: 16,
+      aoe: 0,
+      sustain: 9,
+      safety: 28,
+    },
+  };
+
+  const presentation = buildRunPresentation(run, getPlayerStats(run), getCharacter(run.characterId));
+  assert.match(presentation.decisionPlanLabel, /首领|作战计划/);
+  assert.match(presentation.decisionPlanPriority, /安全网 8\/36（缺 28）/);
+  assert.match(presentation.decisionPlanDetail, /余烬护符|烟幕疾行|凤凰余烬|屏障/);
+  assert.equal(presentation.decisionPlanTone, 'boss');
+  assert.ok(presentation.decisionPlanChips.includes('第 20 波 Boss 讨伐'));
+  assert.ok(presentation.decisionPlanChips.some(chip => /危险度/.test(chip)));
+});
+
 test('presentation 奖励读板应标出协同机会和高风险', () => {
   const run = createRun(3030);
   run.wave = 4;

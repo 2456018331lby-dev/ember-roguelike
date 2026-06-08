@@ -6,6 +6,7 @@ export function buildRunPresentation(run, stats, character) {
   const buildAnalysis = run.buildAnalysis || {};
   const weaknessText = buildWeaknessSummary(buildAnalysis);
   const rewardWhy = buildRewardWhy(run, buildAnalysis, targetProfile);
+  const decisionPlan = buildDecisionPlan(run, buildAnalysis, targetProfile);
   const resultPriority = buildResultPriority(run, buildAnalysis);
   const resultCollapse = buildResultCollapseReadout(run, resultPriority);
   const resultTimeline = buildResultTimeline(run, resultPriority);
@@ -25,6 +26,11 @@ export function buildRunPresentation(run, stats, character) {
     hudMood: buildHudMood(run, stats, targetProfile),
     phaseHint: buildPhaseHint(targetProfile),
     rewardWhy,
+    decisionPlanLabel: decisionPlan.label,
+    decisionPlanPriority: decisionPlan.priority,
+    decisionPlanDetail: decisionPlan.detail,
+    decisionPlanTone: decisionPlan.tone,
+    decisionPlanChips: decisionPlan.chips,
     weaknessSummary: weaknessText,
     deathReason: run.deathSummary?.reason || '',
     deathWaveLabel: run.deathSummary?.waveLabel || '',
@@ -899,6 +905,81 @@ function buildRewardWhy(run, analysis, profile) {
   if (weaknesses.sustain) lines.push(`当前续航与硬抗不够稳（${formatPressureDetail((pressure.sustain || 0) + (pressure.mitigation || 0), targets.sustain)}）`);
   if (weaknesses.safety) lines.push(`当前缺安全网，失误后难回正（${formatPressureDetail(pressure.safety, targets.safety)}）`);
   return lines.join(' · ') || '当前奖励更适合继续推进主构筑';
+}
+
+function buildDecisionPlan(run, analysis = {}, profile) {
+  const pressure = analysis?.pressure || {};
+  const targets = analysis?.pressureTargets || {};
+  const gaps = analysis?.pressureGaps || {};
+  const weaknesses = analysis?.weaknesses || {};
+  const priority = pickDecisionPlanPriority(pressure, targets, gaps, weaknesses);
+  const profileLabel = profile?.label || (profile?.wave ? `第 ${profile.wave} 波` : `第 ${run.wave + 1} 波`);
+  const danger = Number(profile?.danger) || 0;
+  const chips = [
+    profileLabel,
+    danger > 0 ? `危险度 ${'★'.repeat(Math.max(1, Math.min(5, danger)))}` : '',
+    priority ? `${priority.label}缺 ${Math.round(priority.gap)}` : '压力目标达标',
+  ].filter(Boolean);
+  const tone = buildDecisionPlanTone(profile, priority);
+  return {
+    label: buildDecisionPlanLabel(profile),
+    priority: priority ? `${priority.label} ${Math.round(priority.current)}/${Math.round(priority.target || 0)}（缺 ${Math.round(priority.gap)}）` : '压力目标基本达标',
+    detail: priority ? decisionPlanAdvice(priority.key, profile) : decisionPlanDefaultAdvice(profile),
+    tone,
+    chips,
+  };
+}
+
+function pickDecisionPlanPriority(pressure, targets, gaps, weaknesses) {
+  const candidates = [
+    ['singleTarget', pressure.singleTarget || 0, targets.singleTarget, gaps.singleTarget],
+    ['aoe', pressure.aoe || 0, targets.aoe, gaps.aoe],
+    ['sustain', (pressure.sustain || 0) + (pressure.mitigation || 0), targets.sustain, gaps.sustain],
+    ['safety', pressure.safety || 0, targets.safety, gaps.safety],
+  ].map(([key, current, target, rawGap]) => {
+    const computedGap = target ? Math.max(0, target - current) : 0;
+    const gap = Math.max(Number(rawGap) || 0, computedGap, weaknesses?.[key] ? 1 : 0);
+    return {
+      key,
+      label: PRESSURE_LABELS[key],
+      current: Number(current) || 0,
+      target: Number(target) || 0,
+      gap,
+    };
+  }).filter(item => item.gap > 0 && item.label);
+  return candidates.sort((a, b) => b.gap - a.gap)[0] || null;
+}
+
+function buildDecisionPlanLabel(profile) {
+  if (profile?.kind === 'boss') return '首领战作战计划';
+  if (profile?.kind === 'elite') return '精英波作战计划';
+  if (profile?.kind === 'onslaught' || profile?.kind === 'siege') return '压场作战计划';
+  if (profile?.kind === 'event') return '锻造窗口计划';
+  return '下一波作战计划';
+}
+
+function buildDecisionPlanTone(profile, priority) {
+  if (profile?.kind === 'boss') return 'boss';
+  if (priority?.key === 'safety' || priority?.gap >= 14) return 'danger';
+  if (profile?.kind === 'event') return 'event';
+  if (profile?.kind === 'elite') return 'elite';
+  return 'normal';
+}
+
+function decisionPlanAdvice(key, profile) {
+  const prefix = profile?.kind === 'boss'
+    ? 'Boss 前先补能决定容错的牌位。'
+    : '下一波前先处理最大短板。';
+  if (key === 'safety') return `${prefix} 优先选择余烬护符、烟幕疾行、凤凰余烬、屏障或闪避，别只继续堆输出。`;
+  if (key === 'singleTarget') return `${prefix} 优先拿高伤害、暴击、攻速或易伤，把首领战时间压短。`;
+  if (key === 'aoe') return `${prefix} 优先拿链击、范围、减速、召唤或爆炸，把怪群处理速度补起来。`;
+  if (key === 'sustain') return `${prefix} 优先补回血、吸血、护甲、护盾或减伤，避免连续消耗后低血进场。`;
+  return decisionPlanDefaultAdvice(profile);
+}
+
+function decisionPlanDefaultAdvice(profile) {
+  if (profile?.kind === 'event') return '锻造窗口更适合升级核心牌、净化献祭代价，或把低价值牌位换成明确补强。';
+  return profile?.risk || profile?.summary || '压力目标基本达标，按当前路线补强或选择成长牌。';
 }
 
 function buildHudMood(run, stats, targetProfile) {

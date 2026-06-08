@@ -265,6 +265,57 @@ body::before {
   font-size: 12px;
   line-height: 1.6;
 }
+.decision-plan {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255,255,255,.08);
+}
+.decision-plan-head {
+  display: grid;
+  grid-template-columns: minmax(0, .75fr) minmax(0, 1.25fr);
+  gap: 10px;
+  align-items: start;
+}
+.decision-plan-head span {
+  color: #fbbf24;
+  font-size: 12px;
+  font-weight: 800;
+}
+.decision-plan-head strong {
+  color: #f8fafc;
+  font-size: 14px;
+  line-height: 1.35;
+  text-align: right;
+}
+.decision-plan-detail {
+  margin-top: 8px;
+  color: #cbd5e1;
+  font-size: 12px;
+  line-height: 1.55;
+}
+.decision-plan-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+.decision-plan-chips span {
+  max-width: 100%;
+  padding: 5px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.1);
+  background: rgba(15,23,42,.72);
+  color: #cbd5e1;
+  font-size: 11px;
+  line-height: 1.2;
+}
+.decision-plan-danger .decision-plan-head span,
+.decision-plan-boss .decision-plan-head span {
+  color: #fca5a5;
+}
+.decision-plan-event .decision-plan-head span {
+  color: #93c5fd;
+}
 .reward-meta {
   color: #f8fafc;
   font-size: 13px;
@@ -1855,6 +1906,53 @@ body::after {
   color: var(--ember-muted);
 }
 
+.decision-plan {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top-color: rgba(232, 184, 93, .16);
+}
+
+.decision-plan-head span {
+  color: var(--ember-gold);
+  font-weight: 900;
+}
+
+.decision-plan-head strong {
+  color: var(--ember-text);
+}
+
+.decision-plan-detail {
+  color: var(--ember-muted);
+}
+
+.decision-plan-chips span {
+  border-radius: 6px;
+  border-color: rgba(232, 184, 93, .16);
+  background: rgba(5, 7, 11, .52);
+  color: var(--ember-muted);
+}
+
+.decision-plan-danger .decision-plan-head span,
+.decision-plan-boss .decision-plan-head span {
+  color: #f5a37f;
+}
+
+.decision-plan-danger .decision-plan-chips span,
+.decision-plan-boss .decision-plan-chips span {
+  border-color: rgba(242, 108, 36, .28);
+  background: rgba(82, 30, 20, .35);
+  color: #f5d7c7;
+}
+
+.decision-plan-event .decision-plan-head span {
+  color: var(--ember-cyan);
+}
+
+.decision-plan-event .decision-plan-chips span {
+  border-color: rgba(78, 196, 233, .28);
+  color: #cdeef8;
+}
+
 .choices {
   min-height: 0;
   overflow-y: auto;
@@ -3010,6 +3108,19 @@ body::after {
 
   .reward-guidance-card {
     padding: 12px;
+  }
+
+  .decision-plan-head {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .decision-plan-head strong {
+    text-align: left;
+  }
+
+  .decision-plan-chips span {
+    font-size: 10px;
   }
 
   .result-panel {
