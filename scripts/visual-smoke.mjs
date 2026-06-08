@@ -457,6 +457,7 @@ const resultReportExpression = `(() => {
   const briefCopy = document.querySelector('.result-brief p');
   const heroCards = [...document.querySelectorAll('.result-hero-card')];
   const sections = [...document.querySelectorAll('.result-section')];
+  const collapse = document.querySelector('.collapse-review');
   const timelineItems = [...document.querySelectorAll('.timeline-item')];
   const combatTimelineItems = [...document.querySelectorAll('.timeline-combat, .timeline-survival, .timeline-boss')];
   const impactItems = [...document.querySelectorAll('.timeline-impact')];
@@ -467,6 +468,7 @@ const resultReportExpression = `(() => {
   const briefRect = brief?.getBoundingClientRect();
   const outcomeRect = outcome?.getBoundingClientRect();
   const copyRect = briefCopy?.getBoundingClientRect();
+  const collapseRect = collapse?.getBoundingClientRect();
   const restartRect = restart?.getBoundingClientRect();
   const actionsRect = actions?.getBoundingClientRect();
   const noHorizontalOverflow = document.documentElement.scrollWidth <= window.innerWidth + 2;
@@ -481,6 +483,11 @@ const resultReportExpression = `(() => {
       restartRect.top >= 0 && restartRect.bottom <= window.innerHeight + 2 &&
       panelRect && panelRect.width <= window.innerWidth + 2 &&
       /下一把优先级/.test(next.textContent || '') &&
+      collapse &&
+      /崩盘诱因/.test(collapse.textContent || '') &&
+      /高伤害命中/.test(collapse.textContent || '') &&
+      /瞄准连射命中|恶魔领主·混沌造成/.test(collapse.textContent || '') &&
+      collapseRect && collapseRect.width >= Math.min(280, window.innerWidth - 40) &&
       /数值缺口/.test(panel.textContent || '') &&
       /最后决策/.test(panel.textContent || '') &&
       /复盘时间线/.test(panel.textContent || '') &&
@@ -494,6 +501,7 @@ const resultReportExpression = `(() => {
       noHorizontalOverflow),
     heroCards: heroCards.map(card => card.textContent.trim()),
     sections: sections.map(section => section.textContent.trim().slice(0, 32)),
+    collapse: collapse?.textContent.trim().slice(0, 96) || '',
     timelineItems: timelineItems.map(item => item.textContent.trim().slice(0, 48)),
     combatTimelineItems: combatTimelineItems.map(item => item.textContent.trim().slice(0, 48)),
     impactItems: impactItems.map(item => item.textContent.trim().slice(0, 48)),
@@ -501,6 +509,7 @@ const resultReportExpression = `(() => {
     briefRect: briefRect ? { height: Math.round(briefRect.height), bottom: Math.round(briefRect.bottom) } : null,
     outcomeRect: outcomeRect ? { bottom: Math.round(outcomeRect.bottom) } : null,
     copyRect: copyRect ? { bottom: Math.round(copyRect.bottom) } : null,
+    collapseRect: collapseRect ? { width: Math.round(collapseRect.width), height: Math.round(collapseRect.height) } : null,
     restartRect: restartRect ? { width: Math.round(restartRect.width), height: Math.round(restartRect.height), top: Math.round(restartRect.top) } : null,
     actionsRect: actionsRect ? { bottom: Math.round(actionsRect.bottom), height: Math.round(actionsRect.height) } : null,
     scrollWidth: document.documentElement.scrollWidth,

@@ -1,6 +1,6 @@
 # 余烬 Ember - 维护与接手文档
 
-最后更新：2026-06-08（本轮继续推进“更细命中来源 -> 复盘时间线”的解释闭环：`game_core.mjs` 现在会把敌人近战、普通弹幕和 Boss 弹幕的来源描述传入 `takeDamage()`，并在单次伤害达到高信号阈值时写入有界 `combatLog` 的 `heavy_hit` 事件；Boss 弹幕会携带 `bossAttackLabel()`，因此结果时间线可以显示“被瞄准连射命中”，并说明“恶魔领主·混沌造成 31 伤害，剩余 49/128”。`main.mjs` 的本地 debug 结果样本加入这条危险事件，`styles.css` 给 `timeline-danger` 的 marker 补了红色读法，`scripts/visual-smoke.mjs` 现在断言时间线存在具体命中来源，同时继续要求路线影响、战斗事件和崩盘节点。Playwright 本地浏览器通过 `?debug=1` 触发 `showResult(false)`，确认结果时间线有 2 条路线影响、具体瞄准连射命中、低血线事件、无水平溢出且底部操作可见；visual smoke 与 visual regression 均通过。PWA cache 已提升到 `ember-v21`，并已同步 `web -> docs -> android`。当前 checkpoint 仍为 `baseline avgWave 19.12`、`smart avgWave 23.42`，smart 第 5 波 `60/60` 通过，第 20 波到达 `53/60`，第 25 波到达 `48/60`，通关 `45/60`，无 max-tick 卡局。本轮 Android debug APK 构建和 payload 校验通过，当前 APK SHA256 为 `C077F62A448005FD191105228F075C29B2925FC3300FE8E68ECD8CA3598685C6`；临时 PATH 可解析 `adb.exe`，但本机仍找不到 `emulator.exe` 且 `adb devices` 无在线设备，当前 APK 的模拟器点击流 smoke 仍需恢复 Android Emulator 或接入真机后重跑，最近一次通过的模拟器点击流仍是前序 APK `1BCDFAF64F2EDEC1C1C1731E353629C4C6F873024C6CA3FC348B8B5204386D51`。前序记录中的路线影响、奖励读板、下一把优先级、中后期奖励短板修复、Boss 前容错、脆皮 `fragilityDebt`、烟幕残影保命、Boss 读招面板、逐资源 service worker 预缓存和视觉回归仍继续成立。）
+最后更新：2026-06-08（本轮继续推进“命中来源 -> 崩盘诱因 -> 复盘时间线”的解释闭环：`presentation.mjs` 新增 `resultCollapseLabel/resultCollapseDetail/resultCollapseTone`，会从 `deathSummary.combatLog` / `run.combatLog` 中按高伤害命中、低血线、救场、Boss 终局弹幕等优先级提炼最关键的崩盘诱因。`main.mjs` 在阵亡复盘区新增 `崩盘诱因` 卡片，debug 结果样本可显示“崩盘诱因 · 高伤害命中：被瞄准连射命中”，并解释“恶魔领主·混沌造成 31 伤害，剩余 49/128”如何兑现安全网缺口；`styles.css` 为 danger / boss / combat / survival / victory 诱因补齐独立视觉状态。`scripts/visual-smoke.mjs` 现在断言结果页存在具体高伤害崩盘诱因，同时继续要求路线影响、具体命中来源、战斗事件和崩盘节点；Playwright 本地浏览器通过 `?debug=1` 触发 `showResult(false)`，确认崩盘诱因、无水平溢出且底部操作可见。`npm test`、`npm run test:web-smoke`、`npm run test:visual-smoke` 和 `npm run test:visual-regression` 均通过。PWA cache 已提升到 `ember-v22`，并已同步 `web -> docs -> android`。当前 checkpoint 仍为 `baseline avgWave 19.12`、`smart avgWave 23.42`，smart 第 5 波 `60/60` 通过，第 20 波到达 `53/60`，第 25 波到达 `48/60`，通关 `45/60`，无 max-tick 卡局。本轮 Android debug APK 构建和 payload 校验通过，当前 APK SHA256 为 `330A647F98842BDDA4B0A13759A77A176A0F521213F4831552C3CE348808E83D`；临时 PATH 可解析 `adb.exe`，但本机仍找不到 `emulator.exe` 且无在线设备，当前 APK 的模拟器点击流 smoke 仍需恢复 Android Emulator 或接入真机后重跑，最近一次通过的模拟器点击流仍是前序 APK `1BCDFAF64F2EDEC1C1C1731E353629C4C6F873024C6CA3FC348B8B5204386D51`。前序记录中的路线影响、奖励读板、下一把优先级、中后期奖励短板修复、Boss 前容错、脆皮 `fragilityDebt`、烟幕残影保命、Boss 读招面板、逐资源 service worker 预缓存和视觉回归仍继续成立。）
 
 本文件给下一个继续维护的人或 AI，用来快速判断三件事：
 
@@ -25,16 +25,17 @@
 
 - `web/src/presentation.mjs`：新增 `resultPriorityLabel/resultNextHint`，把“下一把优先级”从 UI 里抽成结构化展示逻辑，并按 `singleTarget / aoe / sustain / safety` 最大压力缺口给出下一轮建议。
 - `web/src/presentation.mjs`：新增 `resultTimeline`，把结构化 `decisionLog` 和 `combatLog` 合并成复盘时间线，并追加崩盘/胜利终点；没有结构化日志时兼容旧版 `lastDecisions` 字符串。
+- `web/src/presentation.mjs`：新增 `resultCollapseLabel/resultCollapseDetail/resultCollapseTone`，把复盘里最关键的波中崩盘诱因提炼成独立读板；高伤害命中优先级最高，其次是低血线、救场和 Boss 终局弹幕。
 - `web/src/presentation.mjs`：本轮新增 `buildDecisionImpact()` 路线影响推导，会按最终最大缺口给奖励、营火、锻造和商店节点补 `impactLabel / impactDetail / impactTone`，让关键选择说明自己补了什么、漏了什么。
 - `web/src/game_core.mjs`：新增有界 `combatLog`，只记录低血线、救场、复活、Boss 终局弹幕和首领倒下等高信号事件；`deathSummary` 会携带最近事件供结算页复盘。
 - `web/src/game_core.mjs`：本轮新增 `heavy_hit` 战斗事件，敌人近战、普通弹幕和 Boss 弹幕会把来源传进 `takeDamage()`；高伤害命中按波次和来源节流，避免复盘时间线被弹幕刷屏。
 - `web/src/presentation.mjs`：新增 `rewardCardReadouts`，集中输出奖励卡决策标签、风险等级、稀有度、协同触发机会和短板修复解释；`tests/game_core.test.mjs` 已覆盖协同机会和高风险读板。
-- `web/src/main.mjs`：`showResult()` 改成战报复盘结构，分区展示关键数值、路线概览、构筑诊断、阵亡复盘和下一把优先级；本地 `?debug=1` 新增 `showResult()` 钩子用于稳定生成结算页截图。
+- `web/src/main.mjs`：`showResult()` 改成战报复盘结构，分区展示关键数值、路线概览、构筑诊断、阵亡复盘、崩盘诱因和下一把优先级；本地 `?debug=1` 新增 `showResult()` 钩子用于稳定生成结算页截图。
 - `web/src/main.mjs`：新增 `renderResultTimeline()`，只消费展示层给出的 timeline 节点；本轮 debug 结果样本加入“被瞄准连射命中”危险节点，用于稳定视觉验证。
 - `web/src/main.mjs`：奖励卡现在渲染 `card-readout`，展示协同/修复/风险机会说明；不再保留只在奖励卡里使用的 `cardStatsLine()`。
-- `web/styles.css`：结算页改为标题、可滚动复盘内容和底部固定操作区的布局，移动端关键数值两列显示，摘要卡显式防裁切；本轮补齐 `timeline-danger` marker 样式，具体命中来源会以危险色调进入时间线。
-- `scripts/visual-smoke.mjs` / `scripts/visual-regression.mjs`：新增桌面/移动端结算页、时间线区域和奖励卡读板覆盖，断言摘要标题/说明未被裁切、底部按钮在视口内、时间线包含路线影响、具体高伤害命中来源、崩盘节点和战斗事件、奖励卡有机会标签/风险等级且卡面内容不被内部裁切，并把结果页、时间线和奖励卡变化纳入视觉回归基线。
-- `web/sw.js`：PWA cache 提升到 `ember-v21`；`docs/` 镜像已由 `node scripts/sync-web.mjs` 同步。
+- `web/styles.css`：结算页改为标题、可滚动复盘内容和底部固定操作区的布局，移动端关键数值两列显示，摘要卡显式防裁切；本轮补齐 `collapse-review` 与 `timeline-danger` 的危险读法，具体命中来源会在崩盘诱因和时间线里同时可见。
+- `scripts/visual-smoke.mjs` / `scripts/visual-regression.mjs`：新增桌面/移动端结算页、时间线区域和奖励卡读板覆盖，断言摘要标题/说明未被裁切、底部按钮在视口内、崩盘诱因包含具体高伤害命中、时间线包含路线影响、具体高伤害命中来源、崩盘节点和战斗事件、奖励卡有机会标签/风险等级且卡面内容不被内部裁切，并把结果页、时间线和奖励卡变化纳入视觉回归基线。
+- `web/sw.js`：PWA cache 提升到 `ember-v22`；`docs/` 镜像已由 `node scripts/sync-web.mjs` 同步。
 - `web/src/game_core.mjs`：`isAoeRepairCard()`、`isSustainRepairCard()`、`isPressureRepairCard()` 和 `getPriorityPressureRepairKey()` 共同负责中后期奖励短板修复保底；通用奖励保底刻意不覆盖 `safety`。
 - `web/src/game_core.mjs`：`generateRestChoices()` 会在第 10 波 Boss 前 safety 极高时提前提供 `余烬护符`，第 15 波以后仍使用较低 safety 门槛。
 - `tests/game_core.test.mjs`：`中后期奖励应保底修复最大构筑短板` 锁定清场缺口必须至少出现一张修复牌；`第 10 波 Boss 前安全缺口极高时应提前提供护符` 锁定 Boss 前容错窗口。
@@ -159,8 +160,8 @@ roguelike-game/
 - 构筑短板阈值已从固定开局阈值升级为随波次成长的压力目标；`singleTarget / aoe / sustain / safety` 会保存当前强度、目标和缺口，奖励提示与死亡复盘共用这套解释
 - 奖励、锻造、商店和 Boss 前营火选择会写入 `decisionLog`，结算页显示最后几次关键选择，方便回看阵亡前路线是否误选
 - 主菜单、角色选择页、结算页已有更明确的视觉层次
-- 结算页已从统计列表升级为战报复盘：关键数值、路线概览、构筑诊断、阵亡复盘和下一把优先级分区展示；底部操作区固定可见，移动端复盘内容独立滚动
-- 结算页已新增复盘时间线：奖励、锻造、商店、营火等关键选择会按波次展示，并用“路线影响”副行说明该选择和最终短板之间的关系；低血线、Boss 终局弹幕和具体高伤害命中来源会插入时间线，末尾追加崩盘节点，帮助玩家把路线选择、波中转折和死亡原因连起来
+- 结算页已从统计列表升级为战报复盘：关键数值、路线概览、构筑诊断、阵亡复盘、崩盘诱因和下一把优先级分区展示；底部操作区固定可见，移动端复盘内容独立滚动
+- 结算页已新增复盘时间线：奖励、锻造、商店、营火等关键选择会按波次展示，并用“路线影响”副行说明该选择和最终短板之间的关系；低血线、Boss 终局弹幕和具体高伤害命中来源会插入时间线，末尾追加崩盘节点，崩盘诱因卡会把最关键的波中转折前置出来，帮助玩家把路线选择、波中转折和死亡原因连起来
 - 移动端主菜单首屏已压缩信息密度，`开始远征` 按钮在 390x844 视口下无需滚动即可点击
 - 角色选择页和战斗内玩家模型已改用 AI 生成的 4 角色 x 2 动作帧 spritesheet，不再使用圆形/豆形占位角色
 - 角色选择页现在会直接展示职业职责、武器、战斗备注和起手流派，锁定职业不再被压到几乎不可读
@@ -182,11 +183,11 @@ roguelike-game/
 - 之前 Python 静态服务的 `.mjs` MIME 问题已绕开
 - `scripts/serve-web.mjs` 已提供正确的本地 Node 静态服务
 - `scripts/web-smoke.mjs` 已建立无依赖 smoke test，可验证 spritesheet 尺寸/内容、敌人图集格子、service worker 预缓存覆盖和离线 fallback、本地 MIME、UI 状态路由，以及 `game_core.mjs` 发出的粒子类型是否都有 `drawParticles` 覆盖
-- `scripts/visual-smoke.mjs` 已建立无 npm 依赖视觉 smoke，可用本机 Chrome/Edge 验证桌面/移动端菜单、角色选择、战斗 canvas 非空、奖励选择页推荐卡渲染和读板、Boss 前奖励点击后进入营火、营火选择后进入第 5 波 Boss、桌面/移动端结算复盘和时间线区域，并额外保存桌面和移动端活跃首领战 `boss-fight-*.png`，以及固定的高波桌面场景 `boss-fight-highwave-desktop.png`；高波样本会断言 debug snapshot 中存在当前 `bossPatternLabel` 和 `bossCharge`，奖励样本会断言每张卡有 `card-readout`、机会标签、风险等级且没有内部裁切，结果页样本会断言摘要未裁切、底部按钮可见，时间线样本会断言存在路线影响、具体高伤害命中来源、战斗事件和崩盘节点
+- `scripts/visual-smoke.mjs` 已建立无 npm 依赖视觉 smoke，可用本机 Chrome/Edge 验证桌面/移动端菜单、角色选择、战斗 canvas 非空、奖励选择页推荐卡渲染和读板、Boss 前奖励点击后进入营火、营火选择后进入第 5 波 Boss、桌面/移动端结算复盘和时间线区域，并额外保存桌面和移动端活跃首领战 `boss-fight-*.png`，以及固定的高波桌面场景 `boss-fight-highwave-desktop.png`；高波样本会断言 debug snapshot 中存在当前 `bossPatternLabel` 和 `bossCharge`，奖励样本会断言每张卡有 `card-readout`、机会标签、风险等级且没有内部裁切，结果页样本会断言摘要未裁切、底部按钮可见、崩盘诱因包含具体高伤害命中，时间线样本会断言存在路线影响、具体高伤害命中来源、战斗事件和崩盘节点
 - `scripts/visual-regression.mjs` 已建立 PNG 解码后的像素回归：角色选择等稳定界面使用严格 RGBA 哈希，菜单和动画界面使用亮度、RGB 均值、暗/亮/饱和像素比例容差；基线在 `tests/visual-regression-baseline.json`，包含桌面/移动端奖励页读板、活跃 Boss 战截图、高波桌面样本、桌面/移动端结算复盘和桌面/移动端时间线区域
 - `scripts/generate-art-assets.mjs` 默认保留现有角色 spritesheet，避免误运行后覆盖 AI 人物资源；同时会重生成参考图风格竞技场背景和敌人 / Boss spritesheet
 - `web/src/main.mjs` 会按背景图原始比例居中裁切绘制竞技场 PNG，因此后续直接替换 `web/assets/arena-ember-fortress.png` 不会被拉伸；它也会优先使用敌人 spritesheet，加载失败时仍回退到 SVG 符号和圆形占位
-- `web/sw.js` 已预缓存 `main.mjs` 的静态模块依赖和核心美术资源；当前 `CACHE = ember-v21`；替换同名 PNG 或修改核心脚本后必须继续提升 `CACHE` 版本，避免 PWA/Android WebView 继续命中旧缓存；预缓存必须逐资源容错，不能使用 `cache.addAll()`，否则 Android WebView 可能因单个 Cache 内部错误产生启动期 fatal log；fetch handler 只拦截同源 GET，离线 cache miss 会返回明确 Response，避免 WebView console 噪声
+- `web/sw.js` 已预缓存 `main.mjs` 的静态模块依赖和核心美术资源；当前 `CACHE = ember-v22`；替换同名 PNG 或修改核心脚本后必须继续提升 `CACHE` 版本，避免 PWA/Android WebView 继续命中旧缓存；预缓存必须逐资源容错，不能使用 `cache.addAll()`，否则 Android WebView 可能因单个 Cache 内部错误产生启动期 fatal log；fetch handler 只拦截同源 GET，离线 cache miss 会返回明确 Response，避免 WebView console 噪声
 - `web/index.html` 不再依赖 Google Fonts 外链，Android / PWA 离线环境不会因为外部字体请求污染 logcat 或首屏加载
 - Android `assembleDebug` 已在本机成功跑通过一次
 - `scripts/build-android-debug.ps1` 已建立，负责选择可用 JDK 21、同步资源、构建 APK，并校验 APK 内关键 Web 资源和代码标记
@@ -236,6 +237,7 @@ npm run serve
   - 本轮新增覆盖：`死亡复盘下一把优先级应跟随最大压力缺口`，锁定结算页下一步建议必须来自 `presentation.mjs` 的最大压力缺口推导，而不是 UI 硬编码
   - 本轮新增覆盖：`复盘时间线应标出关键选择的路线影响`，锁定奖励/营火节点必须能说明它们和最终最大短板之间的关系
   - 本轮新增覆盖：`核心战斗应记录高伤害命中来源`，锁定 Boss 弹幕来源和模式必须进入 `heavy_hit` 复盘事件
+  - 本轮新增覆盖：`死亡复盘应提炼最关键的崩盘诱因`，锁定展示层必须从 combatLog 中把高伤害命中提炼成 `崩盘诱因 · 高伤害命中`
   - 本轮新增断言：复盘时间线必须包含历史选择和崩盘节点；结构化 `decisionLog` 中的 `pick` 动作必须中文化为“拿牌”
   - 已新增覆盖：高压 `aimed_burst` 必须先出现预警，再延迟发射弹幕
   - 已覆盖 `末日` 诅咒从拿牌时开始倒计时，中后期拿牌不会因整局时间已超过 45 秒而立刻判死
@@ -267,6 +269,7 @@ npm run serve
   - 固定第 20 波高波样本会断言 debug snapshot 中存在 `bossPatternLabel` 和 `bossCharge`
   - 奖励页样本会断言每张奖励卡存在 `card-readout`、机会标签、风险等级，且 `scrollHeight <= clientHeight`，避免卡面内容被内部裁切
   - 结算页样本会断言摘要标题和说明未被裁切、底部 `再来一把 / 返回菜单` 按钮在视口内、无水平溢出
+  - 结果页样本会断言 `崩盘诱因 · 高伤害命中` 存在，并包含具体“被瞄准连射命中 / 恶魔领主·混沌造成”文本
   - 时间线样本会断言至少 2 条“路线影响”副行、具体高伤害命中来源，同时保留战斗事件和崩盘节点
   - 移动端菜单、角色选择、局内 canvas、奖励选择页和 Boss 前营火渲染通过，无水平溢出
   - 移动端局内摇杆与闪避按钮可见
@@ -307,7 +310,7 @@ npm run serve
 - Android 构建：
   - `npm run build:android:debug` 当前返回成功
   - APK 路径：`android/app/build/outputs/apk/debug/app-debug.apk`
-  - 当前构建 APK SHA256：`C077F62A448005FD191105228F075C29B2925FC3300FE8E68ECD8CA3598685C6`
+  - 当前构建 APK SHA256：`330A647F98842BDDA4B0A13759A77A176A0F521213F4831552C3CE348808E83D`
   - 构建脚本会自动验证 APK 内容，避免 Web 修复没有同步进 Android 包
   - 已验证 APK 内包含当前 Web 资源关键标记：
     - `assets/public/index.html` 含 `Arena Roguelike`

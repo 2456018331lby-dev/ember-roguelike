@@ -797,6 +797,15 @@ function showResult(victory) {
   const gameTime = presentation.deathGameTime ? `<div class="final-stat"><span>存活时间</span><span>${Math.floor(presentation.deathGameTime / 60)}分${presentation.deathGameTime % 60}秒</span></div>` : '';
   const pressureReview = presentation.deathPressureLine ? `<div class="final-stat wide pressure-review"><span>数值缺口</span><span>${escapeHtml(presentation.deathPressureLine)}</span></div>` : '';
   const decisionReview = presentation.deathDecisionLine ? `<div class="final-stat wide decision-review"><span>最后决策</span><span>${escapeHtml(presentation.deathDecisionLine)}</span></div>` : '';
+  const collapseTone = ['danger', 'combat', 'survival', 'boss', 'victory', 'neutral'].includes(presentation.resultCollapseTone)
+    ? presentation.resultCollapseTone
+    : 'neutral';
+  const collapsePrefix = victory ? '通关关键' : '崩盘诱因';
+  const collapseReview = presentation.resultCollapseDetail ? `
+    <div class="final-stat wide collapse-review collapse-${collapseTone}">
+      <span>${collapsePrefix} · ${escapeHtml(presentation.resultCollapseLabel || '战斗转折')}</span>
+      <span>${escapeHtml(presentation.resultCollapseDetail)}</span>
+    </div>` : '';
   const focusText = presentation.buildSummary || '构筑尚未成型';
   const weaknessText = presentation.weaknessSummary || '暂无明显短板';
   const nextPriorityLabel = presentation.resultPriorityLabel || (victory ? '冲分路线' : '路线校准');
@@ -838,6 +847,7 @@ function showResult(victory) {
     <div class="result-section after-action">
       <div class="result-section-title">阵亡复盘</div>
       <div class="final-stat reason wide"><span>失败原因</span><span>${escapeHtml(presentation.deathReason || (victory ? '已完成远征' : '余烬熄灭'))}</span></div>
+      ${collapseReview}
       ${pressureReview}
       ${decisionReview}
       ${deathTip}

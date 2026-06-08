@@ -2322,6 +2322,65 @@ test('复盘时间线应合并波中战斗事件', () => {
   assert.match(pres.resultTimeline.at(-1).title, /崩盘节点/);
 });
 
+test('死亡复盘应提炼最关键的崩盘诱因', () => {
+  const run = createRun(115);
+  run.state = 'gameover';
+  run.wave = 20;
+  run.waveProfile = { kind: 'boss', label: '第 20 波 Boss 讨伐' };
+  run.buildAnalysis = {
+    primaryFocus: 'fortress',
+    weaknesses: { singleTarget: false, sustain: false, aoe: false, safety: true },
+    pressure: { singleTarget: 118, aoe: 50, sustain: 84, mitigation: 18, safety: 8 },
+    pressureTargets: { singleTarget: 110, aoe: 44, sustain: 82, safety: 36 },
+    pressureGaps: { singleTarget: 0, aoe: 0, sustain: 0, safety: 28 },
+    summary: '壁垒',
+  };
+  run.combatLog = [
+    {
+      type: 'boss_late_phase',
+      wave: 20,
+      time: 726,
+      title: '首领进入终局弹幕',
+      detail: '首领低血后进入最高压弹幕。',
+      tone: 'boss',
+    },
+    {
+      type: 'heavy_hit',
+      wave: 20,
+      time: 729,
+      title: '被瞄准连射命中',
+      detail: '恶魔领主·混沌造成 31 伤害，剩余 49/128；这类命中会快速兑现安全网缺口。',
+      tone: 'danger',
+    },
+    {
+      type: 'low_hp',
+      wave: 20,
+      time: 731,
+      title: '血线跌入危险区',
+      detail: '连续弹幕后只剩 18/128。',
+      tone: 'combat',
+    },
+  ];
+  run.deathSummary = {
+    reason: 'Boss 讨伐失败：走位和弹幕处理还需优化。',
+    wave: 20,
+    waveLabel: '第 20 波 Boss 讨伐',
+    waveKind: 'boss',
+    pressure: run.buildAnalysis.pressure,
+    pressureTargets: run.buildAnalysis.pressureTargets,
+    pressureGaps: run.buildAnalysis.pressureGaps,
+    combatLog: run.combatLog,
+  };
+
+  const pres = buildRunPresentation(run, getPlayerStats(run), { name: '战士' });
+
+  assert.equal(pres.resultCollapseLabel, '高伤害命中');
+  assert.equal(pres.resultCollapseTone, 'danger');
+  assert.match(pres.resultCollapseDetail, /被瞄准连射命中/);
+  assert.match(pres.resultCollapseDetail, /恶魔领主·混沌造成 31 伤害/);
+  assert.match(pres.resultCollapseDetail, /安全网缺口/);
+});
+
 test('复盘时间线应标出关键选择的路线影响', () => {
   const run = createRun(113);
   run.state = 'gameover';

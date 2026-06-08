@@ -7,6 +7,7 @@ export function buildRunPresentation(run, stats, character) {
   const weaknessText = buildWeaknessSummary(buildAnalysis);
   const rewardWhy = buildRewardWhy(run, buildAnalysis, targetProfile);
   const resultPriority = buildResultPriority(run, buildAnalysis);
+  const resultCollapse = buildResultCollapseReadout(run, resultPriority);
   const resultTimeline = buildResultTimeline(run, resultPriority);
   return {
     topLine: `第 ${run.wave} / ${run.totalWaves} 波`,
@@ -33,6 +34,9 @@ export function buildRunPresentation(run, stats, character) {
     deathDecisionLine: buildDeathDecisionLine(run.deathSummary),
     resultPriorityLabel: resultPriority.label,
     resultNextHint: resultPriority.hint,
+    resultCollapseLabel: resultCollapse.label,
+    resultCollapseDetail: resultCollapse.detail,
+    resultCollapseTone: resultCollapse.tone,
     resultTimeline,
     deathDeckSize: run.deathSummary?.deckSize || 0,
     deathFocus: run.deathSummary?.focus || '',
@@ -404,6 +408,127 @@ function buildResultPriority(run, analysis = {}) {
     label: '战斗节奏',
     hint: '压力目标基本达标，下一把优先复盘站位、冲刺窗口和 Boss 读招节奏。',
   };
+}
+
+function buildResultCollapseReadout(run, resultPriority) {
+  if (run.state === 'victory') {
+    return {
+      label: '通关节奏',
+      detail: '本轮路线已经撑过最终压力，可以保留核心牌序后再提高献祭风险。',
+      tone: 'victory',
+    };
+  }
+
+  const summary = run.deathSummary || {};
+  const combatLog = getResultCombatLog(run, summary);
+  const moment = pickCollapseMoment(combatLog);
+  if (moment) return buildCollapseReadoutFromMoment(moment, resultPriority);
+
+  const priorityLabel = resultPriority?.label || '';
+  if (priorityLabel) {
+    return {
+      label: `${priorityLabel}缺口`,
+      detail: `${summary.reason || '没有记录到明确波中转折。'} 下一把先按${priorityLabel}方向补强，再复盘站位和冲刺窗口。`,
+      tone: 'neutral',
+    };
+  }
+
+  return {
+    label: '战斗节奏',
+    detail: summary.reason || '没有记录到明确波中转折，下一把优先检查站位、冲刺窗口和 Boss 读招节奏。',
+    tone: 'neutral',
+  };
+}
+
+function getResultCombatLog(run, summary) {
+  if (Array.isArray(summary?.combatLog) && summary.combatLog.length) return summary.combatLog;
+  return Array.isArray(run.combatLog) ? run.combatLog : [];
+}
+
+function pickCollapseMoment(log) {
+  return [...(log || [])]
+    .filter(Boolean)
+    .sort((a, b) => collapseMomentScore(b) - collapseMomentScore(a) || (Number(b.time) || 0) - (Number(a.time) || 0))[0] || null;
+}
+
+function collapseMomentScore(moment) {
+  const typeScore = {
+    heavy_hit: 100,
+    low_hp: 84,
+    survival: 74,
+    boss_late_phase: 68,
+    boss_defeated: 18,
+  }[moment?.type] ?? 40;
+  const toneScore = moment?.tone === 'danger' ? 10 : moment?.tone === 'boss' ? 6 : moment?.tone === 'survival' ? 4 : 0;
+  return typeScore + toneScore;
+}
+
+function buildCollapseReadoutFromMoment(moment, resultPriority) {
+  const title = moment.title || '战斗转折';
+  const baseDetail = `${title}：${trimSentence(moment.detail || '这一刻改变了战斗走向。')}`;
+  const priorityLabel = resultPriority?.label || '';
+
+  if (moment.type === 'heavy_hit') {
+    return {
+      label: '高伤害命中',
+      detail: joinSentences([
+        baseDetail,
+        priorityLabel ? `这次命中把${priorityLabel}缺口直接兑现。` : '这类命中通常说明容错或走位窗口已经被压穿。',
+      ]),
+      tone: 'danger',
+    };
+  }
+
+  if (moment.type === 'low_hp') {
+    return {
+      label: '血线断层',
+      detail: joinSentences([
+        baseDetail,
+        priorityLabel ? `低血线后最需要先补${priorityLabel}。` : '低血线后已经没有足够空间继续犯错。',
+      ]),
+      tone: 'combat',
+    };
+  }
+
+  if (moment.type === 'survival') {
+    return {
+      label: '救场已消耗',
+      detail: joinSentences([
+        baseDetail,
+        '保命资源已经用掉，后续路线必须补回安全网。',
+      ]),
+      tone: 'survival',
+    };
+  }
+
+  if (moment.type === 'boss_late_phase') {
+    return {
+      label: '终局弹幕压迫',
+      detail: joinSentences([
+        baseDetail,
+        priorityLabel ? `这个阶段会持续追问${priorityLabel}。` : '这个阶段需要更稳定的输出和走位窗口。',
+      ]),
+      tone: 'boss',
+    };
+  }
+
+  return {
+    label: '战斗转折',
+    detail: baseDetail,
+    tone: moment.tone || 'combat',
+  };
+}
+
+function trimSentence(text) {
+  return String(text || '').trim().replace(/[。；;,.，\s]+$/u, '');
+}
+
+function joinSentences(parts) {
+  return parts
+    .map(part => trimSentence(part))
+    .filter(Boolean)
+    .map(part => `${part}。`)
+    .join('');
 }
 
 function buildResultTimeline(run, resultPriority) {

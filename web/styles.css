@@ -2320,6 +2320,59 @@ body::after {
   background: rgba(232, 184, 93, .1);
 }
 
+.collapse-review {
+  position: relative;
+  overflow: hidden;
+  border-color: rgba(248, 113, 113, .22);
+  background:
+    linear-gradient(90deg, rgba(127, 29, 29, .24), rgba(5, 7, 11, .46)),
+    rgba(5, 7, 11, .42);
+}
+
+.collapse-review span:first-child {
+  color: #fecaca;
+}
+
+.collapse-review span:last-child {
+  color: #f8fafc;
+  line-height: 1.55;
+}
+
+.collapse-boss {
+  border-color: rgba(251, 146, 60, .26);
+  background:
+    linear-gradient(90deg, rgba(154, 52, 18, .22), rgba(5, 7, 11, .46)),
+    rgba(5, 7, 11, .42);
+}
+
+.collapse-boss span:first-child {
+  color: #fed7aa;
+}
+
+.collapse-combat {
+  border-color: rgba(96, 165, 250, .24);
+  background:
+    linear-gradient(90deg, rgba(30, 64, 175, .2), rgba(5, 7, 11, .46)),
+    rgba(5, 7, 11, .42);
+}
+
+.collapse-combat span:first-child {
+  color: #bfdbfe;
+}
+
+.collapse-survival,
+.collapse-victory {
+  border-color: rgba(45, 212, 191, .24);
+  background:
+    linear-gradient(90deg, rgba(13, 148, 136, .18), rgba(5, 7, 11, .46)),
+    rgba(5, 7, 11, .42);
+}
+
+.collapse-survival span:first-child,
+.collapse-victory span:first-child {
+  color: #99f6e4;
+}
+
 .result-stats {
   grid-template-columns: 1fr;
   gap: 12px;
