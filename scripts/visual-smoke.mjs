@@ -488,6 +488,7 @@ const resultReportExpression = `(() => {
       timelineItems.some(item => /崩盘节点/.test(item.textContent || '')) &&
       combatTimelineItems.length >= 1 &&
       timelineItems.some(item => /血线跌入危险区|首领进入终局弹幕|凤凰余烬复燃|余烬护符救场/.test(item.textContent || '')) &&
+      timelineItems.some(item => /瞄准连射命中|恶魔领主·混沌造成/.test(item.textContent || '')) &&
       impactItems.length >= 2 &&
       impactItems.some(item => /路线影响/.test(item.textContent || '')) &&
       noHorizontalOverflow),

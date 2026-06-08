@@ -2608,6 +2608,11 @@ body::after {
     rgba(5, 7, 11, .38);
 }
 
+.timeline-danger .timeline-marker {
+  border-color: rgba(248, 113, 113, .26);
+  color: #fecaca;
+}
+
 .timeline-victory {
   border-color: rgba(134, 239, 172, .28);
 }

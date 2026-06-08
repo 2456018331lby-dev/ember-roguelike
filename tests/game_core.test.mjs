@@ -2235,6 +2235,40 @@ test('核心战斗应记录低血线和救场事件', () => {
   assert.ok(wardRun.combatLog.some(item => item.tone === 'survival' && /余烬护符/.test(item.title)), '救场应写入生存事件');
 });
 
+test('核心战斗应记录高伤害命中来源', () => {
+  const run = createRun(114);
+  run.waveTransitionTimer = 0;
+  updateRun(run, { x: 0, y: 0 }, 0.001);
+  run.wave = 20;
+  run.waveProfile = { kind: 'boss', label: '第 20 波 Boss 讨伐' };
+  run.player.hp = 100;
+  run.player.invuln = 0;
+  run.projectiles.push({
+    x: run.player.x,
+    y: run.player.y,
+    vx: 0,
+    vy: 0,
+    damage: 30,
+    life: 1,
+    radius: 30,
+    color: '#ff0',
+    fromEnemy: true,
+    sourceKind: 'boss_projectile',
+    sourceType: 'demon',
+    sourceName: '恶魔领主·混沌',
+    sourcePattern: 'aimed_burst',
+    sourcePatternLabel: '瞄准连射',
+    isBoss: true,
+  });
+  updateRun(run, { x: 0, y: 0 }, 0.016);
+
+  const heavyHit = run.combatLog.find(item => item.type === 'heavy_hit');
+  assert.ok(heavyHit, '高伤害命中应写入战斗事件');
+  assert.equal(heavyHit.tone, 'danger');
+  assert.match(heavyHit.title, /瞄准连射/);
+  assert.match(heavyHit.detail, /恶魔领主·混沌造成/);
+});
+
 test('复盘时间线应合并波中战斗事件', () => {
   const run = createRun(112);
   run.state = 'gameover';

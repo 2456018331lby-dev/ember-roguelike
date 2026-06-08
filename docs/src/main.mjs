@@ -2461,6 +2461,16 @@ function enableDebugHooks() {
           tone: 'boss',
         },
         {
+          type: 'heavy_hit',
+          wave: 20,
+          waveKind: 'boss',
+          waveLabel: '第 20 波 Boss 讨伐',
+          time: 729,
+          title: '被瞄准连射命中',
+          detail: '恶魔领主·混沌造成 31 伤害，剩余 49/128；这类命中会快速兑现安全网缺口。',
+          tone: 'danger',
+        },
+        {
           type: 'low_hp',
           wave: 20,
           waveKind: 'boss',

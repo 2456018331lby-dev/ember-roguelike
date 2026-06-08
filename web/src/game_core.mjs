@@ -172,6 +172,8 @@ const DEBUG_HIGH_WAVE_CARD_IDS = [
 const MAX_COMBAT_LOG = 8;
 const LOW_HP_MOMENT_RATIO = 0.35;
 const BOSS_LATE_PHASE_RATIO = 0.4;
+const HEAVY_HIT_RATIO = 0.16;
+const HEAVY_HIT_FLOOR = 12;
 
 // ---- 随机数 ----
 function mulberry32(seed) {
@@ -366,7 +368,7 @@ export function createRun(seed = Date.now(), character = null, difficultyKey = '
     restChoices: [],       // Boss前休息选项
     decisionLog: [],       // 决策记录（用于死亡回顾）
     combatLog: [],         // 波中关键战斗事件（用于结果时间线）
-    combatMomentFlags: { lowHpWaves: {}, bossLatePhase: {}, bossDefeated: {} },
+    combatMomentFlags: { lowHpWaves: {}, heavyHitWaves: {}, bossLatePhase: {}, bossDefeated: {} },
     rewardRerolls: meta.rerollCount,
     rewardContext: { choiceCount: 3, rarityBonus: 0 },
     waveProfile: null,
@@ -463,7 +465,7 @@ export function createDebugBossFight(seed = 2048, options = {}) {
   run.nextWavePreview = null;
   run.decisionLog = [];
   run.combatLog = [];
-  run.combatMomentFlags = { lowHpWaves: {}, bossLatePhase: {}, bossDefeated: {} };
+  run.combatMomentFlags = { lowHpWaves: {}, heavyHitWaves: {}, bossLatePhase: {}, bossDefeated: {} };
   run.waveHistory = [];
   run.enemies = [];
   run.projectiles = [];
@@ -2868,7 +2870,12 @@ function resolveMeleeAttack(run, e, stats) {
       run.particles.push({ type: 'dodge', x: run.player.x, y: run.player.y - 35, life: 0.6, maxLife: 0.6 });
     } else {
       const dmg = Math.max(1, (e.meleePendingDamage || e.baseDamage) - Math.max(0, stats.armor - (e.armorPierce || 0)));
-      takeDamage(run, dmg);
+      takeDamage(run, dmg, {
+        sourceKind: 'melee',
+        sourceType: e.typeKey,
+        sourceName: e.name,
+        isBoss: e.isBoss,
+      });
       if (stats.reflect > 0) {
         const refDmg = Math.floor(dmg * stats.reflect);
         damageEnemy(run, e, refDmg, stats, false);
@@ -2899,7 +2906,7 @@ function performRangedAttack(run, e) {
         vy: Math.sin(angle) * e.projectileSpeed,
         damage: e.baseDamage, life: e.projectileLife || 3.5,
         radius: e.projectileRadius, color: e.projectileColor,
-        fromEnemy: true, sourceType: e.typeKey,
+        fromEnemy: true, sourceKind: 'projectile', sourceType: e.typeKey, sourceName: e.name,
       });
     }
   } else {
@@ -2911,7 +2918,7 @@ function performRangedAttack(run, e) {
       vy: dirY * e.projectileSpeed,
       damage: e.baseDamage, life: e.projectileLife || 3.5,
       radius: e.projectileRadius, color: e.projectileColor,
-      fromEnemy: true, sourceType: e.typeKey,
+      fromEnemy: true, sourceKind: 'projectile', sourceType: e.typeKey, sourceName: e.name,
     });
   }
   if (e.typeKey === 'archer') pushMessage(run, '⚠ 弓箭手拉弓，准备侧移。');
@@ -2936,6 +2943,14 @@ function performBossAttack(run, boss, phase, dirX, dirY, dist) {
     type: 'circle', owner: boss.id,
   });
   pushMessage(run, `⚠ ${boss.name} 即将发动 ${bossAttackLabel(pattern)}。`);
+  const bossSource = {
+    sourceKind: 'boss_projectile',
+    sourceType: boss.typeKey,
+    sourceName: boss.name,
+    sourcePattern: pattern,
+    sourcePatternLabel: bossAttackLabel(pattern),
+    isBoss: true,
+  };
 
   switch (pattern) {
     case 'circle_shot': {
@@ -2948,7 +2963,7 @@ function performBossAttack(run, boss, phase, dirX, dirY, dist) {
           vx: Math.cos(angle) * bulletSpeed,
           vy: Math.sin(angle) * bulletSpeed,
           damage: boss.baseDamage, life: 4,
-          radius: 7, color: boss.color, fromEnemy: true,
+          radius: 7, color: boss.color, fromEnemy: true, ...bossSource,
         });
       }
       break;
@@ -2966,7 +2981,7 @@ function performBossAttack(run, boss, phase, dirX, dirY, dist) {
               vx: Math.cos(angle) * bulletSpeed,
               vy: Math.sin(angle) * bulletSpeed,
               damage: boss.baseDamage, life: 4.5,
-              radius: 6, color: boss.color, fromEnemy: true,
+              radius: 6, color: boss.color, fromEnemy: true, ...bossSource,
             });
           }
         });
@@ -2991,7 +3006,7 @@ function performBossAttack(run, boss, phase, dirX, dirY, dist) {
             vx: Math.cos(angle) * burstSpeed,
             vy: Math.sin(angle) * burstSpeed,
             damage: boss.baseDamage * (run.wave === 5 ? 1.08 : 1.3), life: 3,
-            radius: 8, color: '#ff0', fromEnemy: true,
+            radius: 8, color: '#ff0', fromEnemy: true, ...bossSource,
           });
         }
         run.screenShake = Math.max(run.screenShake, 0.24);
@@ -3010,7 +3025,7 @@ function performBossAttack(run, boss, phase, dirX, dirY, dist) {
             y: boss.y + Math.sin(angle) * (boss.radius + 5),
             vx: Math.cos(angle) * spd, vy: Math.sin(angle) * spd,
             damage: boss.baseDamage, life: 5,
-            radius: 5, color: '#80deea', fromEnemy: true,
+            radius: 5, color: '#80deea', fromEnemy: true, ...bossSource,
           });
         }
       }
@@ -3026,7 +3041,7 @@ function performBossAttack(run, boss, phase, dirX, dirY, dist) {
             x: boss.x, y: boss.y,
             vx: Math.cos(baseAngle) * spd, vy: Math.sin(baseAngle) * spd,
             damage: boss.baseDamage, life: 4,
-            radius: 6, color: '#b3e5fc', fromEnemy: true,
+            radius: 6, color: '#b3e5fc', fromEnemy: true, ...bossSource,
           });
         }
       }
@@ -3044,7 +3059,7 @@ function performBossAttack(run, boss, phase, dirX, dirY, dist) {
             y: boss.y + (run.rand() - 0.5) * 100,
             vx: Math.cos(angle) * spd, vy: Math.sin(angle) * spd,
             damage: boss.baseDamage * 0.7, life: 3.5,
-            radius: 5, color: '#ce93d8', fromEnemy: true,
+            radius: 5, color: '#ce93d8', fromEnemy: true, ...bossSource,
           });
         });
       }
@@ -3294,6 +3309,7 @@ export function resolveAutoAttack(run, dt) {
 function ensureCombatMomentFlags(run) {
   if (!run.combatMomentFlags) run.combatMomentFlags = {};
   if (!run.combatMomentFlags.lowHpWaves) run.combatMomentFlags.lowHpWaves = {};
+  if (!run.combatMomentFlags.heavyHitWaves) run.combatMomentFlags.heavyHitWaves = {};
   if (!run.combatMomentFlags.bossLatePhase) run.combatMomentFlags.bossLatePhase = {};
   if (!run.combatMomentFlags.bossDefeated) run.combatMomentFlags.bossDefeated = {};
   return run.combatMomentFlags;
@@ -3332,6 +3348,44 @@ function maybeRecordLowHpMoment(run, amount, stats) {
     title: '血线跌入危险区',
     detail: `承受 ${Math.round(amount)} 伤害后只剩 ${Math.ceil(hp)}/${maxHp}，这一波已经进入容错断层。`,
     tone: 'combat',
+  });
+}
+
+function buildDamageSourceInfo(source = {}) {
+  const sourceType = source.sourceType || source.typeKey || '';
+  const sourceName = source.sourceName || ENEMY_TYPES[sourceType]?.name || BOSS_TYPES[sourceType]?.name || '未知来源';
+  const patternLabel = source.sourcePatternLabel || (source.sourcePattern ? bossAttackLabel(source.sourcePattern) : '');
+  const sourceKind = source.sourceKind || source.kind || '';
+  const label = patternLabel
+    || (sourceKind === 'melee' ? `${sourceName}近身攻击` : `${sourceName}弹幕`);
+  return {
+    key: [sourceKind || 'hit', sourceType || sourceName, patternLabel].filter(Boolean).join(':'),
+    label,
+    sourceName,
+    patternLabel,
+    isBoss: Boolean(source.isBoss || BOSS_TYPES[sourceType]),
+  };
+}
+
+function maybeRecordHeavyHitMoment(run, amount, stats, source = {}) {
+  if (!source || (!source.sourceType && !source.sourceName && !source.sourcePatternLabel && !source.sourcePattern && !source.isBoss)) return;
+  const maxHp = Math.max(1, stats?.maxHp || run.player.maxHp || 1);
+  const hp = Math.max(0, run.player.hp);
+  const heavyThreshold = Math.max(HEAVY_HIT_FLOOR, maxHp * HEAVY_HIT_RATIO);
+  const sourceInfo = buildDamageSourceInfo(source);
+  const bossPressureHit = sourceInfo.isBoss && amount >= maxHp * 0.1;
+  const lethalWindowHit = hp / maxHp <= 0.5 && amount >= maxHp * 0.1;
+  if (amount < heavyThreshold && !bossPressureHit && !lethalWindowHit) return;
+
+  const flags = ensureCombatMomentFlags(run);
+  const key = `${run.wave || 0}:${sourceInfo.key || 'unknown'}`;
+  if (flags.heavyHitWaves[key]) return;
+  flags.heavyHitWaves[key] = true;
+  recordCombatMoment(run, {
+    type: 'heavy_hit',
+    title: `被${sourceInfo.label}命中`,
+    detail: `${sourceInfo.sourceName}造成 ${Math.round(amount)} 伤害，剩余 ${Math.ceil(hp)}/${maxHp}；这类命中会快速兑现安全网缺口。`,
+    tone: 'danger',
   });
 }
 
@@ -3428,7 +3482,7 @@ function damageEnemy(run, enemy, amount, stats, isCrit) {
   }
 }
 
-function takeDamage(run, amount) {
+function takeDamage(run, amount, source = {}) {
   if (run.player.invuln > 0 || amount <= 0) return;
 
   // 护盾吸收
@@ -3449,6 +3503,7 @@ function takeDamage(run, amount) {
   run.events.push('hit');
 
   const stats = getPlayerStats(run);
+  maybeRecordHeavyHitMoment(run, amount, stats, source);
   maybeRecordLowHpMoment(run, amount, stats);
 
   if (run.player.hp <= 0) {
@@ -3620,7 +3675,7 @@ function updateProjectiles(run, dt, stats) {
           run.particles.push({ type: 'dodge', x: run.player.x, y: run.player.y - 35, life: 0.6, maxLife: 0.6 });
         } else {
           const dmg = Math.max(1, p.damage - stats.armor);
-          takeDamage(run, dmg);
+          takeDamage(run, dmg, p);
         }
         p.life = 0;
         run.particles.push({ type: 'bullet_hit', x: p.x, y: p.y, life: 0.2, maxLife: 0.2, color: p.color });
