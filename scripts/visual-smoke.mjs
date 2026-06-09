@@ -189,18 +189,27 @@ function menuCheckExpression({ mobile = false } = {}) {
   return `(() => {
     const menu = document.querySelector('#menu');
     const start = document.querySelector('#startBtn');
-    const h1 = document.querySelector('.hero-panel h1');
+    const heroPanel = document.querySelector('.hero-panel');
+    const h1 = heroPanel?.querySelector('h1');
     const startRect = start?.getBoundingClientRect();
+    const heroRect = heroPanel?.getBoundingClientRect();
     const h1Rect = h1?.getBoundingClientRect();
+    const heroBg = heroPanel ? getComputedStyle(heroPanel).backgroundImage : '';
+    const menuBg = menu ? getComputedStyle(menu, '::before').backgroundImage : '';
+    const generatedArtLoaded = heroBg.includes('ember-menu-tableau.png') || menuBg.includes('ember-menu-tableau.png');
+    const fullBleedHero = heroRect && heroRect.width >= window.innerWidth - 4 && heroRect.height >= window.innerHeight - 4;
     const noHorizontalOverflow = document.documentElement.scrollWidth <= window.innerWidth + 2;
     return {
-      ok: Boolean(menu && start && h1 && !menu.classList.contains('hidden') &&
+      ok: Boolean(menu && start && heroPanel && h1 && !menu.classList.contains('hidden') &&
+        generatedArtLoaded && fullBleedHero &&
         startRect.width >= 90 && startRect.height >= 34 &&
         h1Rect.width > 80 && h1Rect.height > 40 &&
         noHorizontalOverflow${mobile ? ' && startRect.top < window.innerHeight' : ''}),
       startText: start?.textContent || '',
       startRect: startRect ? { top: Math.round(startRect.top), bottom: Math.round(startRect.bottom), width: Math.round(startRect.width), height: Math.round(startRect.height) } : null,
+      heroRect: heroRect ? { top: Math.round(heroRect.top), bottom: Math.round(heroRect.bottom), width: Math.round(heroRect.width), height: Math.round(heroRect.height) } : null,
       h1Rect: h1Rect ? { top: Math.round(h1Rect.top), bottom: Math.round(h1Rect.bottom), width: Math.round(h1Rect.width), height: Math.round(h1Rect.height) } : null,
+      generatedArtLoaded,
       width: window.innerWidth,
       height: window.innerHeight,
       scrollWidth: document.documentElement.scrollWidth

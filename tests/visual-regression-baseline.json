@@ -6,16 +6,16 @@
       "mode": "metric",
       "width": 1343,
       "height": 670,
-      "fileBytes": 646806,
-      "pixelHash": "95082e54c26dca8a1c1e78dc5520822346a30b27bb2744b6bddcb902d84287a3",
+      "fileBytes": 725239,
+      "pixelHash": "0c34a20e9c9b11df49aae8867f7b0540321b0c3b2440316a1a6306df38819cf8",
       "metrics": {
-        "r": 14.54,
-        "g": 14.69,
-        "b": 17.07,
-        "luma": 14.83,
-        "darkRatio": 0.9653,
-        "lightRatio": 0.0087,
-        "saturatedRatio": 0.0074
+        "r": 22.09,
+        "g": 19.9,
+        "b": 19.99,
+        "luma": 20.38,
+        "darkRatio": 0.9545,
+        "lightRatio": 0.0102,
+        "saturatedRatio": 0.0134
       }
     },
     "character-select-desktop.png": {
@@ -38,10 +38,10 @@
       "mode": "metric",
       "width": 1343,
       "height": 670,
-      "fileBytes": 733710,
-      "pixelHash": "11a91280b0d3ef4467227f632468a6efb99c7c02599d15495f915ba5aded9708",
+      "fileBytes": 734096,
+      "pixelHash": "f8a42893febbf26fdc7e6d78ab66dba60b9ee941689c96a5de75f40f7cbd5d3a",
       "metrics": {
-        "r": 23.88,
+        "r": 23.9,
         "g": 24.02,
         "b": 27.79,
         "luma": 24.26,
@@ -54,31 +54,31 @@
       "mode": "metric",
       "width": 1343,
       "height": 670,
-      "fileBytes": 377767,
-      "pixelHash": "a756be9f23d8b63449f481999ea412809785e869390c49a583cafa4baf7a0d25",
+      "fileBytes": 351322,
+      "pixelHash": "9a2259c466c5868bb00ef06e480fe5c3478bb585d9e8a6ce62a3fa97583fd8d8",
       "metrics": {
-        "r": 27.89,
-        "g": 27.82,
-        "b": 30.58,
-        "luma": 28.03,
-        "darkRatio": 0.9188,
-        "lightRatio": 0.0171,
-        "saturatedRatio": 0.0109
+        "r": 25.07,
+        "g": 25.69,
+        "b": 28.97,
+        "luma": 25.79,
+        "darkRatio": 0.9283,
+        "lightRatio": 0.0139,
+        "saturatedRatio": 0.0099
       }
     },
     "rest-desktop.png": {
       "mode": "metric",
       "width": 1343,
       "height": 670,
-      "fileBytes": 458804,
-      "pixelHash": "7c0650ed9d135146fc3a89a1fa3fe53cf2b346035aa538feeba01a9f11e40faa",
+      "fileBytes": 420803,
+      "pixelHash": "b53d65c903f14fb405ec7d78a604a6bf9394fd8367eddc6477b51a9e0c7a0eb3",
       "metrics": {
-        "r": 19.9,
-        "g": 22.2,
-        "b": 25.67,
-        "luma": 21.96,
-        "darkRatio": 0.9495,
-        "lightRatio": 0.0109,
+        "r": 20.64,
+        "g": 22.63,
+        "b": 25.96,
+        "luma": 22.45,
+        "darkRatio": 0.9436,
+        "lightRatio": 0.0117,
         "saturatedRatio": 0.005
       }
     },
@@ -86,15 +86,15 @@
       "mode": "metric",
       "width": 1343,
       "height": 670,
-      "fileBytes": 803774,
-      "pixelHash": "17467154d32673c56b0278f3a6bc1abe6eaf7c78069456bc10270a12df8c2ae8",
+      "fileBytes": 803909,
+      "pixelHash": "8715991955acbe317ed95e3cbd15b8fc2aa3057e85d33244951a6a9765aab097",
       "metrics": {
-        "r": 28.24,
-        "g": 25.81,
-        "b": 29.15,
-        "luma": 26.57,
-        "darkRatio": 0.922,
-        "lightRatio": 0.016,
+        "r": 28.16,
+        "g": 25.77,
+        "b": 29.13,
+        "luma": 26.52,
+        "darkRatio": 0.9222,
+        "lightRatio": 0.0159,
         "saturatedRatio": 0.0186
       }
     },
@@ -102,14 +102,14 @@
       "mode": "metric",
       "width": 1343,
       "height": 670,
-      "fileBytes": 816394,
-      "pixelHash": "a288bc5ad7c5aaba88fdb6729a55b9efc27ee1140927af82558f97769101e70f",
+      "fileBytes": 816875,
+      "pixelHash": "3d4b2e5ae663a42c579a4eb6852d5d8fc5ae63f7f0ddf55d38e68e1b32abd3f5",
       "metrics": {
         "r": 29.83,
         "g": 25.92,
         "b": 29.2,
         "luma": 26.99,
-        "darkRatio": 0.9091,
+        "darkRatio": 0.9095,
         "lightRatio": 0.0128,
         "saturatedRatio": 0.0307
       }
@@ -118,28 +118,28 @@
       "mode": "metric",
       "width": 1343,
       "height": 670,
-      "fileBytes": 847891,
-      "pixelHash": "818dd8d1a27a1ca674e62e35ab836c63f84798ff9d634c69b2c646f11e2be54a",
+      "fileBytes": 845815,
+      "pixelHash": "bcb2f14b7a2d4f1ab69707bacb349a5b5a35bb1fcbf82202fbad3d3eebd79cc9",
       "metrics": {
-        "r": 32.7,
-        "g": 27.44,
+        "r": 32.82,
+        "g": 27.51,
         "b": 29.52,
-        "luma": 28.71,
-        "darkRatio": 0.8821,
+        "luma": 28.79,
+        "darkRatio": 0.8809,
         "lightRatio": 0.0135,
-        "saturatedRatio": 0.0384
+        "saturatedRatio": 0.0381
       }
     },
     "result-desktop.png": {
       "mode": "metric",
       "width": 1343,
       "height": 670,
-      "fileBytes": 337340,
-      "pixelHash": "7699c16d46e580054b3bcdaad5b30bcbf5cec477bb6a178212b8ece7d9984048",
+      "fileBytes": 337049,
+      "pixelHash": "7577dc963cd215b9dfd8520823488ae33204faa8be1cf033f365167e85db31b4",
       "metrics": {
         "r": 20,
         "g": 21.36,
-        "b": 23.85,
+        "b": 23.86,
         "luma": 21.25,
         "darkRatio": 0.9488,
         "lightRatio": 0.0196,
@@ -150,32 +150,32 @@
       "mode": "metric",
       "width": 1343,
       "height": 670,
-      "fileBytes": 380484,
-      "pixelHash": "509cfd0ddf8eb1a524deb11bd227dca489d6dab8b45d6d793a9f534408c364bf",
+      "fileBytes": 400997,
+      "pixelHash": "b1cb8626b40223ad1e3dbd688c81ebc66b94e556c326c6416164e8e5dfb0fd40",
       "metrics": {
-        "r": 18.91,
-        "g": 20.33,
-        "b": 22.19,
-        "luma": 20.17,
-        "darkRatio": 0.9458,
-        "lightRatio": 0.016,
-        "saturatedRatio": 0.0067
+        "r": 19.65,
+        "g": 20.36,
+        "b": 22.58,
+        "luma": 20.37,
+        "darkRatio": 0.9429,
+        "lightRatio": 0.0165,
+        "saturatedRatio": 0.0061
       }
     },
     "menu-mobile.png": {
       "mode": "metric",
       "width": 780,
       "height": 1688,
-      "fileBytes": 820808,
-      "pixelHash": "3b7788a4624077d6f2b5a9f289afc775b404d653ccee5a2d91cbd639478f89f7",
+      "fileBytes": 832681,
+      "pixelHash": "739483cadafb9e16e1bbca12721655cb13f5794ad87bc0ba9f040059c03d30b1",
       "metrics": {
-        "r": 33.81,
-        "g": 32.27,
-        "b": 30.84,
-        "luma": 32.49,
-        "darkRatio": 0.8924,
-        "lightRatio": 0.0348,
-        "saturatedRatio": 0.0498
+        "r": 35.1,
+        "g": 30.77,
+        "b": 27.93,
+        "luma": 31.48,
+        "darkRatio": 0.8933,
+        "lightRatio": 0.0358,
+        "saturatedRatio": 0.0583
       }
     },
     "character-select-mobile.png": {
@@ -198,8 +198,8 @@
       "mode": "metric",
       "width": 780,
       "height": 1688,
-      "fileBytes": 883663,
-      "pixelHash": "f6aa0c49c2c8800707c6538f4ca9e43f801e785011d60a4e17a213b048af9ea1",
+      "fileBytes": 883688,
+      "pixelHash": "7911e5d333004782a97b47549e271b22d2d2149812c1ceb75a9a81f558c58b74",
       "metrics": {
         "r": 16.33,
         "g": 16.76,
@@ -214,46 +214,46 @@
       "mode": "metric",
       "width": 780,
       "height": 1688,
-      "fileBytes": 582995,
-      "pixelHash": "9a59805627ee198d3bc6419f4a6494f2ed66d6869b43712ecaf196403975dfc6",
+      "fileBytes": 611902,
+      "pixelHash": "76496c62a9a37db6909e98112467e3f79f686233dbac7fccf7fe93ead943b7cd",
       "metrics": {
-        "r": 32.5,
-        "g": 33.07,
-        "b": 33.27,
-        "luma": 32.97,
-        "darkRatio": 0.8885,
-        "lightRatio": 0.0291,
-        "saturatedRatio": 0.0232
+        "r": 33.9,
+        "g": 34.33,
+        "b": 34.77,
+        "luma": 34.27,
+        "darkRatio": 0.8819,
+        "lightRatio": 0.0315,
+        "saturatedRatio": 0.0222
       }
     },
     "rest-mobile.png": {
       "mode": "metric",
       "width": 780,
       "height": 1688,
-      "fileBytes": 660343,
-      "pixelHash": "b10dd779e668bf96d639b15bac5160ac701661c5fb6f49e114a3f158ff11e79a",
+      "fileBytes": 619436,
+      "pixelHash": "4244118c9d205da1c0076f500443a64761d552dccbbaddd22730dbea81049199",
       "metrics": {
-        "r": 25.21,
-        "g": 27.48,
-        "b": 30.7,
-        "luma": 27.23,
-        "darkRatio": 0.9234,
-        "lightRatio": 0.0193,
-        "saturatedRatio": 0.0072
+        "r": 24.3,
+        "g": 26.16,
+        "b": 29.62,
+        "luma": 26.01,
+        "darkRatio": 0.925,
+        "lightRatio": 0.0158,
+        "saturatedRatio": 0.0055
       }
     },
     "boss-fight-mobile.png": {
       "mode": "metric",
       "width": 780,
       "height": 1688,
-      "fileBytes": 927308,
-      "pixelHash": "44b7dd4b22b645fa9429d543b75852aaf95e825186fd72191b133e58a69c808c",
+      "fileBytes": 927272,
+      "pixelHash": "e38cb8385e4e9e7299b4c71e1249b74384bff013d26f833029b874b92f193569",
       "metrics": {
-        "r": 18.06,
-        "g": 17.25,
-        "b": 19.77,
-        "luma": 17.61,
-        "darkRatio": 0.9554,
+        "r": 18.08,
+        "g": 17.28,
+        "b": 19.8,
+        "luma": 17.63,
+        "darkRatio": 0.9553,
         "lightRatio": 0.0121,
         "saturatedRatio": 0.0142
       }
@@ -262,13 +262,13 @@
       "mode": "metric",
       "width": 780,
       "height": 1688,
-      "fileBytes": 535586,
-      "pixelHash": "4b54e7807a8097bd86e94a1308dae801ef2bad638757b8f04e478c0f385c46d4",
+      "fileBytes": 535582,
+      "pixelHash": "7c3109aea33d241e04c4bbadba898a54754b558c432ae6c115d8025f8c8eb18a",
       "metrics": {
         "r": 25.31,
-        "g": 25.82,
+        "g": 25.81,
         "b": 26.86,
-        "luma": 25.79,
+        "luma": 25.78,
         "darkRatio": 0.9248,
         "lightRatio": 0.027,
         "saturatedRatio": 0.0156
@@ -278,16 +278,16 @@
       "mode": "metric",
       "width": 780,
       "height": 1688,
-      "fileBytes": 693377,
-      "pixelHash": "4928e25112fc0de71306efb04d51903b40a128c6d59b7c78f5b36ad80902d7c3",
+      "fileBytes": 699301,
+      "pixelHash": "6573e16508f83639119f82799f19a0594cbf784fc27feb7ce56de36e88e494fc",
       "metrics": {
-        "r": 25.43,
-        "g": 25.72,
-        "b": 26.33,
-        "luma": 25.7,
-        "darkRatio": 0.9123,
-        "lightRatio": 0.0302,
-        "saturatedRatio": 0.0186
+        "r": 25.83,
+        "g": 25.37,
+        "b": 26.61,
+        "luma": 25.56,
+        "darkRatio": 0.909,
+        "lightRatio": 0.0298,
+        "saturatedRatio": 0.0169
       }
     }
   }

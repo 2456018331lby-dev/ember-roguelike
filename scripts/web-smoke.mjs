@@ -30,6 +30,7 @@ const REQUIRED_DIMENSIONS = {
   'assets/ember-characters-spritesheet.png': [512, 256],
   'assets/ember-enemies-spritesheet.png': [512, 512],
   'assets/arena-ember-fortress.png': [1280, 720],
+  'assets/ember-menu-tableau.png': [1280, 720],
 };
 
 function assert(condition, message) {

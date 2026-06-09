@@ -836,6 +836,176 @@ function drawBanner(surface, x, y, side) {
   drawPath(surface, [points[0], points[1]], 2, rgba('#fca5a5', 0.26));
 }
 
+function drawMenuHeroFigure(surface, x, y, scale, palette) {
+  const armor = rgba(palette.armor, 0.92);
+  const dark = rgba('#05070b', 0.92);
+  const trim = rgba(palette.trim, 0.72);
+  const glow = rgba(palette.glow, 0.32);
+  surface.radialGlow(x, y - 24 * scale, 92 * scale, glow, 2.0);
+  surface.fillEllipse(x, y + 58 * scale, 42 * scale, 12 * scale, rgba('#000000', 0.32));
+  surface.fillPolygon([
+    [x - 28 * scale, y - 10 * scale],
+    [x + 30 * scale, y - 10 * scale],
+    [x + 46 * scale, y + 58 * scale],
+    [x - 38 * scale, y + 58 * scale],
+  ], rgba('#020617', 0.72));
+  surface.fillEllipse(x, y + 2 * scale, 24 * scale, 34 * scale, armor);
+  surface.fillPolygon([
+    [x - 22 * scale, y - 10 * scale],
+    [x + 22 * scale, y - 10 * scale],
+    [x + 14 * scale, y + 28 * scale],
+    [x - 16 * scale, y + 28 * scale],
+  ], mix(armor, trim, 0.18));
+  surface.fillCircle(x, y - 44 * scale, 19 * scale, trim);
+  surface.fillPolygon([
+    [x - 20 * scale, y - 60 * scale],
+    [x + 20 * scale, y - 60 * scale],
+    [x + 14 * scale, y - 42 * scale],
+    [x - 14 * scale, y - 42 * scale],
+  ], armor);
+  surface.drawLine(x + 24 * scale, y + 16 * scale, x + 70 * scale, y - 54 * scale, 7 * scale, rgba('#d1d5db', 0.86));
+  surface.drawLine(x + 28 * scale, y + 13 * scale, x + 73 * scale, y - 58 * scale, 2 * scale, rgba('#fff7ed', 0.72));
+  surface.drawLine(x - 20 * scale, y + 16 * scale, x - 48 * scale, y + 40 * scale, 7 * scale, dark);
+  surface.drawLine(x + 20 * scale, y + 16 * scale, x + 40 * scale, y + 44 * scale, 7 * scale, dark);
+  surface.fillEllipse(x - 12 * scale, y + 56 * scale, 9 * scale, 24 * scale, dark);
+  surface.fillEllipse(x + 12 * scale, y + 56 * scale, 9 * scale, 24 * scale, dark);
+  surface.strokeEllipse(x, y + 2 * scale, 28 * scale, 39 * scale, 2.2 * scale, trim);
+}
+
+function drawMenuBossFigure(surface, x, y, scale) {
+  surface.radialGlow(x, y - 6 * scale, 230 * scale, rgba('#dc2626', 0.2), 2.25);
+  surface.radialGlow(x + 46 * scale, y - 82 * scale, 180 * scale, rgba('#7f1d1d', 0.18), 2.1);
+  surface.fillEllipse(x, y + 116 * scale, 118 * scale, 22 * scale, rgba('#000000', 0.42));
+  surface.fillPolygon([
+    [x - 96 * scale, y + 76 * scale],
+    [x - 42 * scale, y - 80 * scale],
+    [x, y - 116 * scale],
+    [x + 44 * scale, y - 78 * scale],
+    [x + 104 * scale, y + 78 * scale],
+    [x + 16 * scale, y + 132 * scale],
+  ], rgba('#1f0909', 0.92));
+  surface.fillPolygon([
+    [x - 42 * scale, y - 112 * scale],
+    [x - 116 * scale, y - 184 * scale],
+    [x - 76 * scale, y - 70 * scale],
+  ], rgba('#5f1212', 0.82));
+  surface.fillPolygon([
+    [x + 42 * scale, y - 112 * scale],
+    [x + 128 * scale, y - 174 * scale],
+    [x + 78 * scale, y - 70 * scale],
+  ], rgba('#5f1212', 0.82));
+  surface.fillPolygon([
+    [x - 68 * scale, y - 28 * scale],
+    [x - 220 * scale, y - 78 * scale],
+    [x - 164 * scale, y + 70 * scale],
+    [x - 52 * scale, y + 76 * scale],
+  ], rgba('#0f0506', 0.74));
+  surface.fillPolygon([
+    [x + 72 * scale, y - 28 * scale],
+    [x + 230 * scale, y - 60 * scale],
+    [x + 160 * scale, y + 76 * scale],
+    [x + 50 * scale, y + 78 * scale],
+  ], rgba('#0f0506', 0.7));
+  surface.fillEllipse(x - 18 * scale, y - 70 * scale, 5 * scale, 5 * scale, rgba('#fde047', 0.9));
+  surface.fillEllipse(x + 20 * scale, y - 70 * scale, 5 * scale, 5 * scale, rgba('#fde047', 0.9));
+  drawPath(surface, [[x - 70 * scale, y + 16 * scale], [x, y + 38 * scale], [x + 76 * scale, y + 12 * scale]], 2.2 * scale, rgba('#fca5a5', 0.2));
+}
+
+function drawMenuCardShard(surface, x, y, w, h, angle, tone) {
+  const ca = Math.cos(angle);
+  const sa = Math.sin(angle);
+  const hw = w / 2;
+  const hh = h / 2;
+  const corners = [[-hw, -hh], [hw, -hh], [hw, hh], [-hw, hh]].map(([px, py]) => [
+    x + px * ca - py * sa,
+    y + px * sa + py * ca,
+  ]);
+  surface.fillPolygon(corners, rgba(tone === 'blue' ? '#082f49' : tone === 'red' ? '#451a03' : '#1c1917', 0.78));
+  drawPath(surface, [...corners, corners[0]], 1.6, rgba(tone === 'blue' ? '#7dd3fc' : '#f8d78a', 0.38));
+  const cx = x + Math.cos(angle) * w * 0.16;
+  const cy = y + Math.sin(angle) * w * 0.16;
+  drawDiamond(surface, cx, cy, Math.min(w, h) * 0.13, tone === 'blue' ? 0.28 : 0.42);
+}
+
+function generateMenuTableau() {
+  const w = 1280;
+  const h = 720;
+  const image = new Surface(w, h);
+  const rand = seededRandom(20260608);
+  const dark = rgba('#03050a');
+  const mid = rgba('#151923');
+
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const nx = (x - 660) / 660;
+      const ny = (y - 370) / 380;
+      const vignette = smoothstep(1.18, 0.14, Math.hypot(nx * 0.92, ny));
+      const warm = clamp01(1 - Math.hypot((x - 884) / 430, (y - 510) / 330));
+      const cold = clamp01(1 - Math.hypot((x - 1090) / 330, (y - 140) / 260));
+      const grain = Math.sin(x * 0.17 + y * 0.09) * 0.5 + Math.sin(x * 0.041 - y * 0.16) * 0.5;
+      let base = mix(dark, mid, vignette * 0.48 + grain * 0.018);
+      base = mix(base, rgba('#42140b'), warm * 0.2);
+      base = mix(base, rgba('#082f49'), cold * 0.14);
+      image.set(x, y, [
+        Math.round(base[0] * (0.66 + vignette * 0.42)),
+        Math.round(base[1] * (0.66 + vignette * 0.42)),
+        Math.round(base[2] * (0.72 + vignette * 0.36)),
+        255,
+      ]);
+    }
+  }
+
+  for (let y = 46; y < h - 44; y += 42) image.drawLine(542, y, 1210, y - 54, 1.1, rgba('#f8d78a', 0.035));
+  for (let x = 570; x < w - 44; x += 44) image.drawLine(x, 106, x - 92, 650, 1.1, rgba('#7dd3fc', 0.025));
+
+  image.radialGlow(802, 500, 390, rgba('#f97316', 0.34), 2.2);
+  image.radialGlow(1010, 128, 260, rgba('#38bdf8', 0.2), 2.1);
+  image.radialGlow(682, 420, 230, rgba('#f8d78a', 0.09), 2.8);
+
+  image.fillEllipse(828, 574, 332, 74, rgba('#020617', 0.5));
+  image.strokeEllipse(820, 540, 244, 102, 7, rgba('#c99a46', 0.35));
+  image.strokeEllipse(820, 540, 170, 66, 3, rgba('#ffe6a6', 0.26));
+  for (let i = 0; i < 10; i++) {
+    const a = (i / 10) * Math.PI * 2 + 0.16;
+    const x = 820 + Math.cos(a) * 206;
+    const y = 540 + Math.sin(a) * 82;
+    drawDiamond(image, x, y, 10 + (i % 3), 0.34);
+  }
+
+  const cracks = [
+    [[590, 600], [690, 548], [812, 574], [954, 520], [1110, 548]],
+    [[650, 448], [766, 412], [886, 434], [1040, 386]],
+    [[732, 646], [806, 604], [906, 630]],
+  ];
+  for (const path of cracks) drawLavaCrack(image, path, rand, 0.72);
+
+  drawMenuBossFigure(image, 986, 366, 1.16);
+  drawMenuHeroFigure(image, 730, 500, 1.16, { armor: '#2f6fed', trim: '#dbeafe', glow: '#60a5fa' });
+  drawMenuHeroFigure(image, 638, 530, 0.86, { armor: '#8b5cf6', trim: '#ede9fe', glow: '#c4b5fd' });
+  drawMenuHeroFigure(image, 820, 536, 0.82, { armor: '#f59e0b', trim: '#ffedd5', glow: '#fbbf24' });
+
+  const cards = [
+    [1030, 182, 58, 82, -0.25, 'red'],
+    [1118, 236, 50, 76, 0.28, 'blue'],
+    [910, 136, 48, 70, 0.18, 'gold'],
+    [1160, 480, 46, 72, -0.18, 'red'],
+    [704, 242, 42, 62, -0.42, 'blue'],
+  ];
+  for (const card of cards) drawMenuCardShard(image, ...card);
+
+  for (let i = 0; i < 380; i++) {
+    const rightBias = Math.pow(rand(), 0.62);
+    const x = 430 + rightBias * 820 + (rand() - 0.5) * 42;
+    const y = 56 + rand() * 600;
+    const warm = rand() > 0.28;
+    image.fillCircle(x, y, rand() * 1.9 + 0.45, rgba(warm ? '#fb923c' : '#7dd3fc', rand() * 0.17 + 0.03));
+  }
+
+  image.fillRect(0, 0, 500, h, rgba('#03050a', 0.36));
+  image.radialGlow(120, 220, 330, rgba('#020617', 0.42), 1.2);
+  return image;
+}
+
 function scatterRubble(surface, rand) {
   for (let i = 0; i < 240; i++) {
     const edgeRoll = rand();
@@ -924,6 +1094,8 @@ if (!existsSync(heroSheetPath) || forceFallbackHeroes) {
 }
 writePng(resolve(outDir, 'arena-ember-fortress.png'), generateArena());
 writePng(resolve(outDir, 'ember-enemies-spritesheet.png'), generateEnemies());
+writePng(resolve(outDir, 'ember-menu-tableau.png'), generateMenuTableau());
 
 console.log('Generated web/assets/arena-ember-fortress.png');
 console.log('Generated web/assets/ember-enemies-spritesheet.png');
+console.log('Generated web/assets/ember-menu-tableau.png');

@@ -25,6 +25,7 @@ https://2456018331lby-dev.github.io/ember-roguelike/
 - 四个角色现在已有明确自动战斗身份：战士近战突进、法师奥术球溅射、游侠飞刀扇射、死灵噬魂咒弹
 - 小怪不再只靠贴脸吃伤害：史莱姆 / 蝙蝠 / 骷髅 / 石像鬼等早中期敌人已有 skirmish / hybrid / lobber 型弹幕压力
 - 已重做菜单 / 角色选择 / HUD 信息层，角色页会直接展示职业职责、武器、战斗备注和起手流派
+- 主菜单已接入本地生成的 1280x720 封面图：角色队伍、Boss 剪影、卡牌碎片和火光元素由资源脚本稳定生成，桌面端改成全屏游戏封面式入口，移动端保持首屏按钮可见
 - 已替换 AI 生成角色 spritesheet，战斗与角色选择共用同一套人物图
 - 已新增并继续强化本地生成的敌人 / Boss spritesheet：小怪 silhouette、法系/支援敌人和 Boss 的威胁轮廓更清晰，战斗中优先使用图集，保留 SVG 兜底
 - 已重做参考图风格的城堡竞技场背景：石板裂隙、中心法阵、边缘墙体、台阶、角塔和冷热光源都由资源脚本稳定生成
@@ -73,24 +74,24 @@ http://127.0.0.1:5173
 - `npm run serve` 现在使用仓库内的 Node 静态服务，`.mjs` MIME 正确，不再依赖 Python 的默认静态服务器行为。
 - `npm test` 会验证核心玩法和平衡回归；其中包含奖励 / 锻造 / 商店 / 营火等决策状态不能进入无出口卡死状态的状态机检查。
 - `npm run test:boss-checkpoints` 会跑 baseline / smart 两套 60 seed 模拟，输出第 5/10/15/20/25 波 Boss 检查点、死亡 seed、短板标签和少量死亡样本，方便继续调中后期节奏；当前最近一次结果为 `baseline avgWave 19.12`、`smart avgWave 23.42`，其中 smart 第 5 波 `60/60` 通过、第 20 波到达 `53/60`、第 25 波到达 `48/60`、通关 `45/60`，且没有 max-tick 卡局。
-- `npm run test:web-smoke` 会验证 spritesheet 尺寸/内容、service worker 预缓存清单、本地服务 MIME、UI 状态路由，以及核心逻辑发出的粒子类型是否都被前端绘制，不需要新增浏览器测试依赖。
-- `npm run test:visual-smoke` 会用本机 Chrome/Edge 做桌面和移动端视觉 smoke，覆盖菜单、角色选择、局内 canvas、奖励选择页读板、Boss 前营火、Boss 波进入、桌面/移动端活跃 Boss 战读招画面、固定的第 20 波高波 Boss 桌面场景、桌面/移动端结算复盘，以及桌面/移动端时间线区域；奖励/营火页会检查“下一波作战计划”、每张卡的读板、机会标签、风险等级且无内部裁切，结果页会检查摘要未被裁切、底部按钮可见、崩盘诱因显示具体高伤害命中、时间线存在路线影响、具体高伤害命中来源、战斗事件和崩盘节点，截图输出到 `output/visual-smoke/`，不需要新增 Playwright/Puppeteer 依赖。
+- `npm run test:web-smoke` 会验证 spritesheet 和菜单封面图尺寸/内容、service worker 预缓存清单、本地服务 MIME、UI 状态路由，以及核心逻辑发出的粒子类型是否都被前端绘制，不需要新增浏览器测试依赖。
+- `npm run test:visual-smoke` 会用本机 Chrome/Edge 做桌面和移动端视觉 smoke，覆盖菜单、角色选择、局内 canvas、奖励选择页读板、Boss 前营火、Boss 波进入、桌面/移动端活跃 Boss 战读招画面、固定的第 20 波高波 Boss 桌面场景、桌面/移动端结算复盘，以及桌面/移动端时间线区域；菜单会检查本地生成封面图已加载且首屏全幅铺满，奖励/营火页会检查“下一波作战计划”、每张卡的读板、机会标签、风险等级且无内部裁切，结果页会检查摘要未被裁切、底部按钮可见、崩盘诱因显示具体高伤害命中、时间线存在路线影响、具体高伤害命中来源、战斗事件和崩盘节点，截图输出到 `output/visual-smoke/`，不需要新增 Playwright/Puppeteer 依赖。
 - `npm run test:visual-regression` 会先跑视觉 smoke，再读取 PNG 像素并和 `tests/visual-regression-baseline.json` 对比；角色选择等稳定界面使用严格 RGBA 哈希，动画界面使用像素亮度/色彩比例容差，当前基线已包含奖励页读板、结算页和时间线区域的桌面/移动端截图。
 - 如果要构建 Android，优先使用仓库脚本 `npm run build:android:debug`；它会同步资源、构建 APK，并校验 APK 内的关键 Web 资源与代码标记。
 - `npm run verify:android:debug` 会用 `adb` 安装并启动 debug APK，检查应用进程、首屏截图和启动后的 WebView/JS 致命错误；没有在线设备且本机只有一个 AVD 时会自动启动并在结束后关闭。
 - 自动启动 AVD 时，验证脚本会在 `sys.boot_completed` 后额外等待一小段时间再开始安装与启动，减少冷启动期误报 ANR。
 - `npm run verify:android:smoke` 会在 `debug` 验证基础上继续点击 `开始远征 -> 开始战斗`，确认 APK 能进入局内战斗，并保存启动、角色选择、局内三张截图。
-- `npm run assets:generate` 默认会保留现有角色 spritesheet，并重生成参考图风格竞技场与敌人 / Boss 图集；如确需恢复占位角色，显式传 `-- --force-placeholder-heroes`。替换同名竞技场 PNG 时，canvas 会按图片比例居中裁切铺满，不会拉伸变形。
+- `npm run assets:generate` 默认会保留现有角色 spritesheet，并重生成参考图风格竞技场、敌人 / Boss 图集和主菜单封面图；如确需恢复占位角色，显式传 `-- --force-placeholder-heroes`。替换同名竞技场 PNG 时，canvas 会按图片比例居中裁切铺满，不会拉伸变形。
 
 ## Android APK 构建
 
-当前仓库已经验证过可在本机生成 debug APK，并且前序版本已在本机 `NightRunner35` Android 模拟器完成安装、冷启动、焦点窗口、点击进入角色选择、点击进入局内战斗、截图和 logcat 致命错误扫描。本轮当前 APK 已完成构建和 payload 校验，但本机当前缺 `emulator.exe` 且无在线设备，点击流 smoke 需要恢复 Android Emulator 或接入设备后重跑。
+当前仓库已经验证过可在本机生成 debug APK。本轮当前 APK 已完成构建、APK Web payload 校验，并通过在线 Android 模拟器 `emulator-5554` 的安装、冷启动、焦点窗口、点击进入角色选择、点击进入局内战斗、截图和 logcat 致命错误扫描。
 
-最近一次构建 APK SHA256：`7C2C952857949CBBD3CDBDFC1D0D8DE64C48AC43D3BB238DAA8C7B91CE2F97EB`
+最近一次构建 APK SHA256：`E4BBD0E9177DEE81C8E6E8C532F9C663AFF864E5ECA94A593DBB884AEDDB76FD`
 
-最近一次安装 / 冷启动 / 点击流验证 APK SHA256：`1BCDFAF64F2EDEC1C1C1731E353629C4C6F873024C6CA3FC348B8B5204386D51`（前序通过；本轮当前 APK `7C2C952857949CBBD3CDBDFC1D0D8DE64C48AC43D3BB238DAA8C7B91CE2F97EB` 因本机缺 `emulator.exe` 且无在线设备，未能重跑点击流 smoke）
+最近一次安装 / 冷启动 / 点击流验证 APK SHA256：`E4BBD0E9177DEE81C8E6E8C532F9C663AFF864E5ECA94A593DBB884AEDDB76FD`
 
-最近一次模拟器点击流验证 APK SHA256：`1BCDFAF64F2EDEC1C1C1731E353629C4C6F873024C6CA3FC348B8B5204386D51`
+最近一次模拟器点击流验证 APK SHA256：`E4BBD0E9177DEE81C8E6E8C532F9C663AFF864E5ECA94A593DBB884AEDDB76FD`
 
 ```bash
 npm run build:android:debug
@@ -109,7 +110,7 @@ android/app/build/outputs/apk/debug/app-debug.apk
 - 构建脚本会优先寻找 `.tools/microsoft-jdk-21/` 下的完整 JDK 21。
 - 若系统 `JAVA_HOME` 已经指向带 `jlink` 的 JDK 21+，也可直接使用系统环境。
 - 构建成功后脚本会检查 APK 内是否包含当前 `index.html`、样式、核心 `.mjs`、PWA 缓存清单和关键美术资源，并输出 APK SHA256。
-- 真机或模拟器启动验证依赖 Android SDK `platform-tools` 和 Android Emulator。脚本会从 PATH、`android/local.properties`、`ANDROID_HOME`、`ANDROID_SDK_ROOT` 和常见本机 SDK 目录自动查找 `adb.exe`；如果没有在线设备但只有一个 AVD，npm 验证脚本还需要可发现 `emulator.exe` 才能自动启动它。本机当前 `android/local.properties` 指向的 SDK 缺 `adb.exe`，临时 PATH 可使用 `C:\Users\24560\Desktop\study\kaoyandemo\.android-sdk\platform-tools` 找到 `adb.exe`，但本轮未找到 `emulator.exe`，所以当前 APK 的点击流 smoke 需要先恢复 Android Emulator 或接入在线设备。
+- 真机或模拟器启动验证依赖 Android SDK `platform-tools` 和 Android Emulator。脚本会从 PATH、`android/local.properties`、`ANDROID_HOME`、`ANDROID_SDK_ROOT` 和常见本机 SDK 目录自动查找 `adb.exe`；如果没有在线设备但只有一个 AVD，npm 验证脚本还需要可发现 `emulator.exe` 才能自动启动它。本轮使用临时 PATH `C:\Users\24560\Desktop\study\kaoyandemo\.android-sdk\platform-tools` 解析到 `adb.exe`，并在已在线的 `emulator-5554` 上完成点击流 smoke。
 - Android 外壳已改成沉浸式游戏窗口，启动主题和窗口背景使用游戏黑色，避免模拟器/真机顶部残留浅色系统栏。
 - 如果当前没有在线设备，可以先手动启动模拟器，或直接运行：
 

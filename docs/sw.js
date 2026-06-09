@@ -1,11 +1,12 @@
-const CACHE = 'ember-v23';
+const CACHE = 'ember-v24';
 const ASSETS = [
   './', './index.html', './styles.css', './manifest.webmanifest', './sw.js',
   './src/main.mjs', './src/game_core.mjs', './src/audio.mjs', './src/save.mjs',
   './src/characters.mjs', './src/presentation.mjs', './icons/icon.svg',
   './assets/ember-characters-spritesheet.png',
   './assets/ember-enemies-spritesheet.png',
-  './assets/arena-ember-fortress.png'
+  './assets/arena-ember-fortress.png',
+  './assets/ember-menu-tableau.png'
 ];
 async function precacheAssets() {
   const cache = await caches.open(CACHE);
