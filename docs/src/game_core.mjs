@@ -368,6 +368,7 @@ export function createRun(seed = Date.now(), character = null, difficultyKey = '
     restChoices: [],       // Boss前休息选项
     decisionLog: [],       // 决策记录（用于死亡回顾）
     combatLog: [],         // 波中关键战斗事件（用于结果时间线）
+    damageTaken: { total: 0, sources: {} }, // 受击来源累计（用于结果页归因）
     combatMomentFlags: { lowHpWaves: {}, heavyHitWaves: {}, bossLatePhase: {}, bossDefeated: {} },
     rewardRerolls: meta.rerollCount,
     rewardContext: { choiceCount: 3, rarityBonus: 0 },
@@ -465,6 +466,7 @@ export function createDebugBossFight(seed = 2048, options = {}) {
   run.nextWavePreview = null;
   run.decisionLog = [];
   run.combatLog = [];
+  run.damageTaken = { total: 0, sources: {} };
   run.combatMomentFlags = { lowHpWaves: {}, heavyHitWaves: {}, bossLatePhase: {}, bossDefeated: {} };
   run.waveHistory = [];
   run.enemies = [];
@@ -3087,7 +3089,7 @@ function applyPlayerSelfRisk(run, packet) {
   const stats = packet.stats;
   if (stats.selfDamageChance <= 0 || run.rand() >= stats.selfDamageChance) return;
   const selfDmg = Math.floor(packet.damage * 0.2);
-  takeDamage(run, selfDmg);
+  takeDamage(run, selfDmg, { sourceKind: 'self_damage', sourceName: '双倍或归零反噬' });
   run.particles.push({ type: 'self_damage', x: run.player.x, y: run.player.y - 25, life: 0.5, maxLife: 0.5, value: selfDmg });
 }
 
@@ -3353,18 +3355,94 @@ function maybeRecordLowHpMoment(run, amount, stats) {
 
 function buildDamageSourceInfo(source = {}) {
   const sourceType = source.sourceType || source.typeKey || '';
-  const sourceName = source.sourceName || ENEMY_TYPES[sourceType]?.name || BOSS_TYPES[sourceType]?.name || '未知来源';
-  const patternLabel = source.sourcePatternLabel || (source.sourcePattern ? bossAttackLabel(source.sourcePattern) : '');
   const sourceKind = source.sourceKind || source.kind || '';
+  const sourceName = source.sourceName
+    || ENEMY_TYPES[sourceType]?.name
+    || BOSS_TYPES[sourceType]?.name
+    || (sourceKind === 'self_damage' ? '反噬伤害' : '未知来源');
+  const patternLabel = source.sourcePatternLabel || (source.sourcePattern ? bossAttackLabel(source.sourcePattern) : '');
+  const isBoss = Boolean(source.isBoss || BOSS_TYPES[sourceType] || sourceKind === 'boss_projectile');
+  const category = isBoss
+    ? 'boss'
+    : sourceKind === 'melee'
+      ? 'melee'
+      : sourceKind === 'projectile'
+        ? 'projectile'
+        : sourceKind === 'self_damage' || sourceKind === 'self'
+          ? 'self'
+          : 'unknown';
   const label = patternLabel
-    || (sourceKind === 'melee' ? `${sourceName}近身攻击` : `${sourceName}弹幕`);
+    || (category === 'melee'
+      ? `${sourceName}近身攻击`
+      : category === 'projectile'
+        ? `${sourceName}弹幕`
+        : category === 'self'
+          ? sourceName
+          : `${sourceName}伤害`);
   return {
     key: [sourceKind || 'hit', sourceType || sourceName, patternLabel].filter(Boolean).join(':'),
     label,
+    category,
     sourceName,
     patternLabel,
-    isBoss: Boolean(source.isBoss || BOSS_TYPES[sourceType]),
+    isBoss,
   };
+}
+
+function ensureDamageTaken(run) {
+  if (!run.damageTaken || typeof run.damageTaken !== 'object') run.damageTaken = { total: 0, sources: {} };
+  if (!run.damageTaken.sources || typeof run.damageTaken.sources !== 'object') run.damageTaken.sources = {};
+  if (typeof run.damageTaken.total !== 'number') run.damageTaken.total = 0;
+  return run.damageTaken;
+}
+
+function recordDamageTaken(run, amount, source = {}) {
+  const value = Math.max(0, Number(amount) || 0);
+  if (!run || value <= 0) return;
+  const tracker = ensureDamageTaken(run);
+  const sourceInfo = buildDamageSourceInfo(source);
+  const key = sourceInfo.key || 'unknown';
+  const entry = tracker.sources[key] || {
+    key,
+    label: sourceInfo.label,
+    category: sourceInfo.category,
+    sourceName: sourceInfo.sourceName,
+    patternLabel: sourceInfo.patternLabel,
+    isBoss: sourceInfo.isBoss,
+    amount: 0,
+    hits: 0,
+    lastWave: 0,
+    lastTime: 0,
+  };
+  entry.amount += value;
+  entry.hits += 1;
+  entry.lastWave = run.wave || 0;
+  entry.lastTime = Math.max(0, Math.floor(run.gameTime || 0));
+  tracker.sources[key] = entry;
+  tracker.total += value;
+}
+
+function summarizeDamageSources(damageTaken) {
+  const sources = Object.values(damageTaken?.sources || {});
+  const total = Math.max(0, Number(damageTaken?.total) || sources.reduce((sum, item) => sum + (Number(item.amount) || 0), 0));
+  if (!total || !sources.length) return [];
+  return sources
+    .map(item => ({
+      key: item.key,
+      label: item.label,
+      category: item.category || 'unknown',
+      sourceName: item.sourceName || '',
+      patternLabel: item.patternLabel || '',
+      isBoss: Boolean(item.isBoss),
+      amount: Math.round(Number(item.amount) || 0),
+      hits: Number(item.hits) || 0,
+      percent: (Number(item.amount) || 0) / total,
+      lastWave: item.lastWave || 0,
+      lastTime: item.lastTime || 0,
+    }))
+    .filter(item => item.amount > 0)
+    .sort((a, b) => b.amount - a.amount || b.hits - a.hits)
+    .slice(0, 4);
 }
 
 function maybeRecordHeavyHitMoment(run, amount, stats, source = {}) {
@@ -3494,6 +3572,7 @@ function takeDamage(run, amount, source = {}) {
   }
   if (amount <= 0) return;
 
+  recordDamageTaken(run, amount, source);
   run.player.hp -= amount;
   run.player.invuln = 0.35;
   run.combo = 0;
@@ -3634,6 +3713,8 @@ function die(run, msg) {
     pressureGaps: clone(pressureGaps),
     lastDecisions,
     combatLog: clone((run.combatLog || []).slice(-5)),
+    damageTakenTotal: Math.round(run.damageTaken?.total || 0),
+    damageSources: clone(summarizeDamageSources(run.damageTaken)),
   };
   pushMessage(run, msg);
   pushMessage(run, `☠ ${reason}`);

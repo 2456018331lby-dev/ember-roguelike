@@ -10,6 +10,7 @@ export function buildRunPresentation(run, stats, character) {
   const resultPriority = buildResultPriority(run, buildAnalysis);
   const resultCollapse = buildResultCollapseReadout(run, resultPriority);
   const resultTimeline = buildResultTimeline(run, resultPriority);
+  const damageReport = buildResultDamageReport(run);
   return {
     topLine: `第 ${run.wave} / ${run.totalWaves} 波`,
     scoreLine: `分数 ${Math.floor(run.score)} · 击杀 ${run.kills}`,
@@ -44,6 +45,9 @@ export function buildRunPresentation(run, stats, character) {
     resultCollapseDetail: resultCollapse.detail,
     resultCollapseTone: resultCollapse.tone,
     resultTimeline,
+    resultDamageSources: damageReport.sources,
+    resultDamageTotal: damageReport.total,
+    resultPositioningHint: damageReport.hint,
     deathDeckSize: run.deathSummary?.deckSize || 0,
     deathFocus: run.deathSummary?.focus || '',
     deathGameTime: run.deathSummary?.gameTime || 0,
@@ -449,6 +453,69 @@ function buildResultCollapseReadout(run, resultPriority) {
 function getResultCombatLog(run, summary) {
   if (Array.isArray(summary?.combatLog) && summary.combatLog.length) return summary.combatLog;
   return Array.isArray(run.combatLog) ? run.combatLog : [];
+}
+
+function buildResultDamageReport(run) {
+  const summary = run.deathSummary || {};
+  const rawSources = Array.isArray(summary.damageSources) && summary.damageSources.length
+    ? summary.damageSources
+    : Object.values(run.damageTaken?.sources || {});
+  const total = Math.max(0, Number(summary.damageTakenTotal) || Number(run.damageTaken?.total) || rawSources.reduce((sum, item) => sum + (Number(item.amount) || 0), 0));
+  if (!total || !rawSources.length) {
+    return { sources: [], total: 0, hint: '没有记录到足够的受击来源，下一把优先观察首领读招和冲刺窗口。' };
+  }
+
+  const sources = rawSources
+    .map(item => normalizeDamageSource(item, total))
+    .filter(Boolean)
+    .sort((a, b) => b.amount - a.amount || b.hits - a.hits)
+    .slice(0, 4);
+
+  return {
+    sources,
+    total: Math.round(total),
+    hint: buildPositioningHint(sources),
+  };
+}
+
+function normalizeDamageSource(item, total) {
+  const amount = Math.max(0, Math.round(Number(item?.amount) || 0));
+  if (!amount) return null;
+  const category = item.category || (item.isBoss ? 'boss' : 'unknown');
+  const percent = Number.isFinite(item.percent) && item.percent > 0
+    ? item.percent
+    : amount / Math.max(1, total);
+  return {
+    key: item.key || item.label || category,
+    label: item.label || item.sourceName || '未知伤害',
+    category,
+    tone: damageSourceTone(category),
+    amount,
+    hits: Number(item.hits) || 1,
+    percent: Math.max(0, Math.min(1, percent)),
+    percentText: `${Math.round(Math.max(0, Math.min(1, percent)) * 100)}%`,
+    sourceName: item.sourceName || '',
+    detail: `${Number(item.hits) || 1} 次命中 · ${amount} 伤害`,
+  };
+}
+
+function damageSourceTone(category) {
+  return {
+    boss: 'danger',
+    melee: 'combat',
+    projectile: 'boss',
+    self: 'risk',
+  }[category] || 'neutral';
+}
+
+function buildPositioningHint(sources) {
+  const top = sources?.[0];
+  if (!top) return '没有记录到足够的受击来源，下一把优先观察首领读招和冲刺窗口。';
+  if (top.category === 'boss') return '首领弹幕是最大受击来源；下一把把冲刺留给瞄准/环形窗口，优先横向走位，不要贪最后一轮输出。';
+  if (top.category === 'melee') return '近身攻击占比最高；下一把优先保留安全距离，别让怪群同时贴脸，冲刺用于脱离包围。';
+  if (top.category === 'projectile') return '远程弹幕占比最高；下一把先清弓手/法师，移动时走斜线，不要直线回退。';
+  if (top.category === 'self') return '反噬自伤占比过高；下一把先确认安全网，再选择死亡赌注或高倍率诅咒。';
+  return `${top.label} 是最大受击来源；下一把优先复盘这一类命中的站位和冲刺窗口。`;
 }
 
 function pickCollapseMoment(log) {

@@ -2222,6 +2222,11 @@ test('死亡复盘应包含波次上下文和构筑建议', () => {
     pressureTargets: { singleTarget: 80, aoe: 26, sustain: 58, safety: 24 },
     pressureGaps: { singleTarget: 50, aoe: 11, sustain: 28, safety: 19 },
     lastDecisions: ['第 4 波 奖励/拿牌：治疗光环 · 契合 8.2'],
+    damageTakenTotal: 80,
+    damageSources: [
+      { key: 'boss_projectile:demon:瞄准连射', label: '瞄准连射', category: 'boss', amount: 52, hits: 2, percent: 0.65, sourceName: '恶魔领主·混沌' },
+      { key: 'projectile:archer', label: '弓箭手弹幕', category: 'projectile', amount: 28, hits: 3, percent: 0.35, sourceName: '弓箭手' },
+    ],
   };
   const stats = getPlayerStats(run);
   const pres = buildRunPresentation(run, stats, { name: '战士' });
@@ -2235,6 +2240,9 @@ test('死亡复盘应包含波次上下文和构筑建议', () => {
   assert.ok(pres.resultTimeline.length >= 2, '复盘时间线应包含历史选择和崩盘节点');
   assert.match(pres.resultTimeline[0].title, /治疗光环/);
   assert.match(pres.resultTimeline.at(-1).title, /崩盘节点/);
+  assert.equal(pres.resultDamageSources.length, 2, '复盘应输出受击来源统计');
+  assert.match(pres.resultDamageSources[0].label, /瞄准连射/);
+  assert.match(pres.resultPositioningHint, /首领弹幕|横向走位|冲刺/);
   assert.equal(pres.deathReason, 'Boss 讨伐失败：输出不足，未能在弹幕窗口内击杀首领。');
 });
 
@@ -2317,6 +2325,57 @@ test('核心战斗应记录高伤害命中来源', () => {
   assert.equal(heavyHit.tone, 'danger');
   assert.match(heavyHit.title, /瞄准连射/);
   assert.match(heavyHit.detail, /恶魔领主·混沌造成/);
+});
+
+test('核心战斗应累计受击来源统计', () => {
+  const run = createRun(115);
+  run.waveTransitionTimer = 0;
+  updateRun(run, { x: 0, y: 0 }, 0.001);
+  run.wave = 20;
+  run.waveProfile = { kind: 'boss', label: '第 20 波 Boss 讨伐' };
+  run.player.hp = 160;
+  run.player.invuln = 0;
+
+  run.projectiles.push({
+    x: run.player.x,
+    y: run.player.y,
+    vx: 0,
+    vy: 0,
+    damage: 34,
+    life: 1,
+    radius: 30,
+    color: '#ff0',
+    fromEnemy: true,
+    sourceKind: 'boss_projectile',
+    sourceType: 'demon',
+    sourceName: '恶魔领主·混沌',
+    sourcePattern: 'aimed_burst',
+    sourcePatternLabel: '瞄准连射',
+    isBoss: true,
+  });
+  updateRun(run, { x: 0, y: 0 }, 0.016);
+
+  run.player.invuln = 0;
+  run.projectiles.push({
+    x: run.player.x,
+    y: run.player.y,
+    vx: 0,
+    vy: 0,
+    damage: 18,
+    life: 1,
+    radius: 30,
+    color: '#fff',
+    fromEnemy: true,
+    sourceKind: 'projectile',
+    sourceType: 'archer',
+    sourceName: '弓箭手',
+  });
+  updateRun(run, { x: 0, y: 0 }, 0.016);
+
+  assert.ok(run.damageTaken.total >= 40, `应累计实际受击总量，实际 ${run.damageTaken?.total}`);
+  const sources = Object.values(run.damageTaken.sources || {});
+  assert.ok(sources.some(item => /瞄准连射/.test(item.label) && item.category === 'boss'), '应统计首领弹幕来源');
+  assert.ok(sources.some(item => /弓箭手弹幕/.test(item.label) && item.category === 'projectile'), '应统计普通远程弹幕来源');
 });
 
 test('复盘时间线应合并波中战斗事件', () => {

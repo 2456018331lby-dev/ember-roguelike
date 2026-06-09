@@ -822,6 +822,33 @@ function renderResultTimeline(items = []) {
     </div>`;
 }
 
+function renderDamageSourceReport(sources = [], total = 0, hint = '') {
+  if (!sources.length) return '';
+  const sourceClass = source => {
+    const allowed = new Set(['danger', 'combat', 'boss', 'risk', 'neutral']);
+    return allowed.has(source.tone) ? ` damage-${source.tone}` : ' damage-neutral';
+  };
+  return `
+    <div class="damage-report">
+      <div class="damage-report-head">
+        <span>受击来源</span>
+        <strong>累计 ${Math.round(total || sources.reduce((sum, item) => sum + (Number(item.amount) || 0), 0))}</strong>
+      </div>
+      <div class="damage-source-list">
+        ${sources.map(source => `
+          <div class="damage-source${sourceClass(source)}">
+            <div class="damage-source-meta">
+              <span>${escapeHtml(source.label || '未知伤害')}</span>
+              <strong>${escapeHtml(source.percentText || `${Math.round((source.percent || 0) * 100)}%`)}</strong>
+            </div>
+            <div class="damage-source-bar" style="--damage-ratio:${Math.max(0.04, Math.min(1, Number(source.percent) || 0))}"></div>
+            <div class="damage-source-detail">${escapeHtml(source.detail || `${source.hits || 1} 次命中 · ${source.amount || 0} 伤害`)}</div>
+          </div>`).join('')}
+      </div>
+      ${hint ? `<div class="positioning-hint">${escapeHtml(hint)}</div>` : ''}
+    </div>`;
+}
+
 function showResult(victory) {
   const save = recordRun(run.score, run.wave, run.kills, run.maxCombo, victory, run.characterId);
   const presentation = buildRunPresentation(run, getPlayerStats(run), getCharacter(run.characterId));
@@ -853,6 +880,11 @@ function showResult(victory) {
   const synergies = run.synergies || [];
   const extremes = run.extremes || [];
   const timeline = renderResultTimeline(presentation.resultTimeline);
+  const damageReport = renderDamageSourceReport(
+    presentation.resultDamageSources,
+    presentation.resultDamageTotal,
+    presentation.resultPositioningHint,
+  );
   gameoverTitle.textContent = panelTitle;
   finalStats.innerHTML = `
     <div class="result-brief ${resultTone}">
@@ -888,6 +920,7 @@ function showResult(victory) {
       <div class="result-section-title">阵亡复盘</div>
       <div class="final-stat reason wide"><span>失败原因</span><span>${escapeHtml(presentation.deathReason || (victory ? '已完成远征' : '余烬熄灭'))}</span></div>
       ${collapseReview}
+      ${damageReport}
       ${pressureReview}
       ${decisionReview}
       ${deathTip}
@@ -2531,6 +2564,43 @@ function enableDebugHooks() {
           tone: 'combat',
         },
       ];
+      run.damageTaken = {
+        total: 74,
+        sources: {
+          'boss_projectile:demon:aimed_burst': {
+            key: 'boss_projectile:demon:aimed_burst',
+            label: '瞄准连射',
+            category: 'boss',
+            sourceName: '恶魔领主·混沌',
+            patternLabel: '瞄准连射',
+            isBoss: true,
+            amount: 46,
+            hits: 2,
+            lastWave: 20,
+            lastTime: 729,
+          },
+          'projectile:archer': {
+            key: 'projectile:archer',
+            label: '弓箭手弹幕',
+            category: 'projectile',
+            sourceName: '弓箭手',
+            amount: 18,
+            hits: 2,
+            lastWave: 20,
+            lastTime: 701,
+          },
+          'melee:charger': {
+            key: 'melee:charger',
+            label: '冲锋者近身攻击',
+            category: 'melee',
+            sourceName: '冲锋者',
+            amount: 10,
+            hits: 1,
+            lastWave: 20,
+            lastTime: 713,
+          },
+        },
+      };
       run.deathSummary = {
         reason: victory ? '已完成远征。' : 'Boss 讨伐失败：走位和弹幕处理还需优化。',
         waveLabel: victory ? '第 25 波 · 最终清算' : '第 20 波 Boss 讨伐',
@@ -2546,6 +2616,11 @@ function enableDebugHooks() {
         kills: run.kills,
         extremes: run.extremes.length,
         combatLog: run.combatLog,
+        damageTakenTotal: run.damageTaken.total,
+        damageSources: Object.values(run.damageTaken.sources).map(source => ({
+          ...source,
+          percent: source.amount / Math.max(1, run.damageTaken.total),
+        })),
       };
       run.state = victory ? 'victory' : 'gameover';
       state = 'result';

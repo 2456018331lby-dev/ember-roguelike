@@ -492,6 +492,9 @@ const resultReportExpression = `(() => {
   const timelineItems = [...document.querySelectorAll('.timeline-item')];
   const combatTimelineItems = [...document.querySelectorAll('.timeline-combat, .timeline-survival, .timeline-boss')];
   const impactItems = [...document.querySelectorAll('.timeline-impact')];
+  const damageReport = document.querySelector('.damage-report');
+  const damageSources = [...document.querySelectorAll('.damage-source')];
+  const positioningHint = document.querySelector('.positioning-hint');
   const next = document.querySelector('.result-next');
   const restart = document.querySelector('#restartBtn');
   const actions = document.querySelector('.result-actions');
@@ -500,6 +503,7 @@ const resultReportExpression = `(() => {
   const outcomeRect = outcome?.getBoundingClientRect();
   const copyRect = briefCopy?.getBoundingClientRect();
   const collapseRect = collapse?.getBoundingClientRect();
+  const damageReportRect = damageReport?.getBoundingClientRect();
   const restartRect = restart?.getBoundingClientRect();
   const actionsRect = actions?.getBoundingClientRect();
   const noHorizontalOverflow = document.documentElement.scrollWidth <= window.innerWidth + 2;
@@ -521,6 +525,14 @@ const resultReportExpression = `(() => {
       collapseRect && collapseRect.width >= Math.min(280, window.innerWidth - 40) &&
       /数值缺口/.test(panel.textContent || '') &&
       /最后决策/.test(panel.textContent || '') &&
+      damageReport &&
+      /受击来源/.test(damageReport.textContent || '') &&
+      /累计/.test(damageReport.textContent || '') &&
+      damageSources.length >= 2 &&
+      damageSources.some(item => /瞄准连射/.test(item.textContent || '')) &&
+      positioningHint &&
+      /首领弹幕|横向走位|冲刺/.test(positioningHint.textContent || '') &&
+      damageReportRect && damageReportRect.width >= Math.min(280, window.innerWidth - 40) &&
       /复盘时间线/.test(panel.textContent || '') &&
       timelineItems.length >= 3 &&
       timelineItems.some(item => /崩盘节点/.test(item.textContent || '')) &&
@@ -533,6 +545,9 @@ const resultReportExpression = `(() => {
     heroCards: heroCards.map(card => card.textContent.trim()),
     sections: sections.map(section => section.textContent.trim().slice(0, 32)),
     collapse: collapse?.textContent.trim().slice(0, 96) || '',
+    damageReport: damageReport?.textContent.trim().slice(0, 120) || '',
+    damageSources: damageSources.map(item => item.textContent.trim().slice(0, 48)),
+    positioningHint: positioningHint?.textContent.trim() || '',
     timelineItems: timelineItems.map(item => item.textContent.trim().slice(0, 48)),
     combatTimelineItems: combatTimelineItems.map(item => item.textContent.trim().slice(0, 48)),
     impactItems: impactItems.map(item => item.textContent.trim().slice(0, 48)),
@@ -541,6 +556,7 @@ const resultReportExpression = `(() => {
     outcomeRect: outcomeRect ? { bottom: Math.round(outcomeRect.bottom) } : null,
     copyRect: copyRect ? { bottom: Math.round(copyRect.bottom) } : null,
     collapseRect: collapseRect ? { width: Math.round(collapseRect.width), height: Math.round(collapseRect.height) } : null,
+    damageReportRect: damageReportRect ? { width: Math.round(damageReportRect.width), height: Math.round(damageReportRect.height) } : null,
     restartRect: restartRect ? { width: Math.round(restartRect.width), height: Math.round(restartRect.height), top: Math.round(restartRect.top) } : null,
     actionsRect: actionsRect ? { bottom: Math.round(actionsRect.bottom), height: Math.round(actionsRect.height) } : null,
     scrollWidth: document.documentElement.scrollWidth,
@@ -634,6 +650,9 @@ async function runVisualSmoke() {
     await evaluate(cdp, `window.__EMBER_DEBUG__.showResult(false)`);
     await waitForOk(cdp, resultReportExpression, 'desktop result report');
     const resultShot = await capture(cdp, 'result-desktop.png');
+    await evaluate(cdp, `document.querySelector('.damage-report')?.scrollIntoView({ block: 'center' }); true`);
+    await waitForOk(cdp, resultReportExpression, 'desktop result damage report');
+    const resultDamageShot = await capture(cdp, 'result-damage-desktop.png');
     await evaluate(cdp, `document.querySelector('.result-timeline')?.scrollIntoView({ block: 'center' }); true`);
     await waitForOk(cdp, resultReportExpression, 'desktop result timeline report');
     const resultTimelineShot = await capture(cdp, 'result-timeline-desktop.png');
@@ -674,6 +693,9 @@ async function runVisualSmoke() {
     await evaluate(cdp, `window.__EMBER_DEBUG__.showResult(false)`);
     await waitForOk(cdp, resultReportExpression, 'mobile result report');
     const mobileResultShot = await capture(cdp, 'result-mobile.png');
+    await evaluate(cdp, `document.querySelector('.damage-report')?.scrollIntoView({ block: 'center' }); true`);
+    await waitForOk(cdp, resultReportExpression, 'mobile result damage report');
+    const mobileResultDamageShot = await capture(cdp, 'result-damage-mobile.png');
     await evaluate(cdp, `document.querySelector('.result-timeline')?.scrollIntoView({ block: 'center' }); true`);
     await waitForOk(cdp, resultReportExpression, 'mobile result timeline report');
     const mobileResultTimelineShot = await capture(cdp, 'result-timeline-mobile.png');
@@ -682,7 +704,7 @@ async function runVisualSmoke() {
     assert(!serverStderr.trim(), `serve-web.mjs should not write stderr: ${serverStderr.trim()}`);
 
     return {
-      screenshots: [menuShot, charShot, gameplayShot, rewardShot, restShot, bossShot, bossFightShot, highWaveBossShot, resultShot, resultTimelineShot, mobileMenuShot, mobileCharShot, mobileGameplayShot, mobileRewardShot, mobileRestShot, mobileBossFightShot, mobileResultShot, mobileResultTimelineShot],
+      screenshots: [menuShot, charShot, gameplayShot, rewardShot, restShot, bossShot, bossFightShot, highWaveBossShot, resultShot, resultDamageShot, resultTimelineShot, mobileMenuShot, mobileCharShot, mobileGameplayShot, mobileRewardShot, mobileRestShot, mobileBossFightShot, mobileResultShot, mobileResultDamageShot, mobileResultTimelineShot],
       chromeWarnings: chromeStderr.trim().split(/\r?\n/).filter(Boolean).slice(0, 3),
     };
   } finally {

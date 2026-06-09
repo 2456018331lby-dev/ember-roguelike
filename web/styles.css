@@ -2509,6 +2509,102 @@ body::after {
   color: #99f6e4;
 }
 
+.damage-report {
+  display: grid;
+  gap: 10px;
+  grid-column: 1 / -1;
+  padding: 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(78, 196, 233, .18);
+  background:
+    linear-gradient(135deg, rgba(8, 13, 20, .9), rgba(5, 7, 11, .66)),
+    repeating-linear-gradient(90deg, rgba(78, 196, 233, .04) 0 1px, transparent 1px 34px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .04);
+}
+
+.damage-report-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.damage-report-head span,
+.damage-source-detail,
+.positioning-hint {
+  color: var(--ember-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.damage-report-head span {
+  font-weight: 900;
+}
+
+.damage-report-head strong {
+  color: var(--ember-gold-soft);
+  font-size: 13px;
+}
+
+.damage-source-list {
+  display: grid;
+  gap: 9px;
+}
+
+.damage-source {
+  display: grid;
+  gap: 6px;
+}
+
+.damage-source-meta {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  color: var(--ember-text);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.damage-source-meta strong {
+  color: var(--ember-gold-soft);
+}
+
+.damage-source-bar {
+  position: relative;
+  height: 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .07);
+}
+
+.damage-source-bar::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: calc(var(--damage-ratio, .1) * 100%);
+  border-radius: inherit;
+  background: linear-gradient(90deg, #f97316, #f8d78a);
+  box-shadow: 0 0 18px rgba(249, 115, 22, .3);
+}
+
+.damage-combat .damage-source-bar::after {
+  background: linear-gradient(90deg, #60a5fa, #bfdbfe);
+}
+
+.damage-boss .damage-source-bar::after {
+  background: linear-gradient(90deg, #a78bfa, #f0abfc);
+}
+
+.damage-risk .damage-source-bar::after {
+  background: linear-gradient(90deg, #fb7185, #fed7aa);
+}
+
+.positioning-hint {
+  padding-top: 8px;
+  border-top: 1px solid rgba(232, 184, 93, .12);
+  color: #d9d1c2;
+}
+
 .result-stats {
   grid-template-columns: 1fr;
   gap: 12px;

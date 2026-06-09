@@ -528,7 +528,8 @@ function Invoke-TapUntilScreenshotChanges {
     [Parameter(Mandatory = $true)]
     [object[]]$Ratios,
     [int]$WaitSeconds = 2,
-    [long]$MinFileBytesDelta = 0
+    [long]$MinFileBytesDelta = 0,
+    [long]$MinFileBytes = 0
   )
 
   foreach ($ratio in $Ratios) {
@@ -541,7 +542,7 @@ function Invoke-TapUntilScreenshotChanges {
     }
     $hash = Get-FileSha256 -Path $screenshotPath
     $fileBytes = (Get-Item $screenshotPath).Length
-    if ($hash -ne $BaselineHash -and [Math]::Abs($fileBytes - $BaselineFileBytes) -ge $MinFileBytesDelta) {
+    if ($hash -ne $BaselineHash -and [Math]::Abs($fileBytes - $BaselineFileBytes) -ge $MinFileBytesDelta -and $fileBytes -ge $MinFileBytes) {
       Write-Host "$Description screenshot=$screenshotPath"
       return [PSCustomObject]@{
         Path = $screenshotPath
@@ -597,7 +598,9 @@ function Invoke-AndroidTapSmoke {
       @{ X = 0.50; Y = 0.52 },
       @{ X = 0.50; Y = 0.56 }
     ) `
-    -MinFileBytesDelta 20000
+    -WaitSeconds 4 `
+    -MinFileBytesDelta 20000 `
+    -MinFileBytes 200000
   $characterScreenshotPath = $characterResult.Path
   $characterHash = $characterResult.Hash
   $characterFileBytes = $characterResult.FileBytes
@@ -621,7 +624,8 @@ function Invoke-AndroidTapSmoke {
       @{ X = 0.29; Y = 0.91 }
     ) `
     -WaitSeconds 4 `
-    -MinFileBytesDelta 20000
+    -MinFileBytesDelta 20000 `
+    -MinFileBytes 200000
   $gameplayScreenshotPath = $gameplayResult.Path
   Write-Host "Android tap smoke reached gameplay."
 }

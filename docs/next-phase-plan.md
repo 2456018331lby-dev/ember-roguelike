@@ -1,8 +1,8 @@
 # Ember 下一阶段执行计划
 
-最后更新：2026-06-09（本轮优先回应前端质感问题，新增本地生成的主菜单封面资产 `web/assets/ember-menu-tableau.png`，由 `scripts/generate-art-assets.mjs` 稳定生成角色队伍、Boss 剪影、卡牌碎片和火光构图；主菜单改为全屏游戏封面式入口，桌面端标题/按钮/右侧存档 HUD 覆盖在封面上，移动端继续保证开始按钮首屏可见。`scripts/web-smoke.mjs` 新增菜单封面尺寸校验，`scripts/visual-smoke.mjs` 新增生成图加载和 hero 全幅铺满断言，视觉回归基线已更新；PWA cache 提升到 `ember-v24` 并预缓存新资源。已完成 `npm run assets:generate`、`npm run test:web-smoke`、`npm run test:visual-smoke`、`npm run test:visual-regression -- --update`、`npm run test:visual-regression`，并用 Playwright MCP 打开 `http://127.0.0.1:5173/` 人工检查桌面菜单截图。下一步继续把角色选择、奖励动效、敌人多帧动画、高波 Boss 阶段特效和受击/走位来源统计推进到更接近成品。）
+最后更新：2026-06-09（本轮优先回应前端质感问题，新增本地生成的主菜单封面资产 `web/assets/ember-menu-tableau.png`，由 `scripts/generate-art-assets.mjs` 稳定生成角色队伍、Boss 剪影、卡牌碎片和火光构图；主菜单改为全屏游戏封面式入口，桌面端标题/按钮/右侧存档 HUD 覆盖在封面上，移动端继续保证开始按钮首屏可见。追加更新：结算页已新增受击来源统计，核心会累计 Boss 弹幕、普通弹幕、近身和自伤等实际扣血来源，结果页用条形占比展示“瞄准连射”等主要来源，并给出横向走位/冲刺窗口建议；视觉 smoke 和视觉回归已纳入桌面/移动端 `result-damage-*.png`。已完成 `npm test`、`npm run test:web-smoke`、`npm run test:boss-checkpoints`、`npm run test:visual-smoke`、`npm run test:visual-regression -- --update`、`npm run test:visual-regression`。下一步继续把角色选择、奖励动效、敌人多帧动画、高波 Boss 阶段特效和卡组路线对比推进到更接近成品。）
 
-本轮 Android 补充：`npm run build:android:debug` 通过，当前 APK SHA256 为 `E4BBD0E9177DEE81C8E6E8C532F9C663AFF864E5ECA94A593DBB884AEDDB76FD`；`npm run verify:android:smoke` 已在在线模拟器 `emulator-5554` 上通过安装、冷启动、点击进入角色选择、点击进入局内战斗和 logcat fatal scan。实体真机复测仍未完成。
+本轮 Android 补充：`npm run build:android:debug` 通过，当前 APK SHA256 为 `F027BEF9B71BA6CF6A5EE2940B801EA037EC068B83B3442573DCB7A7F2DBDF59`；`npm run verify:android:smoke` 已在在线模拟器 `emulator-5554` 上通过安装、冷启动、点击进入角色选择、点击进入局内战斗、截图体积阈值和 logcat fatal scan。实体真机复测仍未完成。
 
 这个文件只回答一个问题：下一阶段最值得继续做什么。
 
@@ -37,6 +37,7 @@
 - 奖励、锻造、商店和 Boss 前营火选择已进入 `decisionLog`，死亡复盘会显示最后几次关键路线选择；本轮路线影响会解释这些选择补了什么、最终又漏了什么短板
 - 奖励页和 Boss 前营火现在会在选择前显示“下一波作战计划”，把下一波标签、危险度、最大压力缺口和具体行动建议直接前置到奖励/营火决策界面
 - 低血线、救场、复活、Boss 终局弹幕、首领倒下和高伤害命中来源会进入有界 `combatLog`，结算页会把这些波中转折和路线选择一起展示，并用独立的崩盘诱因卡片前置最关键的一次转折
+- 本局实际受击来源会累计到 `damageTaken`，死亡复盘会展示 Boss 弹幕、普通弹幕、近身和自伤等前 4 个来源的伤害占比，并按最大来源给出走位/冲刺建议
 - 战前营火卡片现在也会显示基于压力模型的推荐标签与建议文案，方便玩家区分补输出、补容错和高风险豪赌
 
 ### 前端
@@ -61,14 +62,15 @@
 - 移动端主菜单首屏已压缩，390x844 下开始按钮无需滚动即可点击
 - 结算页已重构为“战报复盘”：关键数值卡、路线概览、构筑诊断、阵亡复盘、崩盘诱因和下一把优先级分区展示；移动端结果页底部操作按钮保持可见，复盘内容独立滚动
 - 结算页已新增复盘时间线：奖励、锻造、商店、营火等关键选择会按波次展示，并用“路线影响”副行说明该选择和最终短板之间的关系；低血线、Boss 终局弹幕和高伤害命中来源等战斗事件会插入时间线，并在末尾追加崩盘节点，崩盘诱因卡会把最关键的波中转折前置出来，帮助玩家把路线选择、波中转折和死亡原因连起来
+- 结算页已新增“受击来源”区域：条形图显示累计伤害、来源占比和命中次数，最大来源会生成横向走位、冲刺窗口或优先清远程等下一局操作建议
 
 ### 平台
 
 - `scripts/sync-web.mjs` 已可同步 `web -> docs -> android`
 - `scripts/serve-web.mjs` 已能正确以 `text/javascript` 提供 `.mjs`
 - `scripts/web-smoke.mjs` 已可验证 spritesheet、service worker 预缓存清单、UI 状态路由、离线 fallback 和本地 MIME
-- `scripts/visual-smoke.mjs` 已可用本机 Chrome/Edge 做桌面/移动端视觉 smoke 并输出截图，覆盖菜单、角色选择、局内 canvas、奖励选择页读板、Boss 前营火、第 5 波 Boss 进入、桌面/移动端活跃 Boss 战读招画面、固定的第 20 波高压桌面样本、桌面/移动端结算复盘，以及桌面/移动端时间线区域；菜单样本会断言本地生成封面图已加载且 hero 面板全幅铺满，高波样本还会断言 debug snapshot 中存在当前 `bossPatternLabel` 和 `bossCharge`，奖励/营火样本会断言存在“下一波作战计划”、压力优先级和 chips，每张奖励卡有 `card-readout`、机会标签、风险等级且没有内部裁切，结果页样本会断言崩盘诱因包含具体高伤害命中，结果时间线样本会断言存在路线影响、具体高伤害命中来源、战斗事件和崩盘节点
-- `scripts/visual-regression.mjs` 已可解码 visual-smoke PNG，稳定界面做严格 RGBA 哈希，动画界面做像素指标容差回归，当前基线包含 `reward-desktop.png`、`reward-mobile.png`、`boss-fight-desktop.png`、`boss-fight-mobile.png`、`boss-fight-highwave-desktop.png`、`result-desktop.png`、`result-mobile.png`、`result-timeline-desktop.png` 和 `result-timeline-mobile.png`
+- `scripts/visual-smoke.mjs` 已可用本机 Chrome/Edge 做桌面/移动端视觉 smoke 并输出截图，覆盖菜单、角色选择、局内 canvas、奖励选择页读板、Boss 前营火、第 5 波 Boss 进入、桌面/移动端活跃 Boss 战读招画面、固定的第 20 波高压桌面样本、桌面/移动端结算复盘、受击来源区域，以及桌面/移动端时间线区域；菜单样本会断言本地生成封面图已加载且 hero 面板全幅铺满，高波样本还会断言 debug snapshot 中存在当前 `bossPatternLabel` 和 `bossCharge`，奖励/营火样本会断言存在“下一波作战计划”、压力优先级和 chips，每张奖励卡有 `card-readout`、机会标签、风险等级且没有内部裁切，结果页样本会断言崩盘诱因包含具体高伤害命中，受击来源样本会断言 Boss 连射、累计伤害和走位建议，结果时间线样本会断言存在路线影响、具体高伤害命中来源、战斗事件和崩盘节点
+- `scripts/visual-regression.mjs` 已可解码 visual-smoke PNG，稳定界面做严格 RGBA 哈希，动画界面做像素指标容差回归，当前基线包含 `reward-desktop.png`、`reward-mobile.png`、`boss-fight-desktop.png`、`boss-fight-mobile.png`、`boss-fight-highwave-desktop.png`、`result-desktop.png`、`result-mobile.png`、`result-damage-desktop.png`、`result-damage-mobile.png`、`result-timeline-desktop.png` 和 `result-timeline-mobile.png`
 - `tests/sim_harness.mjs` 已抽出 baseline / smart 共用模拟 harness；`npm run test:boss-checkpoints` 会输出第 5/10/15/20/25 波 Boss 检查点与死亡短板
 - `npm run build:android:debug` 当前已可在本机返回成功
 - `npm run build:android:debug` 会自动校验 APK 内当前关键前端资源、锻造/商店 handler、三档难度标记和 PWA 预缓存清单
@@ -86,14 +88,15 @@
 - `smart_sim` 第 5 波失败样本：`0 / 60`
 - `baseline_sim` 第 5 波失败样本：`1 / 60`（seed 39，站桩 baseline 仅作保守压力参考）
 - `npm run test:boss-checkpoints`：baseline 第 5 波 `59/60` 通过，第 10/15/20 波 Boss 死亡 `0 / 0 / 10`；smart 第 5 波 `60/60` 通过，第 10/15/20/25 波 Boss 死亡 `2 / 1 / 3 / 3`，第 20 波到达 `53/60`，第 25 波到达 `48/60`，通关 `45/60`；smart 无 max-tick 卡局，短板标签仍以 `safety` 最集中
-- `npm test`：核心逻辑测试全部通过；已覆盖早期卡牌推荐回归、奖励读板协同机会和高风险文案、首个 Boss 极大单体缺口双输出保底、普通远程敌人场外卡局回归、Boss 前营火链路、第 10 波极高 safety 缺口提前护符、中后期压力目标成长、中后期奖励按 `singleTarget / aoe / sustain` 最大短板保底修复、脆皮烟幕残影保命、低血线/救场战斗事件记录、高伤害命中来源记录、崩盘诱因提炼、死亡复盘缺口/决策展示、下一把优先级跟随最大压力缺口、复盘时间线合并波中战斗事件、关键选择路线影响，以及 `reward / forge / shop / rest` 无出口状态机检查
+- `npm test`：核心逻辑测试全部通过；已覆盖早期卡牌推荐回归、奖励读板协同机会和高风险文案、首个 Boss 极大单体缺口双输出保底、普通远程敌人场外卡局回归、Boss 前营火链路、第 10 波极高 safety 缺口提前护符、中后期压力目标成长、中后期奖励按 `singleTarget / aoe / sustain` 最大短板保底修复、脆皮烟幕残影保命、低血线/救场战斗事件记录、高伤害命中来源记录、受击来源累计、崩盘诱因提炼、死亡复盘缺口/决策/受击来源展示、下一把优先级跟随最大压力缺口、复盘时间线合并波中战斗事件、关键选择路线影响，以及 `reward / forge / shop / rest` 无出口状态机检查
 - `npm run test:web-smoke`：资源、缓存清单、UI 状态路由、离线 fallback、本地 MIME 和核心粒子绘制覆盖检查全部通过
-- `npm run test:visual-smoke`：桌面/移动端菜单、角色选择、局内 canvas、奖励选择页、Boss 前营火、第 5 波 Boss 进入、桌面/移动端活跃 Boss 战读招画面、固定第 20 波高压桌面样本、桌面/移动端结算复盘，以及桌面/移动端时间线区域渲染通过；菜单样本已断言 `ember-menu-tableau.png` 加载与全幅铺满，高波样本已断言 `bossPatternLabel` / `bossCharge`；结果页会断言摘要标题/说明未被裁切、底部按钮在视口内、崩盘诱因显示具体高伤害命中；时间线会断言存在路线影响、具体高伤害命中来源、战斗事件和崩盘节点；截图已输出到 `output/visual-smoke/`
+- `npm run test:visual-smoke`：桌面/移动端菜单、角色选择、局内 canvas、奖励选择页、Boss 前营火、第 5 波 Boss 进入、桌面/移动端活跃 Boss 战读招画面、固定第 20 波高压桌面样本、桌面/移动端结算复盘、受击来源区域，以及桌面/移动端时间线区域渲染通过；菜单样本已断言 `ember-menu-tableau.png` 加载与全幅铺满，高波样本已断言 `bossPatternLabel` / `bossCharge`；结果页会断言摘要标题/说明未被裁切、底部按钮在视口内、崩盘诱因显示具体高伤害命中；受击来源会断言累计伤害、至少两条来源、Boss 连射和横向走位/冲刺建议；时间线会断言存在路线影响、具体高伤害命中来源、战斗事件和崩盘节点；截图已输出到 `output/visual-smoke/`
 - `npm run test:visual-regression`：视觉 smoke 截图像素回归通过；基线文件为 `tests/visual-regression-baseline.json`
-- Playwright MCP：`开始远征 -> 开始战斗 · 标准 -> 局内 HUD/canvas` 交互通过，canvas 非空采样 `1031`，无水平溢出；前序另用 `?debug=1` 跳转第 20 波高波 Boss，snapshot 返回 `bossPatternLabel = 螺旋弹幕`、`bossCharge ≈ 0.89`、canvas 非空采样 `920`，截图保存到 `output/playwright/boss-readout-highwave-desktop.png`；本轮用 `?debug=1` 触发 `showResult(false)`，确认结果时间线含 2 条路线影响、具体“被瞄准连射命中”危险节点、低血线事件、无水平溢出且底部操作可见
-- `npm run build:android:debug`：Android debug APK 构建和 APK Web payload 校验通过；当前构建 APK SHA256 为 `E4BBD0E9177DEE81C8E6E8C532F9C663AFF864E5ECA94A593DBB884AEDDB76FD`
-- `npm run verify:android:debug` / `npm run verify:android:smoke`：本轮通过临时 PATH 使用 `C:\Users\24560\Desktop\study\kaoyandemo\.android-sdk\platform-tools\adb.exe`，在在线模拟器 `emulator-5554` 完成 APK 安装、冷启动、焦点窗口、首屏截图、点击进入角色选择、点击进入局内战斗和 logcat fatal-error scan
-- 最近一次模拟器点击流验证 APK SHA256：`E4BBD0E9177DEE81C8E6E8C532F9C663AFF864E5ECA94A593DBB884AEDDB76FD`
+- Visual verdict：受击来源桌面/移动截图人工判定通过，分数 92/100；移动端文字换行、进度条和底部固定按钮未遮挡模块主体
+- Playwright MCP：`开始远征 -> 开始战斗 · 标准 -> 局内 HUD/canvas` 交互通过，canvas 非空采样 `1031`，无水平溢出；前序另用 `?debug=1` 跳转第 20 波高波 Boss，snapshot 返回 `bossPatternLabel = 螺旋弹幕`、`bossCharge ≈ 0.89`、canvas 非空采样 `920`，截图保存到 `output/playwright/boss-readout-highwave-desktop.png`；前序用 `?debug=1` 触发 `showResult(false)`，确认结果时间线含 2 条路线影响、具体“被瞄准连射命中”危险节点、低血线事件、无水平溢出且底部操作可见
+- `npm run build:android:debug`：Android debug APK 构建和 APK Web payload 校验通过；当前构建 APK SHA256 为 `F027BEF9B71BA6CF6A5EE2940B801EA037EC068B83B3442573DCB7A7F2DBDF59`
+- `npm run verify:android:debug` / `npm run verify:android:smoke`：本轮在在线模拟器 `emulator-5554` 完成 APK 安装、冷启动、焦点窗口、首屏截图、点击进入角色选择、点击进入局内战斗、截图体积阈值和 logcat fatal-error scan
+- 最近一次模拟器点击流验证 APK SHA256：`F027BEF9B71BA6CF6A5EE2940B801EA037EC068B83B3442573DCB7A7F2DBDF59`
 - 难度抽样：`steady avgWave 19.00 / standard 18.20 / trial 16.90`
 - 浏览器验证：锻造选择后可进入第 4 波，不再卡在锻造层
 - 浏览器验证：菜单首屏按钮、生成封面图、右侧存档 HUD、角色选择页 AI 头像、局内 AI 玩家模型和敌人 spritesheet 已确认渲染
@@ -107,7 +110,7 @@
 - 标准档 smart 策略第 5 波已无 60 seed 早期失败；站桩 baseline 仍有 1 个第 5 波失败 seed，下一步不要为该单点过度削弱首个 Boss，应优先观察玩家实际操作和试炼档压力
 - 第 10/15/20/25 波 Boss 已有 checkpoint 统计；第 20 波前现在已有真实营火窗口，但 safety 仍是最集中的高波短板
 - 奖励系统已经开始按最大构筑缺口做保底修复；下一步要继续观察它是否会过度干预玩家路线，尤其是高波 safety 与清场缺口同时存在时的取舍
-- 结算复盘已完成一轮信息架构、崩盘诱因、复盘时间线、基础波中战斗事件、关键选择路线影响、具体高伤害命中来源和视觉回归；下一步仍可继续补更多事件类型、受击/走位来源统计和卡组路线对比
+- 结算复盘已完成一轮信息架构、崩盘诱因、复盘时间线、基础波中战斗事件、关键选择路线影响、具体高伤害命中来源、受击来源统计和视觉回归；下一步仍可继续补更多事件类型、卡组路线对比和更细的操作复盘
 
 ### 前端
 

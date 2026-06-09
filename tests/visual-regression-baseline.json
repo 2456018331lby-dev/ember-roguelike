@@ -6,16 +6,16 @@
       "mode": "metric",
       "width": 1343,
       "height": 670,
-      "fileBytes": 725239,
-      "pixelHash": "0c34a20e9c9b11df49aae8867f7b0540321b0c3b2440316a1a6306df38819cf8",
+      "fileBytes": 725312,
+      "pixelHash": "bc3eb524fcc64d6fa8960197c57a5e21c4e7666d9ca5ceb799be09c41d9bd7bc",
       "metrics": {
-        "r": 22.09,
-        "g": 19.9,
-        "b": 19.99,
-        "luma": 20.38,
-        "darkRatio": 0.9545,
-        "lightRatio": 0.0102,
-        "saturatedRatio": 0.0134
+        "r": 21.88,
+        "g": 19.62,
+        "b": 19.67,
+        "luma": 20.1,
+        "darkRatio": 0.956,
+        "lightRatio": 0.0096,
+        "saturatedRatio": 0.0131
       }
     },
     "character-select-desktop.png": {
@@ -38,24 +38,24 @@
       "mode": "metric",
       "width": 1343,
       "height": 670,
-      "fileBytes": 734096,
-      "pixelHash": "f8a42893febbf26fdc7e6d78ab66dba60b9ee941689c96a5de75f40f7cbd5d3a",
+      "fileBytes": 735644,
+      "pixelHash": "b289b4a6b4ebbb51044ff33d5189e3b70264ffcd2d878c507065f67fdfe62cab",
       "metrics": {
         "r": 23.9,
         "g": 24.02,
-        "b": 27.79,
-        "luma": 24.26,
-        "darkRatio": 0.9319,
+        "b": 27.82,
+        "luma": 24.27,
+        "darkRatio": 0.9317,
         "lightRatio": 0.011,
-        "saturatedRatio": 0.018
+        "saturatedRatio": 0.0181
       }
     },
     "reward-desktop.png": {
       "mode": "metric",
       "width": 1343,
       "height": 670,
-      "fileBytes": 351322,
-      "pixelHash": "9a2259c466c5868bb00ef06e480fe5c3478bb585d9e8a6ce62a3fa97583fd8d8",
+      "fileBytes": 351128,
+      "pixelHash": "3a22ac07813e56b0db2a2037608c9b2acd1503a52d9b39cf6b04c275e740c430",
       "metrics": {
         "r": 25.07,
         "g": 25.69,
@@ -70,8 +70,8 @@
       "mode": "metric",
       "width": 1343,
       "height": 670,
-      "fileBytes": 420803,
-      "pixelHash": "b53d65c903f14fb405ec7d78a604a6bf9394fd8367eddc6477b51a9e0c7a0eb3",
+      "fileBytes": 420727,
+      "pixelHash": "ff32f7f9d5e31fb255e73deb9d9c49aca144c75b13a5fb82b9b7218d505e2830",
       "metrics": {
         "r": 20.64,
         "g": 22.63,
@@ -86,64 +86,80 @@
       "mode": "metric",
       "width": 1343,
       "height": 670,
-      "fileBytes": 803909,
-      "pixelHash": "8715991955acbe317ed95e3cbd15b8fc2aa3057e85d33244951a6a9765aab097",
+      "fileBytes": 804925,
+      "pixelHash": "ce47c8e8ea08db590542c002a2a479f43810d615877560f5f636b17b7cff86ee",
       "metrics": {
-        "r": 28.16,
-        "g": 25.77,
-        "b": 29.13,
-        "luma": 26.52,
-        "darkRatio": 0.9222,
-        "lightRatio": 0.0159,
-        "saturatedRatio": 0.0186
+        "r": 27.86,
+        "g": 25.57,
+        "b": 29.04,
+        "luma": 26.31,
+        "darkRatio": 0.9229,
+        "lightRatio": 0.0123,
+        "saturatedRatio": 0.0187
       }
     },
     "boss-fight-desktop.png": {
       "mode": "metric",
       "width": 1343,
       "height": 670,
-      "fileBytes": 816875,
-      "pixelHash": "3d4b2e5ae663a42c579a4eb6852d5d8fc5ae63f7f0ddf55d38e68e1b32abd3f5",
+      "fileBytes": 815324,
+      "pixelHash": "64bb913c0782bbc5d62f103f2f59455bf59c5f03ee383985e445d41d627f998c",
       "metrics": {
-        "r": 29.83,
-        "g": 25.92,
-        "b": 29.2,
-        "luma": 26.99,
-        "darkRatio": 0.9095,
-        "lightRatio": 0.0128,
-        "saturatedRatio": 0.0307
+        "r": 30.18,
+        "g": 26.38,
+        "b": 29.63,
+        "luma": 27.42,
+        "darkRatio": 0.9032,
+        "lightRatio": 0.0127,
+        "saturatedRatio": 0.0286
       }
     },
     "boss-fight-highwave-desktop.png": {
       "mode": "metric",
       "width": 1343,
       "height": 670,
-      "fileBytes": 845815,
-      "pixelHash": "bcb2f14b7a2d4f1ab69707bacb349a5b5a35bb1fcbf82202fbad3d3eebd79cc9",
+      "fileBytes": 846014,
+      "pixelHash": "a836438ac29a3e7c53fb40555fc5b1ad8cce3c817242da25a79ca592fd7d2e87",
       "metrics": {
-        "r": 32.82,
-        "g": 27.51,
-        "b": 29.52,
-        "luma": 28.79,
-        "darkRatio": 0.8809,
-        "lightRatio": 0.0135,
-        "saturatedRatio": 0.0381
+        "r": 32.84,
+        "g": 27.52,
+        "b": 29.53,
+        "luma": 28.8,
+        "darkRatio": 0.8808,
+        "lightRatio": 0.0136,
+        "saturatedRatio": 0.0382
       }
     },
     "result-desktop.png": {
       "mode": "metric",
       "width": 1343,
       "height": 670,
-      "fileBytes": 337049,
-      "pixelHash": "7577dc963cd215b9dfd8520823488ae33204faa8be1cf033f365167e85db31b4",
+      "fileBytes": 337004,
+      "pixelHash": "258a75798e75dc221e7173a7cfb6f1fccd95c5171328f17e63189f530bfdea15",
       "metrics": {
-        "r": 20,
-        "g": 21.36,
-        "b": 23.86,
-        "luma": 21.25,
+        "r": 20.01,
+        "g": 21.38,
+        "b": 23.87,
+        "luma": 21.27,
         "darkRatio": 0.9488,
-        "lightRatio": 0.0196,
+        "lightRatio": 0.0197,
         "saturatedRatio": 0.0057
+      }
+    },
+    "result-damage-desktop.png": {
+      "mode": "metric",
+      "width": 1343,
+      "height": 670,
+      "fileBytes": 333927,
+      "pixelHash": "cedf050a899b1dab6b21b3665b66be69b80875152e259c28e2a4cc9348d02055",
+      "metrics": {
+        "r": 18.51,
+        "g": 19.59,
+        "b": 22.65,
+        "luma": 19.58,
+        "darkRatio": 0.9478,
+        "lightRatio": 0.0218,
+        "saturatedRatio": 0.0134
       }
     },
     "result-timeline-desktop.png": {
@@ -151,14 +167,14 @@
       "width": 1343,
       "height": 670,
       "fileBytes": 400997,
-      "pixelHash": "b1cb8626b40223ad1e3dbd688c81ebc66b94e556c326c6416164e8e5dfb0fd40",
+      "pixelHash": "50ad505da77e7e08b23c265fbd9178864b0e7bc88ff1bc710d9359bc677b65cd",
       "metrics": {
-        "r": 19.65,
-        "g": 20.36,
-        "b": 22.58,
-        "luma": 20.37,
+        "r": 19.67,
+        "g": 20.37,
+        "b": 22.59,
+        "luma": 20.38,
         "darkRatio": 0.9429,
-        "lightRatio": 0.0165,
+        "lightRatio": 0.0166,
         "saturatedRatio": 0.0061
       }
     },
@@ -198,8 +214,8 @@
       "mode": "metric",
       "width": 780,
       "height": 1688,
-      "fileBytes": 883688,
-      "pixelHash": "7911e5d333004782a97b47549e271b22d2d2149812c1ceb75a9a81f558c58b74",
+      "fileBytes": 883842,
+      "pixelHash": "8ef77e11e245feb630e704d098dab83fac9ddb6e25df93faa2574070008c69be",
       "metrics": {
         "r": 16.33,
         "g": 16.76,
@@ -214,8 +230,8 @@
       "mode": "metric",
       "width": 780,
       "height": 1688,
-      "fileBytes": 611902,
-      "pixelHash": "76496c62a9a37db6909e98112467e3f79f686233dbac7fccf7fe93ead943b7cd",
+      "fileBytes": 611904,
+      "pixelHash": "052a99d720efc34afe525a13bac3b81cf5b3a25df1fe9d400ab24753a703438f",
       "metrics": {
         "r": 33.9,
         "g": 34.33,
@@ -230,8 +246,8 @@
       "mode": "metric",
       "width": 780,
       "height": 1688,
-      "fileBytes": 619436,
-      "pixelHash": "4244118c9d205da1c0076f500443a64761d552dccbbaddd22730dbea81049199",
+      "fileBytes": 619442,
+      "pixelHash": "d5cc397d80baf806afb997c68174a9ab746b3331efad7c89302e8c66e687ed14",
       "metrics": {
         "r": 24.3,
         "g": 26.16,
@@ -246,8 +262,8 @@
       "mode": "metric",
       "width": 780,
       "height": 1688,
-      "fileBytes": 927272,
-      "pixelHash": "e38cb8385e4e9e7299b4c71e1249b74384bff013d26f833029b874b92f193569",
+      "fileBytes": 927364,
+      "pixelHash": "c906ffeab1651cfc4285cdda9c7b5caed86ef70be6035909aa3b89de5a80442d",
       "metrics": {
         "r": 18.08,
         "g": 17.28,
@@ -262,30 +278,46 @@
       "mode": "metric",
       "width": 780,
       "height": 1688,
-      "fileBytes": 535582,
-      "pixelHash": "7c3109aea33d241e04c4bbadba898a54754b558c432ae6c115d8025f8c8eb18a",
+      "fileBytes": 536169,
+      "pixelHash": "a0d1493dd542df688fbd593d04605c6978f72816b8c95e00d98dbfaeae360fd5",
       "metrics": {
-        "r": 25.31,
+        "r": 25.3,
         "g": 25.81,
-        "b": 26.86,
-        "luma": 25.78,
-        "darkRatio": 0.9248,
+        "b": 26.85,
+        "luma": 25.77,
+        "darkRatio": 0.925,
         "lightRatio": 0.027,
         "saturatedRatio": 0.0156
+      }
+    },
+    "result-damage-mobile.png": {
+      "mode": "metric",
+      "width": 780,
+      "height": 1688,
+      "fileBytes": 627458,
+      "pixelHash": "68780894a7b8e5d216df2e25a2d6c7ae41613c070c841d5971c9ad1e4df4c086",
+      "metrics": {
+        "r": 28.63,
+        "g": 28.05,
+        "b": 29.62,
+        "luma": 28.28,
+        "darkRatio": 0.8977,
+        "lightRatio": 0.0466,
+        "saturatedRatio": 0.0219
       }
     },
     "result-timeline-mobile.png": {
       "mode": "metric",
       "width": 780,
       "height": 1688,
-      "fileBytes": 699301,
-      "pixelHash": "6573e16508f83639119f82799f19a0594cbf784fc27feb7ce56de36e88e494fc",
+      "fileBytes": 699289,
+      "pixelHash": "3592876f6453058befbf7fdbf2903f1e0670fd036c655ad455c385c949245a60",
       "metrics": {
-        "r": 25.83,
-        "g": 25.37,
+        "r": 25.82,
+        "g": 25.36,
         "b": 26.61,
-        "luma": 25.56,
-        "darkRatio": 0.909,
+        "luma": 25.55,
+        "darkRatio": 0.9091,
         "lightRatio": 0.0298,
         "saturatedRatio": 0.0169
       }
