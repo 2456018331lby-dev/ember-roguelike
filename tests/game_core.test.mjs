@@ -2246,6 +2246,45 @@ test('死亡复盘应包含波次上下文和构筑建议', () => {
   assert.equal(pres.deathReason, 'Boss 讨伐失败：输出不足，未能在弹幕窗口内击杀首领。');
 });
 
+test('死亡复盘应对比构筑路线和最终短板', () => {
+  const run = createRun(116);
+  run.state = 'gameover';
+  run.wave = 20;
+  run.waveProfile = { kind: 'boss', label: '第 20 波 Boss 讨伐' };
+  run.buildAnalysis = {
+    primaryFocus: 'burst',
+    descriptors: ['速攻', '暴击'],
+    weaknesses: { singleTarget: false, sustain: false, aoe: false, safety: true },
+    pressure: { singleTarget: 126, aoe: 47, sustain: 84, mitigation: 16, safety: 6 },
+    pressureTargets: { singleTarget: 110, aoe: 44, sustain: 82, safety: 36 },
+    pressureGaps: { singleTarget: 0, aoe: 0, sustain: 0, safety: 30 },
+    summary: '速攻 / 暴击',
+  };
+  run.deathSummary = {
+    reason: 'Boss 讨伐失败：容错不够，一次失误就再难回正。',
+    wave: 20,
+    waveLabel: '第 20 波 Boss 讨伐',
+    waveKind: 'boss',
+    focus: '速攻 / 暴击',
+    deckSize: 14,
+    pressure: run.buildAnalysis.pressure,
+    pressureTargets: run.buildAnalysis.pressureTargets,
+    pressureGaps: run.buildAnalysis.pressureGaps,
+  };
+
+  const pres = buildRunPresentation(run, getPlayerStats(run), { name: '战士' });
+
+  assert.equal(pres.resultRouteComparison.focusText, '速攻 / 暴击');
+  assert.equal(pres.resultRouteComparison.topGap.label, '安全网');
+  assert.match(pres.resultRouteComparison.gapText, /安全网 6\/36（缺 30）/);
+  assert.match(pres.resultRouteComparison.verdict, /实际路线偏向速攻 \/ 暴击/);
+  assert.match(pres.resultRouteComparison.verdict, /安全网没有跟上/);
+  assert.ok(
+    pres.resultRouteComparison.rows.some(row => row.key === 'singleTarget' && row.status === '达标'),
+    '路线对比应保留已达标压力项，避免只显示失败短板',
+  );
+});
+
 test('核心战斗应记录低血线和救场事件', () => {
   const lowHpRun = createRun(110);
   lowHpRun.waveTransitionTimer = 0;

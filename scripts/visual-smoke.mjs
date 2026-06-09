@@ -492,6 +492,8 @@ const resultReportExpression = `(() => {
   const timelineItems = [...document.querySelectorAll('.timeline-item')];
   const combatTimelineItems = [...document.querySelectorAll('.timeline-combat, .timeline-survival, .timeline-boss')];
   const impactItems = [...document.querySelectorAll('.timeline-impact')];
+  const routeComparison = document.querySelector('.route-comparison');
+  const routePressures = [...document.querySelectorAll('.route-pressure')];
   const damageReport = document.querySelector('.damage-report');
   const damageSources = [...document.querySelectorAll('.damage-source')];
   const positioningHint = document.querySelector('.positioning-hint');
@@ -503,6 +505,7 @@ const resultReportExpression = `(() => {
   const outcomeRect = outcome?.getBoundingClientRect();
   const copyRect = briefCopy?.getBoundingClientRect();
   const collapseRect = collapse?.getBoundingClientRect();
+  const routeRect = routeComparison?.getBoundingClientRect();
   const damageReportRect = damageReport?.getBoundingClientRect();
   const restartRect = restart?.getBoundingClientRect();
   const actionsRect = actions?.getBoundingClientRect();
@@ -523,6 +526,16 @@ const resultReportExpression = `(() => {
       /高伤害命中/.test(collapse.textContent || '') &&
       /瞄准连射命中|恶魔领主·混沌造成/.test(collapse.textContent || '') &&
       collapseRect && collapseRect.width >= Math.min(280, window.innerWidth - 40) &&
+      routeComparison &&
+      /路线对比/.test(routeComparison.textContent || '') &&
+      /实际路线/.test(routeComparison.textContent || '') &&
+      /最终缺口/.test(routeComparison.textContent || '') &&
+      /安全网.*缺口|安全网.*缺/.test(routeComparison.textContent || '') &&
+      /首领输出|清场|续航硬度/.test(routeComparison.textContent || '') &&
+      routePressures.length >= 4 &&
+      routePressures.some(item => /达标/.test(item.textContent || '')) &&
+      routePressures.some(item => /缺/.test(item.textContent || '')) &&
+      routeRect && routeRect.width >= Math.min(280, window.innerWidth - 40) &&
       /数值缺口/.test(panel.textContent || '') &&
       /最后决策/.test(panel.textContent || '') &&
       damageReport &&
@@ -545,6 +558,8 @@ const resultReportExpression = `(() => {
     heroCards: heroCards.map(card => card.textContent.trim()),
     sections: sections.map(section => section.textContent.trim().slice(0, 32)),
     collapse: collapse?.textContent.trim().slice(0, 96) || '',
+    routeComparison: routeComparison?.textContent.trim().slice(0, 120) || '',
+    routePressures: routePressures.map(item => item.textContent.trim().slice(0, 48)),
     damageReport: damageReport?.textContent.trim().slice(0, 120) || '',
     damageSources: damageSources.map(item => item.textContent.trim().slice(0, 48)),
     positioningHint: positioningHint?.textContent.trim() || '',
@@ -556,6 +571,7 @@ const resultReportExpression = `(() => {
     outcomeRect: outcomeRect ? { bottom: Math.round(outcomeRect.bottom) } : null,
     copyRect: copyRect ? { bottom: Math.round(copyRect.bottom) } : null,
     collapseRect: collapseRect ? { width: Math.round(collapseRect.width), height: Math.round(collapseRect.height) } : null,
+    routeRect: routeRect ? { width: Math.round(routeRect.width), height: Math.round(routeRect.height) } : null,
     damageReportRect: damageReportRect ? { width: Math.round(damageReportRect.width), height: Math.round(damageReportRect.height) } : null,
     restartRect: restartRect ? { width: Math.round(restartRect.width), height: Math.round(restartRect.height), top: Math.round(restartRect.top) } : null,
     actionsRect: actionsRect ? { bottom: Math.round(actionsRect.bottom), height: Math.round(actionsRect.height) } : null,

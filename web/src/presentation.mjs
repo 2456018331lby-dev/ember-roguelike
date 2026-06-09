@@ -10,6 +10,7 @@ export function buildRunPresentation(run, stats, character) {
   const resultPriority = buildResultPriority(run, buildAnalysis);
   const resultCollapse = buildResultCollapseReadout(run, resultPriority);
   const resultTimeline = buildResultTimeline(run, resultPriority);
+  const resultRouteComparison = buildResultRouteComparison(run, buildAnalysis, resultPriority);
   const damageReport = buildResultDamageReport(run);
   return {
     topLine: `第 ${run.wave} / ${run.totalWaves} 波`,
@@ -44,6 +45,7 @@ export function buildRunPresentation(run, stats, character) {
     resultCollapseLabel: resultCollapse.label,
     resultCollapseDetail: resultCollapse.detail,
     resultCollapseTone: resultCollapse.tone,
+    resultRouteComparison,
     resultTimeline,
     resultDamageSources: damageReport.sources,
     resultDamageTotal: damageReport.total,
@@ -455,6 +457,125 @@ function getResultCombatLog(run, summary) {
   return Array.isArray(run.combatLog) ? run.combatLog : [];
 }
 
+function buildResultRouteComparison(run, analysis = {}, resultPriority = {}) {
+  const summary = run.deathSummary || {};
+  const focusItems = normalizeRouteFocusItems(summary, analysis);
+  const rows = buildRoutePressureRows(summary, analysis, resultPriority);
+  if (!focusItems.length && !rows.length) return null;
+
+  const topGap = rows
+    .filter(row => row.gap > 0)
+    .sort((a, b) => b.gap - a.gap || b.current - a.current)[0] || null;
+  const topCovered = rows
+    .filter(row => row.gap <= 0 && row.target > 0)
+    .sort((a, b) => b.margin - a.margin || b.current - a.current)[0] || null;
+  const focusText = focusItems.length ? focusItems.join(' / ') : '均衡';
+  const gapText = topGap
+    ? `${topGap.label} ${topGap.valueText}（缺 ${Math.round(topGap.gap)}）`
+    : '主要压力达标';
+
+  return {
+    focusLabel: '实际路线',
+    focusText,
+    focusItems,
+    gapLabel: '最终缺口',
+    gapText,
+    topGap,
+    topCovered,
+    coveredText: topCovered ? `${topCovered.label}已达标 ${topCovered.valueText}` : '',
+    verdict: buildRouteComparisonVerdict(focusText, topGap, topCovered, run.state),
+    rows,
+  };
+}
+
+function normalizeRouteFocusItems(summary, analysis) {
+  const descriptors = Array.isArray(analysis?.descriptors)
+    ? analysis.descriptors
+    : [];
+  const raw = descriptors.length
+    ? [...descriptors, summary?.focus, analysis?.summary]
+    : [summary?.focus, analysis?.summary, FOCUS_FALLBACK_LABELS[analysis?.primaryFocus]];
+  const seen = new Set();
+  const items = [];
+  for (const value of raw) {
+    for (const part of splitRouteFocusText(value)) {
+      if (!part || seen.has(part)) continue;
+      seen.add(part);
+      items.push(part);
+      if (items.length >= 4) return items;
+    }
+  }
+  return items;
+}
+
+function splitRouteFocusText(value) {
+  return String(value || '')
+    .split(/[\/、,，]+/u)
+    .map(part => part.trim())
+    .filter(part => part && part !== '当前构筑尚未成型' && part !== '构筑倾向');
+}
+
+function buildRoutePressureRows(summary, analysis, resultPriority) {
+  const pressure = summary?.pressure || analysis?.pressure || {};
+  const targets = summary?.pressureTargets || analysis?.pressureTargets || {};
+  const gaps = summary?.pressureGaps || analysis?.pressureGaps || {};
+  const weaknesses = analysis?.weaknesses || {};
+  const priorityKey = priorityKeyFromResult(resultPriority);
+  return PRESSURE_KEYS
+    .map(key => {
+      const current = key === 'sustain'
+        ? (Number(pressure.sustain) || 0) + (Number(pressure.mitigation) || 0)
+        : Number(pressure[key]) || 0;
+      const target = Number(targets[key]) || 0;
+      const computedGap = target > 0 ? Math.max(0, target - current) : 0;
+      const gap = Math.max(Number(gaps[key]) || 0, computedGap, weaknesses[key] ? 1 : 0);
+      const margin = target > 0 ? current - target : 0;
+      const ratio = target > 0
+        ? Math.max(0.04, Math.min(1, current / Math.max(1, target)))
+        : gap > 0 ? 0.08 : 1;
+      return {
+        key,
+        label: PRESSURE_LABELS[key],
+        current: Math.round(current),
+        target: Math.round(target),
+        gap: Math.round(gap),
+        margin: Math.round(margin),
+        ratio: Math.round(ratio * 1000) / 1000,
+        valueText: target ? `${Math.round(current)}/${Math.round(target)}` : `${Math.round(current)}`,
+        status: gap > 0 ? '缺口' : '达标',
+        tone: gap > 0 ? (key === priorityKey ? 'danger' : 'warning') : 'stable',
+        isPriority: key === priorityKey,
+      };
+    })
+    .filter(row => row.target > 0 || row.gap > 0 || row.current > 0);
+}
+
+function buildRouteComparisonVerdict(focusText, topGap, topCovered, state) {
+  if (state === 'victory' && !topGap) {
+    return `实际路线偏向${focusText}，主要压力目标已经撑过终局；下一把可以在保留核心牌序后提高风险换分数。`;
+  }
+  if (!topGap) {
+    return `实际路线偏向${focusText}，主要压力目标基本达标；这次更应该复盘站位、冲刺窗口和 Boss 读招节奏。`;
+  }
+
+  const routePrefix = `实际路线偏向${focusText}`;
+  if (topGap.key === 'safety') {
+    return `${routePrefix}，但安全网没有跟上；下一把 Boss 前至少留一个护符、烟幕、屏障或复活位。`;
+  }
+  if (topGap.key === 'singleTarget') {
+    return `${routePrefix}，但首领输出仍落后目标；下一把优先把核心伤害、暴击或攻速牌升到位。`;
+  }
+  if (topGap.key === 'aoe') {
+    return `${routePrefix}，但清场速度没有跟上；下一把优先补链击、范围、减速或召唤压场。`;
+  }
+  if (topGap.key === 'sustain') {
+    return `${routePrefix}，但续航硬度没有跟上；下一把先补回血、护甲、护盾或减伤。`;
+  }
+  return topCovered
+    ? `${routePrefix}，${topCovered.label}已经达标，但仍有${topGap.label}缺口需要优先补。`
+    : `${routePrefix}，最终最大缺口落在${topGap.label}。`;
+}
+
 function buildResultDamageReport(run) {
   const summary = run.deathSummary || {};
   const rawSources = Array.isArray(summary.damageSources) && summary.damageSources.length
@@ -844,6 +965,20 @@ const PRESSURE_LABELS = {
   aoe: '清场',
   sustain: '续航硬度',
   safety: '安全网',
+};
+
+const PRESSURE_KEYS = ['singleTarget', 'aoe', 'sustain', 'safety'];
+
+const FOCUS_FALLBACK_LABELS = {
+  crit: '暴击',
+  barrage: '速攻',
+  burst: '爆发',
+  sustain: '续航',
+  fortress: '壁垒',
+  curse: '诅咒',
+  bleed: '流血',
+  control: '控场',
+  greed: '赏金',
 };
 
 function priorityKeyFromResult(resultPriority) {

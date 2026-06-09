@@ -849,6 +849,47 @@ function renderDamageSourceReport(sources = [], total = 0, hint = '') {
     </div>`;
 }
 
+function renderRouteComparison(comparison) {
+  if (!comparison || !Array.isArray(comparison.rows) || !comparison.rows.length) return '';
+  const toneClass = row => {
+    const allowed = new Set(['danger', 'warning', 'stable']);
+    return allowed.has(row.tone) ? ` route-${row.tone}` : ' route-stable';
+  };
+  const focusItems = Array.isArray(comparison.focusItems) && comparison.focusItems.length
+    ? comparison.focusItems
+    : [comparison.focusText || '均衡'];
+  return `
+    <div class="route-comparison">
+      <div class="route-comparison-head">
+        <div>
+          <span>路线对比</span>
+          <strong>${escapeHtml(comparison.focusLabel || '实际路线')} · ${escapeHtml(comparison.focusText || '均衡')}</strong>
+        </div>
+        <em>${escapeHtml(comparison.gapLabel || '最终缺口')} · ${escapeHtml(comparison.gapText || '主要压力达标')}</em>
+      </div>
+      <div class="route-chip-row">
+        ${focusItems.map(item => `<span class="route-chip">${escapeHtml(item)}</span>`).join('')}
+        ${comparison.topCovered ? `<span class="route-chip route-chip-stable">${escapeHtml(comparison.topCovered.label)}达标</span>` : ''}
+        ${comparison.topGap ? `<span class="route-chip route-chip-danger">${escapeHtml(comparison.topGap.label)}缺口</span>` : ''}
+      </div>
+      <div class="route-pressure-list">
+        ${comparison.rows.map(row => `
+          <div class="route-pressure${toneClass(row)}">
+            <div class="route-pressure-meta">
+              <span>${escapeHtml(row.label || '压力')}</span>
+              <strong>${escapeHtml(row.valueText || '')}</strong>
+            </div>
+            <div class="route-pressure-bar" style="--route-ratio:${Math.max(0.04, Math.min(1, Number(row.ratio) || 0))}"></div>
+            <div class="route-pressure-foot">
+              <span>${escapeHtml(row.status || '')}</span>
+              <em>${row.gap > 0 ? `缺 ${Math.round(row.gap)}` : (row.margin > 0 ? `余量 ${Math.round(row.margin)}` : '刚好达标')}</em>
+            </div>
+          </div>`).join('')}
+      </div>
+      <div class="route-verdict">${escapeHtml(comparison.verdict || '下一把优先复盘路线和最终短板的关系。')}</div>
+    </div>`;
+}
+
 function showResult(victory) {
   const save = recordRun(run.score, run.wave, run.kills, run.maxCombo, victory, run.characterId);
   const presentation = buildRunPresentation(run, getPlayerStats(run), getCharacter(run.characterId));
@@ -880,6 +921,7 @@ function showResult(victory) {
   const synergies = run.synergies || [];
   const extremes = run.extremes || [];
   const timeline = renderResultTimeline(presentation.resultTimeline);
+  const routeComparison = renderRouteComparison(presentation.resultRouteComparison);
   const damageReport = renderDamageSourceReport(
     presentation.resultDamageSources,
     presentation.resultDamageTotal,
@@ -920,6 +962,7 @@ function showResult(victory) {
       <div class="result-section-title">阵亡复盘</div>
       <div class="final-stat reason wide"><span>失败原因</span><span>${escapeHtml(presentation.deathReason || (victory ? '已完成远征' : '余烬熄灭'))}</span></div>
       ${collapseReview}
+      ${routeComparison}
       ${damageReport}
       ${pressureReview}
       ${decisionReview}

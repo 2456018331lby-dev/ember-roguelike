@@ -8,6 +8,8 @@
 
 清理更新：删除了被误跟踪的旧 `.claude/worktrees/determined-ishizaka-3887eb/` 工作树副本（122 个重复源码/Android/docs 文件），并清理未跟踪的本地输出和缓存：`output/`、`.omx/`、`.playwright-*`、`.gradle-home/`、`.tools/`、Android build/cache/assets 派生产物和 `ember-*-art-check.png`。保留 `node_modules/` 与 `android/local.properties`，因为后续测试和 Android 构建仍会直接使用；回归测试源码和视觉基线也保留，作为后续维护的防回归资产。
 
+追加更新：本轮完成结算页“卡组路线对比”，`presentation.mjs` 输出 `resultRouteComparison`，把实际构筑路线、四类压力达标/缺口、最大最终短板和下一把修正建议结构化；`main.mjs` 新增 `renderRouteComparison()`，结果页在崩盘诱因后展示路线 chips、压力条和路线判读；`styles.css` 补桌面四列与移动端单列布局。`tests/game_core.test.mjs` 新增“死亡复盘应对比构筑路线和最终短板”，锁定已达标输出项不会被失败短板吞掉；`scripts/visual-smoke.mjs` 会断言路线对比、四个压力项、达标项和缺口项存在，视觉回归基线已更新。为避免再次留下垃圾文件，本轮验证后需要清理 `output/` 和同步脚本产生的 Android 派生产物。
+
 本文件给下一个继续维护的人或 AI，用来快速判断三件事：
 
 - 这个项目当前已经稳定到什么程度
@@ -38,6 +40,7 @@
 - `web/src/presentation.mjs`：新增 `resultTimeline`，把结构化 `decisionLog` 和 `combatLog` 合并成复盘时间线，并追加崩盘/胜利终点；没有结构化日志时兼容旧版 `lastDecisions` 字符串。
 - `web/src/presentation.mjs`：新增 `resultCollapseLabel/resultCollapseDetail/resultCollapseTone`，把复盘里最关键的波中崩盘诱因提炼成独立读板；高伤害命中优先级最高，其次是低血线、救场和 Boss 终局弹幕。
 - `web/src/presentation.mjs`：新增 `resultDamageSources/resultDamageTotal/resultPositioningHint`，把核心累计的受击来源转成结算页可消费的条形占比和走位建议。
+- `web/src/presentation.mjs`：新增 `resultRouteComparison`，把 `buildAnalysis/deathSummary` 里的路线标签、四类压力目标、达标项和最终缺口整理成结果页可消费的数据。
 - `web/src/presentation.mjs`：本轮新增 `buildDecisionImpact()` 路线影响推导，会按最终最大缺口给奖励、营火、锻造和商店节点补 `impactLabel / impactDetail / impactTone`，让关键选择说明自己补了什么、漏了什么。
 - `web/src/game_core.mjs`：新增有界 `combatLog`，只记录低血线、救场、复活、Boss 终局弹幕和首领倒下等高信号事件；`deathSummary` 会携带最近事件供结算页复盘。
 - `web/src/game_core.mjs`：本轮新增 `heavy_hit` 战斗事件，敌人近战、普通弹幕和 Boss 弹幕会把来源传进 `takeDamage()`；高伤害命中按波次和来源节流，避免复盘时间线被弹幕刷屏。
@@ -46,9 +49,10 @@
 - `web/src/main.mjs`：`showResult()` 改成战报复盘结构，分区展示关键数值、路线概览、构筑诊断、阵亡复盘、崩盘诱因和下一把优先级；本地 `?debug=1` 新增 `showResult()` 钩子用于稳定生成结算页截图。
 - `web/src/main.mjs`：新增 `renderResultTimeline()`，只消费展示层给出的 timeline 节点；本轮 debug 结果样本加入“被瞄准连射命中”危险节点，用于稳定视觉验证。
 - `web/src/main.mjs`：新增 `renderDamageSourceReport()`，在崩盘诱因之后展示受击来源条形图；debug 结果样本补入 Boss 连射、弓箭手弹幕和冲锋者近身攻击，供视觉 smoke 稳定断言。
+- `web/src/main.mjs`：新增 `renderRouteComparison()`，在受击来源前展示实际路线、最终缺口、达标/缺口压力条和一句下一把修正建议。
 - `web/src/main.mjs`：奖励卡现在渲染 `card-readout`，展示协同/修复/风险机会说明；本轮新增 `renderDecisionPlan()`，奖励页和 Boss 前营火会显示下一波作战计划，锻造/商店复用 overlay 时会清空该读板；不再保留只在奖励卡里使用的 `cardStatsLine()`。
-- `web/styles.css`：结算页改为标题、可滚动复盘内容和底部固定操作区的布局，移动端关键数值两列显示，摘要卡显式防裁切；本轮补齐 `collapse-review` 与 `timeline-danger` 的危险读法，具体命中来源会在崩盘诱因和时间线里同时可见。
-- `scripts/visual-smoke.mjs` / `scripts/visual-regression.mjs`：新增桌面/移动端结算页、受击来源区域、时间线区域和奖励卡读板覆盖，断言摘要标题/说明未被裁切、底部按钮在视口内、崩盘诱因包含具体高伤害命中、受击来源包含 Boss 连射占比和走位建议、时间线包含路线影响、具体高伤害命中来源、崩盘节点和战斗事件、奖励卡有机会标签/风险等级且卡面内容不被内部裁切；本轮新增奖励/营火作战计划断言，并把结果页、受击来源、时间线、奖励卡和作战计划变化纳入视觉回归基线。
+- `web/styles.css`：结算页改为标题、可滚动复盘内容和底部固定操作区的布局，移动端关键数值两列显示，摘要卡显式防裁切；本轮补齐 `route-comparison`、`collapse-review` 与 `timeline-danger` 的危险读法，具体命中来源会在崩盘诱因和时间线里同时可见。
+- `scripts/visual-smoke.mjs` / `scripts/visual-regression.mjs`：新增桌面/移动端结算页、路线对比、受击来源区域、时间线区域和奖励卡读板覆盖，断言摘要标题/说明未被裁切、底部按钮在视口内、崩盘诱因包含具体高伤害命中、路线对比包含实际路线/最终缺口/达标项/缺口项、受击来源包含 Boss 连射占比和走位建议、时间线包含路线影响、具体高伤害命中来源、崩盘节点和战斗事件、奖励卡有机会标签/风险等级且卡面内容不被内部裁切；本轮新增奖励/营火作战计划断言，并把结果页、路线对比、受击来源、时间线、奖励卡和作战计划变化纳入视觉回归基线。
 - `scripts/verify-android-debug.ps1`：`SmokeTapFlow` 的角色选择和局内截图新增最低文件体积阈值，避免安装后短暂的 Capacitor 启动画面或黑屏只因 hash 改变而误判成功。
 - `web/sw.js`：PWA cache 提升到 `ember-v24`；本轮新增的菜单封面图也进入预缓存；`docs/` 镜像需要由 `node scripts/sync-web.mjs` 同步。
 - `web/src/game_core.mjs`：`isAoeRepairCard()`、`isSustainRepairCard()`、`isPressureRepairCard()` 和 `getPriorityPressureRepairKey()` 共同负责中后期奖励短板修复保底；通用奖励保底刻意不覆盖 `safety`。
@@ -59,7 +63,7 @@
 本轮以后最值得继续做的事情：
 
 - 继续用 `npm run test:boss-checkpoints` 观察第 10/15/20/25 波，不要只优化第 5 波。
-- 继续强化 `构筑缺口 -> 奖励推荐 -> 战前准备 -> 波次风险提示 -> 路线影响/命中来源/战斗转折复盘 -> 下一把优先级` 这一条闭环。
+- 继续强化 `构筑缺口 -> 奖励推荐 -> 战前准备 -> 波次风险提示 -> 路线影响/路线对比/命中来源/战斗转折复盘 -> 下一把优先级` 这一条闭环。
 - 继续补区域级视觉回归和实体 Android 真机复测；本轮当前 APK 已通过在线模拟器点击流 smoke，但还没有实体真机证据。
 
 ---
