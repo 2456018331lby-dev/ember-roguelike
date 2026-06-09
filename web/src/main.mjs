@@ -1280,6 +1280,8 @@ function drawBossArenaPressure() {
   ctx.lineTo(1208, 642 - corner);
   ctx.fill();
 
+  drawBossPhaseEdgeBands(readout, phaseColor, pulse);
+
   const radius = 246 + pulse * 10 + pressure * 18;
   ctx.globalAlpha = 0.26 + pressure * 0.26;
   ctx.strokeStyle = hexToRgba(phaseColor, 0.58);
@@ -1305,10 +1307,12 @@ function drawBossArenaPressure() {
     ctx.stroke();
   }
 
+  drawBossPhaseThresholdRing(readout, phaseColor, radius, pulse);
+
   const panelX = 92;
   const panelY = 134;
   const panelW = 258;
-  const panelH = 72;
+  const panelH = 88;
   ctx.globalAlpha = 0.9;
   ctx.fillStyle = 'rgba(15,23,42,0.72)';
   roundRect(panelX, panelY, panelW, panelH, 18);
@@ -1326,9 +1330,12 @@ function drawBossArenaPressure() {
   ctx.fillStyle = '#e5e7eb';
   ctx.font = 'bold 19px sans-serif';
   ctx.fillText(readout.patternLabel, panelX + 16, panelY + 43);
+  ctx.fillStyle = hexToRgba(phaseColor, 0.92);
+  ctx.font = 'bold 11px sans-serif';
+  ctx.fillText(readout.phaseLabel || '阶段 1/1', panelX + 16, panelY + 67);
 
   const barX = panelX + 152;
-  const barY = panelY + 53;
+  const barY = panelY + 66;
   const barW = 88;
   const barH = 8;
   ctx.fillStyle = 'rgba(148,163,184,0.28)';
@@ -1341,6 +1348,92 @@ function drawBossArenaPressure() {
   ctx.font = 'bold 11px sans-serif';
   ctx.textAlign = 'right';
   ctx.fillText(`蓄力 ${Math.round(charge * 100)}%`, panelX + panelW - 16, panelY + 20);
+  ctx.restore();
+}
+
+function drawBossPhaseEdgeBands(readout, phaseColor, pulse) {
+  const pressure = readout.pressure || 0;
+  const charge = readout.charge || 0;
+  const intensity = readout.phaseIntensity || 0;
+  if (pressure < 0.08 && intensity < 0.12) return;
+
+  const left = 72;
+  const top = 78;
+  const right = 1208;
+  const bottom = 642;
+  const width = right - left;
+  const height = bottom - top;
+  const band = 12 + pressure * 20 + intensity * 24;
+  const alpha = 0.06 + pressure * 0.12 + intensity * 0.16 + pulse * 0.03;
+
+  ctx.save();
+  const topBand = ctx.createLinearGradient(left, top, left, top + band);
+  topBand.addColorStop(0, hexToRgba(phaseColor, alpha));
+  topBand.addColorStop(1, hexToRgba(phaseColor, 0));
+  ctx.fillStyle = topBand;
+  ctx.fillRect(left, top, width, band);
+
+  const bottomBand = ctx.createLinearGradient(left, bottom, left, bottom - band);
+  bottomBand.addColorStop(0, hexToRgba(phaseColor, alpha));
+  bottomBand.addColorStop(1, hexToRgba(phaseColor, 0));
+  ctx.fillStyle = bottomBand;
+  ctx.fillRect(left, bottom - band, width, band);
+
+  const leftBand = ctx.createLinearGradient(left, top, left + band, top);
+  leftBand.addColorStop(0, hexToRgba(phaseColor, alpha * 0.86));
+  leftBand.addColorStop(1, hexToRgba(phaseColor, 0));
+  ctx.fillStyle = leftBand;
+  ctx.fillRect(left, top, band, height);
+
+  const rightBand = ctx.createLinearGradient(right, top, right - band, top);
+  rightBand.addColorStop(0, hexToRgba(phaseColor, alpha * 0.86));
+  rightBand.addColorStop(1, hexToRgba(phaseColor, 0));
+  ctx.fillStyle = rightBand;
+  ctx.fillRect(right - band, top, band, height);
+
+  if (intensity >= 0.32) {
+    const marks = 22;
+    const markGap = width / marks;
+    ctx.globalAlpha = 0.16 + intensity * 0.22 + charge * 0.12;
+    ctx.strokeStyle = hexToRgba(phaseColor, 0.72);
+    ctx.lineWidth = 2 + intensity * 2;
+    ctx.lineCap = 'round';
+    for (let i = 0; i <= marks; i++) {
+      const x = left + i * markGap + ((gameTime * 22 + i * 17) % markGap) * 0.18;
+      const lean = 18 + charge * 30 + pulse * 8;
+      ctx.beginPath();
+      ctx.moveTo(x, top + 6);
+      ctx.lineTo(x + lean, top + band * 0.84);
+      ctx.moveTo(x - lean * 0.5, bottom - band * 0.84);
+      ctx.lineTo(x + lean * 0.5, bottom - 6);
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+
+function drawBossPhaseThresholdRing(readout, phaseColor, baseRadius, pulse) {
+  const total = readout.phaseTotal || 0;
+  if (total <= 1) return;
+
+  const activeIndex = readout.phaseIndex || 0;
+  const intensity = readout.phaseIntensity || 0;
+  const radius = baseRadius + 34 + intensity * 18;
+  const gap = 0.08;
+
+  ctx.save();
+  ctx.lineCap = 'round';
+  for (let i = 0; i < total; i++) {
+    const start = -Math.PI / 2 + (i / total) * Math.PI * 2 + gap;
+    const end = -Math.PI / 2 + ((i + 1) / total) * Math.PI * 2 - gap;
+    const active = i <= activeIndex;
+    ctx.globalAlpha = active ? 0.26 + intensity * 0.28 + pulse * 0.08 : 0.11;
+    ctx.strokeStyle = active ? hexToRgba(phaseColor, 0.82) : 'rgba(148,163,184,0.42)';
+    ctx.lineWidth = active ? 5 + intensity * 3 : 3;
+    ctx.beginPath();
+    ctx.arc(640, 360, radius + (active ? pulse * 4 : 0), start, end);
+    ctx.stroke();
+  }
   ctx.restore();
 }
 
@@ -1447,6 +1540,8 @@ function drawEnemies() {
       if (!drewSymbol) drawFallbackEnemy(e, visualSize * 0.42);
     }
 
+    if (e.isBoss) drawBossPhaseCrown(e, getBossThreatReadout(e), visualSize);
+
     if (e.isElite) {
       ctx.save();
       ctx.strokeStyle = 'rgba(250,204,21,.88)';
@@ -1463,6 +1558,56 @@ function drawEnemies() {
 
     drawEnemyHealth(e, visualSize);
   }
+}
+
+function drawBossPhaseCrown(e, readout, visualSize) {
+  const total = readout.phaseTotal || 0;
+  if (!e?.isBoss || total <= 1) return;
+
+  const activeIndex = readout.phaseIndex || 0;
+  const color = getBossPatternColor(readout.pattern, e.color || '#fb923c');
+  const charge = readout.charge || 0;
+  const intensity = readout.phaseIntensity || 0;
+  const pulse = (Math.sin(gameTime * (4.2 + intensity * 3.4)) + 1) * 0.5;
+  const ringRadius = visualSize * (0.58 + intensity * 0.09) + charge * 8;
+
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.globalAlpha = 0.28 + intensity * 0.22 + charge * 0.16;
+  ctx.strokeStyle = hexToRgba(color, 0.68 + charge * 0.2);
+  ctx.lineWidth = 2 + intensity * 2.5 + charge * 1.8;
+  ctx.setLineDash([8, 10]);
+  ctx.beginPath();
+  ctx.arc(e.x, e.y, ringRadius + pulse * 4, -Math.PI * 0.9, Math.PI * 0.1);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  for (let i = 0; i < total; i++) {
+    const offset = (i - (total - 1) / 2) * 0.43;
+    const a = -Math.PI / 2 + offset;
+    const x = e.x + Math.cos(a) * ringRadius;
+    const y = e.y + Math.sin(a) * ringRadius - visualSize * 0.04;
+    const active = i <= activeIndex;
+    const size = active ? 8 + intensity * 4 + pulse * 1.5 : 6;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(Math.PI / 4 + offset * 0.35);
+    ctx.globalAlpha = active ? 0.72 + charge * 0.2 : 0.32;
+    ctx.fillStyle = active ? hexToRgba(color, 0.9) : 'rgba(148,163,184,0.55)';
+    ctx.strokeStyle = active ? 'rgba(254,243,199,0.82)' : 'rgba(203,213,225,0.36)';
+    ctx.lineWidth = active ? 1.5 : 1;
+    ctx.fillRect(-size / 2, -size / 2, size, size);
+    ctx.strokeRect(-size / 2, -size / 2, size, size);
+    ctx.restore();
+  }
+
+  ctx.globalAlpha = 0.72;
+  ctx.fillStyle = '#fde68a';
+  ctx.font = 'bold 10px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(`P${activeIndex + 1}`, e.x, e.y - ringRadius - 14);
+  ctx.restore();
 }
 
 function drawEnemyIntent(e, visualSize) {
@@ -1763,8 +1908,40 @@ function getCurrentBossPhase(e) {
   return phase;
 }
 
+function getBossPhaseInfo(boss, phase, hpRatio) {
+  const phases = boss?.phases || [];
+  if (!phases.length) {
+    return { phaseIndex: 0, phaseTotal: 0, phaseLabel: '', phaseIntensity: 0 };
+  }
+
+  const index = Math.max(0, phases.indexOf(phase));
+  const phaseDepth = phases.length > 1 ? index / Math.max(1, phases.length - 1) : 0;
+  const lateWavePressure = clamp(((run?.wave || 5) - 10) / 15, 0, 1);
+  const phaseIntensity = clamp(phaseDepth * 0.52 + (1 - hpRatio) * 0.32 + lateWavePressure * 0.2, 0, 1);
+
+  return {
+    phaseIndex: index,
+    phaseTotal: phases.length,
+    phaseLabel: `阶段 ${index + 1}/${phases.length}`,
+    phaseIntensity,
+  };
+}
+
 function getBossThreatReadout(boss) {
-  if (!boss) return { phase: null, pattern: '', patternLabel: '', charge: 0, pressure: 0, hpRatio: null };
+  if (!boss) {
+    return {
+      phase: null,
+      pattern: '',
+      patternLabel: '',
+      charge: 0,
+      pressure: 0,
+      hpRatio: null,
+      phaseIndex: 0,
+      phaseTotal: 0,
+      phaseLabel: '',
+      phaseIntensity: 0,
+    };
+  }
   const phase = getCurrentBossPhase(boss);
   const hpRatio = boss.maxHp > 0 ? clamp(boss.hp / boss.maxHp, 0, 1) : 1;
   const cooldown = Math.max(0.4, phase?.attackCooldown || 2.5);
@@ -1773,6 +1950,7 @@ function getBossThreatReadout(boss) {
   const lateWavePressure = clamp(((run?.wave || 5) - 5) / 20, 0, 1);
   const pressure = clamp((1 - hpRatio) * 0.58 + charge * 0.38 + lateWavePressure * 0.18, 0, 1);
   const pattern = phase?.pattern || '';
+  const phaseInfo = getBossPhaseInfo(boss, phase, hpRatio);
   return {
     phase,
     pattern,
@@ -1780,6 +1958,7 @@ function getBossThreatReadout(boss) {
     charge,
     pressure,
     hpRatio,
+    ...phaseInfo,
   };
 }
 
@@ -2493,6 +2672,10 @@ function enableDebugHooks() {
         bossCharge: bossReadout.charge,
         bossPressure: bossReadout.pressure,
         bossHpRatio: boss?.maxHp > 0 ? boss.hp / boss.maxHp : null,
+        bossPhaseIndex: bossReadout.phaseIndex,
+        bossPhaseTotal: bossReadout.phaseTotal,
+        bossPhaseLabel: bossReadout.phaseLabel,
+        bossPhaseIntensity: bossReadout.phaseIntensity,
         ward: run?.player?.tempDeathWard || 0,
         barrier: run?.player?.barrier || 0,
       };

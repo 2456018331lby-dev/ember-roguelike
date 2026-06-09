@@ -482,6 +482,12 @@ const highWaveBossActiveExpression = `(() => new Promise(resolve => {
         snapshot.bossPatternLabel.length > 0 &&
         typeof snapshot.bossCharge === 'number' &&
         snapshot.bossCharge >= 0 &&
+        typeof snapshot.bossPhaseLabel === 'string' &&
+        snapshot.bossPhaseLabel.startsWith('阶段') &&
+        snapshot.bossPhaseTotal >= 3 &&
+        snapshot.bossPhaseIndex >= 1 &&
+        typeof snapshot.bossPhaseIntensity === 'number' &&
+        snapshot.bossPhaseIntensity >= 0.45 &&
         (snapshot.projectileCount >= 2 || snapshot.telegraphCount >= 2) &&
         visibleSamples > 80),
       snapshot,
