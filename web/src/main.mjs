@@ -638,12 +638,21 @@ function showReward() {
     const score = cardFitScoreValue(card);
     const scoreText = score === null ? '--' : score.toFixed(1);
     const isTopChoice = Boolean(readout?.isTop ?? (index === 0 && score !== null));
-    el.className = `card ${card.rarity || 'common'} ${isTopChoice ? 'card-recommended' : ''} risk-${decision.risk} opportunity-${opportunityTone}`;
+    const fitRatio = score === null ? 0.08 : Math.max(0.08, Math.min(1, score / 20));
+    const opportunityTitle = readout?.opportunityTitle || '路线补强';
+    const riskTicks = [0, 1, 2]
+      .map(tick => `<span class="${tick < decision.risk ? 'is-on' : ''}"></span>`)
+      .join('');
+    el.className = `card reward-choice-card ${card.rarity || 'common'} ${isTopChoice ? 'card-recommended' : ''} risk-${decision.risk} opportunity-${opportunityTone}`;
+    el.style.setProperty('--card-index', String(index));
+    el.style.setProperty('--fit-ratio', fitRatio.toFixed(3));
     el.dataset.fitScore = scoreText;
     el.dataset.decision = decision.label;
     el.dataset.riskLevel = String(decision.risk);
-    el.dataset.opportunity = readout?.opportunityTitle || '';
+    el.dataset.opportunity = opportunityTitle;
     el.innerHTML = `
+      <span class="card-aura" aria-hidden="true"></span>
+      <span class="card-glint" aria-hidden="true"></span>
       <div class="card-shell">
         <div class="card-decision-row">
           <span class="card-decision tone-${decision.tone}">${escapeHtml(decision.label)}</span>
@@ -653,11 +662,19 @@ function showReward() {
           <div class="type">${typeIcon(card.type)} ${escapeHtml(typeName(card.type))}</div>
           <div class="card-score ${isTopChoice ? 'is-top' : ''}">契合 ${scoreText}</div>
         </div>
+        <div class="card-signal-row">
+          <div class="card-fit-meter"><span></span></div>
+          <div class="card-risk-meter" data-risk="${decision.risk}">${riskTicks}</div>
+        </div>
         <h3>${escapeHtml(card.name)}</h3>
         <div class="desc">${escapeHtml(card.desc || '')}</div>
         <div class="card-tags">${buildCardTags(card)}</div>
+        <div class="card-catalyst tone-${opportunityTone}">
+          <span>机会</span>
+          <strong>${escapeHtml(opportunityTitle)}</strong>
+        </div>
         <div class="card-readout fit-line tone-${opportunityTone}">
-          <div class="card-readout-title">${escapeHtml(readout?.opportunityTitle || '路线补强')}</div>
+          <div class="card-readout-title">${escapeHtml(opportunityTitle)}</div>
           <div class="card-readout-detail">${escapeHtml(readout?.opportunityDetail || card.fitHint || '提供通用数值。')}</div>
           <div class="card-readout-hint">建议：${escapeHtml(card.fitHint || '提供通用数值')}</div>
         </div>

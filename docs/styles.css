@@ -2021,17 +2021,27 @@ body::after {
   border-radius: 8px;
   border-color: rgba(232, 184, 93, .18);
   color: var(--ember-text);
+  isolation: isolate;
+  --card-accent: 232, 184, 93;
+  --card-risk: 255, 125, 105;
   background:
     linear-gradient(180deg, rgba(31, 34, 38, .94), rgba(11, 12, 16, .98)),
     linear-gradient(90deg, rgba(242, 108, 36, .08), transparent 46%, rgba(78, 196, 233, .05));
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, .08),
     0 14px 42px rgba(0, 0, 0, .34);
+  animation: rewardCardDeal .42s cubic-bezier(.2, .8, .2, 1) both;
+  animation-delay: calc(var(--card-index, 0) * 58ms);
+}
+
+.reward-choice-card {
+  min-height: 442px;
 }
 
 .card::before {
   border-left-width: 3px;
   border-left-color: rgba(232, 184, 93, .36);
+  z-index: 2;
 }
 
 .card:hover {
@@ -2041,6 +2051,43 @@ body::after {
   box-shadow:
     0 20px 52px rgba(0, 0, 0, .46),
     0 0 28px rgba(232, 184, 93, .12);
+}
+
+.card-aura,
+.card-glint {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+.card-aura {
+  z-index: 0;
+  opacity: .72;
+  background:
+    linear-gradient(110deg, rgba(var(--card-accent), .18), transparent 33%),
+    linear-gradient(290deg, rgba(78, 196, 233, .08), transparent 44%),
+    repeating-linear-gradient(135deg, rgba(255, 255, 255, .035) 0 1px, transparent 1px 18px);
+  mask-image: linear-gradient(180deg, #000, rgba(0, 0, 0, .72));
+}
+
+.card-glint {
+  z-index: 1;
+  opacity: 0;
+  background: linear-gradient(105deg, transparent 0 38%, rgba(255, 248, 232, .22) 48%, transparent 58% 100%);
+  transform: translateX(-70%);
+  transition: opacity .18s ease, transform .42s ease;
+}
+
+.card:hover .card-glint,
+.card.card-recommended .card-glint {
+  opacity: .46;
+  transform: translateX(38%);
+}
+
+.card.card-recommended .card-glint {
+  animation: rewardGlintSweep 2.8s ease-in-out infinite;
+  animation-delay: calc(.35s + var(--card-index, 0) * 80ms);
 }
 
 .card.card-recommended {
@@ -2053,11 +2100,58 @@ body::after {
 
 .card-shell,
 .card-foot {
+  position: relative;
+  z-index: 3;
   padding: 15px;
 }
 
 .card-shell {
   padding-bottom: 8px;
+}
+
+.card-signal-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  margin-top: 9px;
+}
+
+.card-fit-meter {
+  position: relative;
+  height: 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .07);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .04);
+}
+
+.card-fit-meter span {
+  display: block;
+  width: calc(var(--fit-ratio, .08) * 100%);
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(var(--card-accent), .95), #fff0bd);
+  box-shadow: 0 0 18px rgba(var(--card-accent), .24);
+}
+
+.card-risk-meter {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.card-risk-meter span {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .12);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08);
+}
+
+.card-risk-meter span.is-on {
+  background: rgba(var(--card-risk), .92);
+  box-shadow: 0 0 12px rgba(var(--card-risk), .3);
 }
 
 .card-decision,
@@ -2144,6 +2238,7 @@ body::after {
 }
 
 .card.opportunity-synergy {
+  --card-accent: 78, 196, 233;
   border-color: rgba(78, 196, 233, .5);
   box-shadow:
     inset 0 0 0 1px rgba(78, 196, 233, .14),
@@ -2151,29 +2246,35 @@ body::after {
 }
 
 .card.opportunity-repair {
+  --card-accent: 111, 214, 133;
   border-color: rgba(111, 214, 133, .36);
 }
 
 .card.opportunity-safety {
+  --card-accent: 73, 211, 184;
   border-color: rgba(73, 211, 184, .4);
 }
 
 .card.opportunity-risk {
+  --card-accent: 255, 125, 105;
   border-color: rgba(255, 125, 105, .56);
 }
 
 .card.opportunity-growth,
 .card.opportunity-rare {
+  --card-accent: 183, 144, 255;
   border-color: rgba(183, 144, 255, .38);
 }
 
 .card.legendary {
+  --card-accent: 245, 213, 140;
   background:
     linear-gradient(180deg, rgba(48, 42, 25, .96), rgba(11, 12, 16, .98)),
     linear-gradient(90deg, rgba(245, 213, 140, .12), transparent 50%, rgba(78, 196, 233, .06));
 }
 
 .card.epic {
+  --card-accent: 183, 144, 255;
   background:
     linear-gradient(180deg, rgba(35, 31, 46, .96), rgba(11, 12, 16, .98)),
     linear-gradient(90deg, rgba(183, 144, 255, .12), transparent 48%, rgba(78, 196, 233, .06));
@@ -2219,6 +2320,32 @@ body::after {
   border-color: rgba(108, 169, 244, .24);
 }
 
+.card-catalyst {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(var(--card-accent), .2);
+  background: rgba(5, 7, 11, .34);
+}
+
+.card-catalyst span {
+  color: var(--ember-muted);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.card-catalyst strong {
+  min-width: 0;
+  color: #fff8e8;
+  font-size: 12px;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
 .card-readout {
   display: grid;
   gap: 4px;
@@ -2248,6 +2375,43 @@ body::after {
   font-size: 11px;
   line-height: 1.4;
   overflow-wrap: anywhere;
+}
+
+@keyframes rewardCardDeal {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes rewardGlintSweep {
+  0%, 46% {
+    opacity: 0;
+    transform: translateX(-80%);
+  }
+  58% {
+    opacity: .5;
+  }
+  76%, 100% {
+    opacity: 0;
+    transform: translateX(48%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reward-panel .card,
+  .reward-panel .card.risk-3,
+  .reward-panel .card.card-recommended .card-glint {
+    animation: none;
+  }
+
+  .reward-panel .card-glint {
+    transition: none;
+  }
 }
 
 .forge-card {
@@ -3271,12 +3435,98 @@ body::after {
     font-size: 15px;
   }
 
+  .reward-panel {
+    padding: 16px 18px 14px;
+  }
+
+  .reward-header {
+    align-items: center;
+    padding-bottom: 8px;
+  }
+
+  .reward-header h2 {
+    font-size: 26px;
+  }
+
+  .reward-header p {
+    margin: 0;
+    font-size: 13px;
+  }
+
+  .reward-toolbar {
+    margin: 8px 0;
+    padding: 9px 12px;
+  }
+
+  .reward-guidance {
+    margin-bottom: 8px;
+  }
+
+  .reward-guidance-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(300px, .82fr);
+    gap: 8px 14px;
+    padding: 10px 12px;
+  }
+
+  .reward-guidance-label {
+    margin-bottom: 0;
+  }
+
+  .reward-guidance-value,
+  .reward-guidance-subvalue,
+  .decision-plan-detail {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+  }
+
+  .reward-guidance-value {
+    -webkit-line-clamp: 2;
+  }
+
+  .reward-guidance-subvalue,
+  .decision-plan-detail {
+    -webkit-line-clamp: 2;
+  }
+
+  .decision-plan {
+    grid-column: 2;
+    grid-row: 1 / span 3;
+    margin-top: 0;
+    padding: 0 0 0 12px;
+    border-top: 0;
+    border-left: 1px solid rgba(232, 184, 93, .16);
+  }
+
+  .decision-plan-head {
+    grid-template-columns: minmax(0, .72fr) minmax(0, 1.28fr);
+  }
+
+  .decision-plan-detail {
+    margin-top: 5px;
+    line-height: 1.45;
+  }
+
+  .decision-plan-chips {
+    margin-top: 7px;
+  }
+
+  .decision-plan-chips span {
+    padding: 4px 7px;
+    font-size: 10px;
+  }
+
   .hero-map-window {
     min-height: 172px;
   }
 
   .card {
     min-height: 382px;
+  }
+
+  .reward-choice-card {
+    min-height: 442px;
   }
 
   .card-shell,
@@ -3539,6 +3789,10 @@ body::after {
 
   .card {
     min-height: 390px;
+  }
+
+  .reward-choice-card {
+    min-height: 452px;
   }
 
   .reward-panel .card-shell,

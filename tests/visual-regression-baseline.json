@@ -38,14 +38,14 @@
       "mode": "metric",
       "width": 1343,
       "height": 670,
-      "fileBytes": 734561,
-      "pixelHash": "6001c47ece8cb984345c7bd8cbe2493e7607641a349f177c7466a92000b5e0db",
+      "fileBytes": 734130,
+      "pixelHash": "2f228a3ec19b67af46b2a140af13f50bd517abcf971da2b2db66ab42c5693ccb",
       "metrics": {
         "r": 23.89,
-        "g": 24.02,
-        "b": 27.79,
-        "luma": 24.27,
-        "darkRatio": 0.9318,
+        "g": 24.01,
+        "b": 27.8,
+        "luma": 24.26,
+        "darkRatio": 0.9319,
         "lightRatio": 0.011,
         "saturatedRatio": 0.018
       }
@@ -54,88 +54,88 @@
       "mode": "metric",
       "width": 1343,
       "height": 670,
-      "fileBytes": 351109,
-      "pixelHash": "2339f5646ffc266a8b321081575c96426da1f4d348213cee7aed6e7545313e52",
+      "fileBytes": 564078,
+      "pixelHash": "2cbfd0ce44b88a7691195ac0a4a62c9612ab7756964516f6859f4d1aaf68d1d7",
       "metrics": {
-        "r": 25.07,
-        "g": 25.69,
-        "b": 28.97,
-        "luma": 25.79,
-        "darkRatio": 0.9283,
-        "lightRatio": 0.0139,
-        "saturatedRatio": 0.0099
+        "r": 26.88,
+        "g": 27.23,
+        "b": 30.46,
+        "luma": 27.39,
+        "darkRatio": 0.9051,
+        "lightRatio": 0.0125,
+        "saturatedRatio": 0.0092
       }
     },
     "rest-desktop.png": {
       "mode": "metric",
       "width": 1343,
       "height": 670,
-      "fileBytes": 420802,
-      "pixelHash": "11f807ef26c834e25e8d646b71eb0a4a62fc2956bb9d3cb7da17a472b4e99b5c",
+      "fileBytes": 402969,
+      "pixelHash": "9ff72081a55037881dc7ee9bfc6b5a440b76bdf2672027e7e9cde2f826f3636c",
       "metrics": {
-        "r": 20.64,
-        "g": 22.63,
-        "b": 25.96,
-        "luma": 22.45,
-        "darkRatio": 0.9436,
-        "lightRatio": 0.0117,
-        "saturatedRatio": 0.005
+        "r": 19.88,
+        "g": 22.02,
+        "b": 25.52,
+        "luma": 21.82,
+        "darkRatio": 0.9395,
+        "lightRatio": 0.0082,
+        "saturatedRatio": 0.0047
       }
     },
     "boss-wave-desktop.png": {
       "mode": "metric",
       "width": 1343,
       "height": 670,
-      "fileBytes": 804305,
-      "pixelHash": "011faf763400b647983f4f1030a23e93caa837abe7b77f75ade90cff89b5328e",
+      "fileBytes": 803064,
+      "pixelHash": "ff19cf8f0fcec7cf6f3f1c6a3a3839fe9d1b02331198ca3d276c8c8b45b6e54b",
       "metrics": {
-        "r": 27.87,
-        "g": 25.57,
-        "b": 29.03,
-        "luma": 26.31,
-        "darkRatio": 0.9229,
-        "lightRatio": 0.0123,
-        "saturatedRatio": 0.0187
+        "r": 28.21,
+        "g": 25.8,
+        "b": 29.15,
+        "luma": 26.55,
+        "darkRatio": 0.9225,
+        "lightRatio": 0.016,
+        "saturatedRatio": 0.0186
       }
     },
     "boss-fight-desktop.png": {
       "mode": "metric",
       "width": 1343,
       "height": 670,
-      "fileBytes": 814347,
-      "pixelHash": "cd39e816394fd6543691f3c0d080e65c3d7477d5f29bee9fca00f99a63d3d07c",
+      "fileBytes": 817041,
+      "pixelHash": "458fb0b9b82f985380babbd58204783c7fe84f5495e01311550eb104dfa24d84",
       "metrics": {
-        "r": 30.46,
-        "g": 26.82,
-        "b": 30.05,
-        "luma": 27.82,
-        "darkRatio": 0.9036,
-        "lightRatio": 0.0127,
-        "saturatedRatio": 0.0247
+        "r": 29.83,
+        "g": 25.92,
+        "b": 29.2,
+        "luma": 26.99,
+        "darkRatio": 0.9095,
+        "lightRatio": 0.0128,
+        "saturatedRatio": 0.0307
       }
     },
     "boss-fight-highwave-desktop.png": {
       "mode": "metric",
       "width": 1343,
       "height": 670,
-      "fileBytes": 845652,
-      "pixelHash": "8e33bb7436a0ad16249166942cc08721aa139c0c5a294c0be2650d56ec21bff6",
+      "fileBytes": 846984,
+      "pixelHash": "ef9dda0be4006d4ee66ade104c351029fb5c4876b43b9f507aa4a861213e0064",
       "metrics": {
-        "r": 32.87,
-        "g": 27.54,
-        "b": 29.53,
-        "luma": 28.82,
-        "darkRatio": 0.8807,
+        "r": 32.73,
+        "g": 27.47,
+        "b": 29.54,
+        "luma": 28.73,
+        "darkRatio": 0.8817,
         "lightRatio": 0.0136,
-        "saturatedRatio": 0.0383
+        "saturatedRatio": 0.0378
       }
     },
     "result-desktop.png": {
       "mode": "metric",
       "width": 1343,
       "height": 670,
-      "fileBytes": 337002,
-      "pixelHash": "efec61d3db9c1840288b475bbc00d0d264f4af2ac415fa760e176e9f3a732b96",
+      "fileBytes": 337005,
+      "pixelHash": "c28ae0f4c694d92d2f0d7cb82c2dc9b59b1449db3f50850ed9e39fbab601d21f",
       "metrics": {
         "r": 20.02,
         "g": 21.39,
@@ -214,56 +214,56 @@
       "mode": "metric",
       "width": 780,
       "height": 1688,
-      "fileBytes": 883736,
-      "pixelHash": "bb8b19e2a3d43b94682f541415caa4cf376c561a821d47a650e8b93625ac6dbb",
+      "fileBytes": 886607,
+      "pixelHash": "81ec2956ba87a9a4793eaedeeea51232ab6697bd64dc9a08e1ccea44c309e615",
       "metrics": {
-        "r": 16.33,
-        "g": 16.76,
-        "b": 19.59,
-        "luma": 16.87,
-        "darkRatio": 0.9575,
+        "r": 16.37,
+        "g": 16.81,
+        "b": 19.61,
+        "luma": 16.92,
+        "darkRatio": 0.9568,
         "lightRatio": 0.0123,
-        "saturatedRatio": 0.0139
+        "saturatedRatio": 0.0141
       }
     },
     "reward-mobile.png": {
       "mode": "metric",
       "width": 780,
       "height": 1688,
-      "fileBytes": 611910,
-      "pixelHash": "c19b366927ddfd7fa2e1132e84504aaea921b4d8cef3c547d5f0af134b132df2",
+      "fileBytes": 713639,
+      "pixelHash": "6ba1e8e8ab5d29a2a18ad692a411ebcad6a2eb502a2d3cc01b7cf313edac2ef9",
       "metrics": {
-        "r": 33.9,
-        "g": 34.33,
+        "r": 32.75,
+        "g": 34.01,
         "b": 34.77,
-        "luma": 34.27,
-        "darkRatio": 0.8819,
-        "lightRatio": 0.0315,
-        "saturatedRatio": 0.0222
+        "luma": 33.8,
+        "darkRatio": 0.8695,
+        "lightRatio": 0.0286,
+        "saturatedRatio": 0.022
       }
     },
     "rest-mobile.png": {
       "mode": "metric",
       "width": 780,
       "height": 1688,
-      "fileBytes": 619443,
-      "pixelHash": "23415cb7dd35fd8482663bb71a9b6900dc9ea524954ba75108d4e3d44b255c2c",
+      "fileBytes": 530949,
+      "pixelHash": "b0f5ee4a75b532e89854491246147a005a5a219e6ea81c0c31743e94afffd032",
       "metrics": {
-        "r": 24.3,
-        "g": 26.16,
-        "b": 29.62,
-        "luma": 26.01,
+        "r": 23.59,
+        "g": 25.46,
+        "b": 28.95,
+        "luma": 25.32,
         "darkRatio": 0.925,
-        "lightRatio": 0.0158,
-        "saturatedRatio": 0.0055
+        "lightRatio": 0.0144,
+        "saturatedRatio": 0.0051
       }
     },
     "boss-fight-mobile.png": {
       "mode": "metric",
       "width": 780,
       "height": 1688,
-      "fileBytes": 927172,
-      "pixelHash": "4548da018bfb9d17c313b97cf85eb8a911dae9400683ddbe276c4fbb95ab6015",
+      "fileBytes": 927191,
+      "pixelHash": "8b615eac0f087ad305ae28c6235a14e42e3cf7f317e471183408c6b2433085b7",
       "metrics": {
         "r": 18.02,
         "g": 17.2,

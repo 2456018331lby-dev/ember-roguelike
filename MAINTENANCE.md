@@ -10,6 +10,8 @@
 
 追加更新：本轮完成结算页“卡组路线对比”，`presentation.mjs` 输出 `resultRouteComparison`，把实际构筑路线、四类压力达标/缺口、最大最终短板和下一把修正建议结构化；`main.mjs` 新增 `renderRouteComparison()`，结果页在崩盘诱因后展示路线 chips、压力条和路线判读；`styles.css` 补桌面四列与移动端单列布局。`tests/game_core.test.mjs` 新增“死亡复盘应对比构筑路线和最终短板”，锁定已达标输出项不会被失败短板吞掉；`scripts/visual-smoke.mjs` 会断言路线对比、四个压力项、达标项和缺口项存在，视觉回归基线已更新。为避免再次留下垃圾文件，本轮验证后需要清理 `output/` 和同步脚本产生的 Android 派生产物。
 
+追加更新：本轮继续补奖励页成品感，奖励拿牌卡新增 `reward-choice-card`、`card-aura`、`card-glint`、契合度条、三段风险刻度和机会锚点；不同机会类型会用协同/修复/安全/高风险/稀有 accent 区分，推荐卡有入场与扫光动效，并提供 `prefers-reduced-motion` 兜底。低高度桌面视口下，奖励页把“本波提醒”和“作战计划”改成左右紧凑布局，让第一排卡面在首屏露出更多主体。`scripts/visual-smoke.mjs` 已断言这些视觉信号存在且卡片不内部裁切，视觉回归基线已更新。
+
 本文件给下一个继续维护的人或 AI，用来快速判断三件事：
 
 - 这个项目当前已经稳定到什么程度
@@ -50,9 +52,10 @@
 - `web/src/main.mjs`：新增 `renderResultTimeline()`，只消费展示层给出的 timeline 节点；本轮 debug 结果样本加入“被瞄准连射命中”危险节点，用于稳定视觉验证。
 - `web/src/main.mjs`：新增 `renderDamageSourceReport()`，在崩盘诱因之后展示受击来源条形图；debug 结果样本补入 Boss 连射、弓箭手弹幕和冲锋者近身攻击，供视觉 smoke 稳定断言。
 - `web/src/main.mjs`：新增 `renderRouteComparison()`，在受击来源前展示实际路线、最终缺口、达标/缺口压力条和一句下一把修正建议。
+- `web/src/main.mjs`：奖励卡新增 `reward-choice-card` 结构、契合度 CSS 变量、三段风险刻度、卡面光泽节点和机会锚点；仍只消费 `presentation.mjs` 的奖励读板，不在 UI 重算推荐逻辑。
 - `web/src/main.mjs`：奖励卡现在渲染 `card-readout`，展示协同/修复/风险机会说明；本轮新增 `renderDecisionPlan()`，奖励页和 Boss 前营火会显示下一波作战计划，锻造/商店复用 overlay 时会清空该读板；不再保留只在奖励卡里使用的 `cardStatsLine()`。
-- `web/styles.css`：结算页改为标题、可滚动复盘内容和底部固定操作区的布局，移动端关键数值两列显示，摘要卡显式防裁切；本轮补齐 `route-comparison`、`collapse-review` 与 `timeline-danger` 的危险读法，具体命中来源会在崩盘诱因和时间线里同时可见。
-- `scripts/visual-smoke.mjs` / `scripts/visual-regression.mjs`：新增桌面/移动端结算页、路线对比、受击来源区域、时间线区域和奖励卡读板覆盖，断言摘要标题/说明未被裁切、底部按钮在视口内、崩盘诱因包含具体高伤害命中、路线对比包含实际路线/最终缺口/达标项/缺口项、受击来源包含 Boss 连射占比和走位建议、时间线包含路线影响、具体高伤害命中来源、崩盘节点和战斗事件、奖励卡有机会标签/风险等级且卡面内容不被内部裁切；本轮新增奖励/营火作战计划断言，并把结果页、路线对比、受击来源、时间线、奖励卡和作战计划变化纳入视觉回归基线。
+- `web/styles.css`：结算页改为标题、可滚动复盘内容和底部固定操作区的布局，移动端关键数值两列显示，摘要卡显式防裁切；本轮补齐 `route-comparison`、`collapse-review` 与 `timeline-danger` 的危险读法，具体命中来源会在崩盘诱因和时间线里同时可见；奖励卡新增卡面光泽、契合度条、风险刻度、机会锚点和低高度桌面紧凑奖励头部。
+- `scripts/visual-smoke.mjs` / `scripts/visual-regression.mjs`：新增桌面/移动端结算页、路线对比、受击来源区域、时间线区域和奖励卡读板覆盖，断言摘要标题/说明未被裁切、底部按钮在视口内、崩盘诱因包含具体高伤害命中、路线对比包含实际路线/最终缺口/达标项/缺口项、受击来源包含 Boss 连射占比和走位建议、时间线包含路线影响、具体高伤害命中来源、崩盘节点和战斗事件、奖励卡有机会标签/风险等级/契合度条/风险刻度/机会锚点且卡面内容不被内部裁切；本轮新增奖励/营火作战计划断言，并把结果页、路线对比、受击来源、时间线、奖励卡和作战计划变化纳入视觉回归基线。
 - `scripts/verify-android-debug.ps1`：`SmokeTapFlow` 的角色选择和局内截图新增最低文件体积阈值，避免安装后短暂的 Capacitor 启动画面或黑屏只因 hash 改变而误判成功。
 - `web/sw.js`：PWA cache 提升到 `ember-v24`；本轮新增的菜单封面图也进入预缓存；`docs/` 镜像需要由 `node scripts/sync-web.mjs` 同步。
 - `web/src/game_core.mjs`：`isAoeRepairCard()`、`isSustainRepairCard()`、`isPressureRepairCard()` 和 `getPriorityPressureRepairKey()` 共同负责中后期奖励短板修复保底；通用奖励保底刻意不覆盖 `safety`。

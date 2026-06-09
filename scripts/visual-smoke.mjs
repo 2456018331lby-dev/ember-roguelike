@@ -300,6 +300,16 @@ const rewardCheckExpression = `(() => {
   const noHorizontalOverflow = document.documentElement.scrollWidth <= window.innerWidth + 2;
   const noCardClipping = cards.every(card => card.scrollHeight <= card.clientHeight + 2);
   const cardHeights = cards.map(card => ({ scroll: card.scrollHeight, client: card.clientHeight }));
+  const visualSignals = cards.every(card => {
+    const fitRatio = Number(getComputedStyle(card).getPropertyValue('--fit-ratio'));
+    return card.querySelector('.card-aura') &&
+      card.querySelector('.card-glint') &&
+      card.querySelector('.card-signal-row') &&
+      card.querySelector('.card-fit-meter span') &&
+      card.querySelectorAll('.card-risk-meter span').length === 3 &&
+      card.querySelector('.card-catalyst strong')?.textContent.trim().length >= 3 &&
+      Number.isFinite(fitRatio) && fitRatio > 0 && fitRatio <= 1;
+  });
   const completeCards = cards.every(card =>
     card.querySelector('.card-shell') &&
     card.querySelector('.card-foot') &&
@@ -322,13 +332,14 @@ const rewardCheckExpression = `(() => {
       /作战计划/.test(planText) &&
       /安全网|首领输出|清场|续航硬度|压力目标/.test(planText) &&
       planChips.length >= 2 && noPlanOverflow &&
-      sorted && completeCards && noCardClipping && noHorizontalOverflow &&
+      sorted && visualSignals && completeCards && noCardClipping && noHorizontalOverflow &&
       firstRect && firstRect.width >= 240 && firstRect.height >= 220 &&
       panelRect && panelRect.width <= window.innerWidth + 2),
     decisions,
     opportunities,
     riskLevels,
     noCardClipping,
+    visualSignals,
     planText,
     planChips,
     noPlanOverflow,
