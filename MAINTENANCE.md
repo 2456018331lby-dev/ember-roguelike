@@ -1,6 +1,6 @@
 # 余烬 Ember - 维护与接手文档
 
-最后更新：2026-06-09（本轮回应“前端还是太烂，可以尝试自己生成图片”的方向，新增本地可复现的主菜单封面资产管线：`scripts/generate-art-assets.mjs` 现在生成 `web/assets/ember-menu-tableau.png`，画面包含角色队伍、Boss 剪影、卡牌碎片、法阵火光和左侧标题留白；`web/styles.css` 把主菜单改为全屏游戏封面式入口，桌面端去掉居中大卡片限制，右侧存档/路线信息改成 HUD 侧栏，移动端保持按钮首屏可见并用同一封面作背景；`web/sw.js` 当前提升到 `ember-v26` 并预缓存新 PNG；`scripts/web-smoke.mjs` 会校验菜单封面图尺寸，`scripts/visual-smoke.mjs` 会断言菜单加载了本地生成图且 hero 面板全幅铺满，视觉回归基线已更新。已用 `npm run assets:generate` 生成新资源，`npm run test:web-smoke`、`npm run test:visual-smoke`、`npm run test:visual-regression -- --update`、`npm run test:visual-regression` 和 Playwright MCP 打开 `http://127.0.0.1:5173/` 截图人工检查通过；角色选择、奖励页和局内截图未发现本轮样式破坏。本轮继续完成高波 Boss 阶段特效首轮强化，并新增角色选择战术档案首轮强化，后续仍要继续把稀有卡动效和敌人多帧动作推到成品级。前序记录中的作战计划读板、路线影响、命中来源、崩盘诱因、下一把优先级、中后期奖励短板修复、Boss 前容错、脆皮 `fragilityDebt`、烟幕残影保命、Boss 读招面板、逐资源 service worker 预缓存和视觉回归仍继续成立。）
+最后更新：2026-06-09（本轮回应“前端还是太烂，可以尝试自己生成图片”的方向，新增本地可复现的主菜单封面资产管线：`scripts/generate-art-assets.mjs` 现在生成 `web/assets/ember-menu-tableau.png`，画面包含角色队伍、Boss 剪影、卡牌碎片、法阵火光和左侧标题留白；`web/styles.css` 把主菜单改为全屏游戏封面式入口，桌面端去掉居中大卡片限制，右侧存档/路线信息改成 HUD 侧栏，移动端保持按钮首屏可见并用同一封面作背景；`web/sw.js` 当前提升到 `ember-v27` 并预缓存新 PNG；`scripts/web-smoke.mjs` 会校验菜单封面图尺寸，`scripts/visual-smoke.mjs` 会断言菜单加载了本地生成图且 hero 面板全幅铺满，视觉回归基线已更新。已用 `npm run assets:generate` 生成新资源，`npm run test:web-smoke`、`npm run test:visual-smoke`、`npm run test:visual-regression -- --update`、`npm run test:visual-regression` 和 Playwright MCP 打开 `http://127.0.0.1:5173/` 截图人工检查通过；角色选择、奖励页和局内截图未发现本轮样式破坏。本轮继续完成高波 Boss 阶段特效首轮强化、角色选择战术档案首轮强化，并把奖励页高稀有度卡面反馈推进到首轮成品化；后续仍要继续把敌人多帧动作、协同触发和更强卡牌诱惑感推到成品级。前序记录中的作战计划读板、路线影响、命中来源、崩盘诱因、下一把优先级、中后期奖励短板修复、Boss 前容错、脆皮 `fragilityDebt`、烟幕残影保命、Boss 读招面板、逐资源 service worker 预缓存和视觉回归仍继续成立。）
 
 本轮 Android 验证补充：`npm run build:android:debug` 通过，当前 APK SHA256 为 `F027BEF9B71BA6CF6A5EE2940B801EA037EC068B83B3442573DCB7A7F2DBDF59`；随后用临时 PATH `C:\Users\24560\Desktop\study\Englishdemo\.android-sdk\platform-tools` 解析到 `adb.exe`，在在线模拟器 `emulator-5554` 上跑通 `npm run verify:android:smoke`，完成安装、冷启动、焦点窗口、点击进入角色选择、点击进入局内战斗、三张截图和 logcat fatal-error scan。实体真机复测仍未完成。
 
@@ -12,9 +12,11 @@
 
 追加更新：本轮继续补奖励页成品感，奖励拿牌卡新增 `reward-choice-card`、`card-aura`、`card-glint`、契合度条、三段风险刻度和机会锚点；不同机会类型会用协同/修复/安全/高风险/稀有 accent 区分，推荐卡有入场与扫光动效，并提供 `prefers-reduced-motion` 兜底。低高度桌面视口下，奖励页把“本波提醒”和“作战计划”改成左右紧凑布局，让第一排卡面在首屏露出更多主体。`scripts/visual-smoke.mjs` 已断言这些视觉信号存在且卡片不内部裁切，视觉回归基线已更新。
 
-追加更新：本轮完成高波 Boss 阶段特效首轮强化。`web/src/main.mjs` 在 Boss 战 canvas 中新增边界压力带、阶段阈值环和 Boss 头顶阶段冠环，读招面板会同时显示当前 `阶段 x/y`；`getBossThreatReadout()` 统一输出 `phaseIndex / phaseTotal / phaseLabel / phaseIntensity`，debug snapshot 也暴露这些字段。`scripts/visual-smoke.mjs` 的固定第 20 波高压样本现在会断言阶段标签、阶段序号和阶段强度；该轮 `web/sw.js` 提升到 `ember-v25`，当前缓存版本已在角色选择档案轮次提升到 `ember-v26`。已完成 `npm test`、`npm run test:web-smoke`、`npm run test:boss-checkpoints`、`npm run test:visual-smoke`、`npm run test:visual-regression`，并人工检查 `output/visual-smoke/boss-fight-highwave-desktop.png`。
+追加更新：本轮完成高波 Boss 阶段特效首轮强化。`web/src/main.mjs` 在 Boss 战 canvas 中新增边界压力带、阶段阈值环和 Boss 头顶阶段冠环，读招面板会同时显示当前 `阶段 x/y`；`getBossThreatReadout()` 统一输出 `phaseIndex / phaseTotal / phaseLabel / phaseIntensity`，debug snapshot 也暴露这些字段。`scripts/visual-smoke.mjs` 的固定第 20 波高压样本现在会断言阶段标签、阶段序号和阶段强度；该轮 `web/sw.js` 提升到 `ember-v25`，后续角色选择档案轮次提升到 `ember-v26`，本轮奖励稀有度反馈已继续提升到 `ember-v27`。已完成 `npm test`、`npm run test:web-smoke`、`npm run test:boss-checkpoints`、`npm run test:visual-smoke`、`npm run test:visual-regression`，并人工检查 `output/visual-smoke/boss-fight-highwave-desktop.png`。
 
 追加更新：本轮完成角色选择战术档案首轮强化。`web/src/main.mjs` 新增 `renderCharacterDossier()`，选中角色会显示大头像、职责/武器标签、当前难度、起手铭牌和四项基础属性条；`web/styles.css` 把角色选择改为桌面两栏布局，右侧名册卡压缩重复信息，底部操作区 sticky，确保 1365x670 桌面和移动端首屏都能直接看到“开始战斗”；`scripts/visual-smoke.mjs` 现在断言 `char-dossier`、4 个属性条、3 个起手铭牌、当前档位和开始按钮视口可见，角色选择严格视觉基线已更新。`web/sw.js` 提升到 `ember-v26`。已完成 `npm test`、`npm run test:web-smoke`、`npm run test:boss-checkpoints`、`npm run test:visual-smoke`、`npm run test:visual-regression -- --update`、`npm run test:visual-regression`，并人工检查 `output/visual-smoke/character-select-desktop.png` 与 `character-select-mobile.png`。
+
+追加更新：本轮完成奖励页高稀有度反馈首轮强化。`web/src/main.mjs` 给奖励卡输出 `rarityTier/rarityLabel`，新增稀有度阶级 rail 和罗马数字 sigil，并把 debug 奖励样本固定为 `凤凰余烬 / 影刃 / 末日`，确保 visual smoke 稳定覆盖传说卡；`web/styles.css` 增加史诗/传说卡专属印章、传说推荐卡呼吸动效和 `prefers-reduced-motion` 兜底；`scripts/visual-smoke.mjs` 现在断言稀有度阶级、至少一张高稀有度卡、至少一张传说卡、rail/sigil 节点存在，并把 Windows Chrome 临时 profile 清理改成带重试和退出兜底，避免 `CrashpadMetrics-active.pma` 锁文件让测试误失败。`web/sw.js` 提升到 `ember-v27`，视觉回归基线已更新。已完成 `node --check web/src/main.mjs`、`node --check scripts/visual-smoke.mjs`、`npm test`、`npm run test:web-smoke`、`npm run test:boss-checkpoints`、`npm run test:visual-smoke`、`npm run test:visual-regression -- --update`、`npm run test:visual-regression`，并人工检查 `output/visual-smoke/reward-desktop.png`。
 
 本文件给下一个继续维护的人或 AI，用来快速判断三件事：
 
@@ -40,7 +42,7 @@
 - `scripts/generate-art-assets.mjs`：新增 `generateMenuTableau()` 和菜单专用角色 / Boss / 卡牌碎片绘制函数，生成 `web/assets/ember-menu-tableau.png`；这是本轮主菜单封面图的可复现源，不依赖外部图片服务。
 - `web/styles.css`：主菜单改为全屏封面入口，去掉桌面端 `hero-panel` 的最大宽度限制，桌面用右侧 HUD 侧栏承载存档/路线信息，移动端继续保持开始按钮首屏可见。
 - `scripts/web-smoke.mjs` / `scripts/visual-smoke.mjs`：Web smoke 新增菜单封面 PNG 尺寸校验；视觉 smoke 新增生成图加载和全幅 hero 面板断言。
-- `web/sw.js`：PWA cache 当前提升到 `ember-v26`，并把 `./assets/ember-menu-tableau.png` 加入预缓存清单。
+- `web/sw.js`：PWA cache 当前提升到 `ember-v27`，并把 `./assets/ember-menu-tableau.png` 加入预缓存清单。
 - `web/src/presentation.mjs`：新增 `resultPriorityLabel/resultNextHint`，把“下一把优先级”从 UI 里抽成结构化展示逻辑，并按 `singleTarget / aoe / sustain / safety` 最大压力缺口给出下一轮建议。
 - `web/src/presentation.mjs`：新增 `decisionPlan*` 作战计划读板，按下一波 profile、危险度和最大压力缺口输出奖励/营火选择前的优先级、建议和 chips。
 - `web/src/presentation.mjs`：新增 `resultTimeline`，把结构化 `decisionLog` 和 `combatLog` 合并成复盘时间线，并追加崩盘/胜利终点；没有结构化日志时兼容旧版 `lastDecisions` 字符串。
@@ -60,10 +62,12 @@
 - `web/src/main.mjs`：Boss 战 canvas 新增 `drawBossPhaseEdgeBands()`、`drawBossPhaseThresholdRing()` 和 `drawBossPhaseCrown()`，把高波阶段压力画到边界、中心环和 Boss 本体；`getBossThreatReadout()` 现在统一提供阶段标签和阶段强度，debug snapshot 暴露 `bossPhase*` 字段。
 - `web/src/main.mjs`：角色选择新增 `renderCharacterDossier()` 战术档案，选中职业与难度变化会刷新大头像、起手铭牌、当前档位和四项属性条；角色卡只保留名册筛选需要的信息，避免重复挤占首屏。
 - `web/src/main.mjs`：奖励卡现在渲染 `card-readout`，展示协同/修复/风险机会说明；本轮新增 `renderDecisionPlan()`，奖励页和 Boss 前营火会显示下一波作战计划，锻造/商店复用 overlay 时会清空该读板；不再保留只在奖励卡里使用的 `cardStatsLine()`。
+- `web/src/main.mjs`：奖励卡新增 `rarityTier/rarityLabel`、稀有度 rail 和罗马数字 sigil；debug 奖励样本固定为 `凤凰余烬 / 影刃 / 末日`，让传说卡反馈在视觉 smoke 中稳定出现。
 - `web/styles.css`：结算页改为标题、可滚动复盘内容和底部固定操作区的布局，移动端关键数值两列显示，摘要卡显式防裁切；本轮补齐 `route-comparison`、`collapse-review` 与 `timeline-danger` 的危险读法，具体命中来源会在崩盘诱因和时间线里同时可见；奖励卡新增卡面光泽、契合度条、风险刻度、机会锚点和低高度桌面紧凑奖励头部。
-- `scripts/visual-smoke.mjs` / `scripts/visual-regression.mjs`：新增桌面/移动端结算页、路线对比、受击来源区域、时间线区域和奖励卡读板覆盖，断言摘要标题/说明未被裁切、底部按钮在视口内、崩盘诱因包含具体高伤害命中、路线对比包含实际路线/最终缺口/达标项/缺口项、受击来源包含 Boss 连射占比和走位建议、时间线包含路线影响、具体高伤害命中来源、崩盘节点和战斗事件、奖励卡有机会标签/风险等级/契合度条/风险刻度/机会锚点且卡面内容不被内部裁切；本轮新增奖励/营火作战计划断言，并把结果页、路线对比、受击来源、时间线、奖励卡和作战计划变化纳入视觉回归基线。
+- `web/styles.css`：奖励高稀有度卡新增 rail、sigil、史诗/传说专属强化和传说推荐卡呼吸动效，`prefers-reduced-motion` 下会关闭 sigil 动画。
+- `scripts/visual-smoke.mjs` / `scripts/visual-regression.mjs`：新增桌面/移动端结算页、路线对比、受击来源区域、时间线区域和奖励卡读板覆盖，断言摘要标题/说明未被裁切、底部按钮在视口内、崩盘诱因包含具体高伤害命中、路线对比包含实际路线/最终缺口/达标项/缺口项、受击来源包含 Boss 连射占比和走位建议、时间线包含路线影响、具体高伤害命中来源、崩盘节点和战斗事件、奖励卡有机会标签/风险等级/契合度条/风险刻度/机会锚点/稀有度阶级/传说卡 rail 与 sigil，且卡面内容不被内部裁切；本轮新增奖励/营火作战计划断言，并把结果页、路线对比、受击来源、时间线、奖励卡和作战计划变化纳入视觉回归基线；Windows 退出清理已对 `taskkill` 和 Chrome 临时 profile 锁文件做重试/超时兜底。
 - `scripts/verify-android-debug.ps1`：`SmokeTapFlow` 的角色选择和局内截图新增最低文件体积阈值，避免安装后短暂的 Capacitor 启动画面或黑屏只因 hash 改变而误判成功。
-- `web/sw.js`：PWA cache 当前提升到 `ember-v26`；本轮新增的菜单封面图也进入预缓存；`docs/` 镜像需要由 `node scripts/sync-web.mjs` 同步。
+- `web/sw.js`：PWA cache 当前提升到 `ember-v27`；本轮新增的菜单封面图也进入预缓存；`docs/` 镜像需要由 `node scripts/sync-web.mjs` 同步。
 - `web/src/game_core.mjs`：`isAoeRepairCard()`、`isSustainRepairCard()`、`isPressureRepairCard()` 和 `getPriorityPressureRepairKey()` 共同负责中后期奖励短板修复保底；通用奖励保底刻意不覆盖 `safety`。
 - `web/src/game_core.mjs`：`generateRestChoices()` 会在第 10 波 Boss 前 safety 极高时提前提供 `余烬护符`，第 15 波以后仍使用较低 safety 门槛。
 - `tests/game_core.test.mjs`：`中后期奖励应保底修复最大构筑短板` 锁定清场缺口必须至少出现一张修复牌；`第 10 波 Boss 前安全缺口极高时应提前提供护符` 锁定 Boss 前容错窗口。
@@ -212,11 +216,11 @@ roguelike-game/
 - 之前 Python 静态服务的 `.mjs` MIME 问题已绕开
 - `scripts/serve-web.mjs` 已提供正确的本地 Node 静态服务
 - `scripts/web-smoke.mjs` 已建立无依赖 smoke test，可验证 spritesheet 尺寸/内容、敌人图集格子、service worker 预缓存覆盖和离线 fallback、本地 MIME、UI 状态路由，以及 `game_core.mjs` 发出的粒子类型是否都有 `drawParticles` 覆盖
-- `scripts/visual-smoke.mjs` 已建立无 npm 依赖视觉 smoke，可用本机 Chrome/Edge 验证桌面/移动端菜单、角色选择、战斗 canvas 非空、奖励选择页推荐卡渲染和读板、Boss 前奖励点击后进入营火、营火选择后进入第 5 波 Boss、桌面/移动端结算复盘、受击来源区域和时间线区域，并额外保存桌面和移动端活跃首领战 `boss-fight-*.png`，以及固定的高波桌面场景 `boss-fight-highwave-desktop.png`；高波样本会断言 debug snapshot 中存在当前 `bossPatternLabel`、`bossCharge`、`bossPhaseLabel`、`bossPhaseIndex`、`bossPhaseTotal` 和 `bossPhaseIntensity`，奖励样本会断言每张卡有 `card-readout`、机会标签、风险等级且没有内部裁切，结果页样本会断言摘要未裁切、底部按钮可见、崩盘诱因包含具体高伤害命中，受击来源样本会断言 Boss 连射占比和走位建议，时间线样本会断言存在路线影响、具体高伤害命中来源、战斗事件和崩盘节点
+- `scripts/visual-smoke.mjs` 已建立无 npm 依赖视觉 smoke，可用本机 Chrome/Edge 验证桌面/移动端菜单、角色选择、战斗 canvas 非空、奖励选择页推荐卡渲染和读板、Boss 前奖励点击后进入营火、营火选择后进入第 5 波 Boss、桌面/移动端结算复盘、受击来源区域和时间线区域，并额外保存桌面和移动端活跃首领战 `boss-fight-*.png`，以及固定的高波桌面场景 `boss-fight-highwave-desktop.png`；高波样本会断言 debug snapshot 中存在当前 `bossPatternLabel`、`bossCharge`、`bossPhaseLabel`、`bossPhaseIndex`、`bossPhaseTotal` 和 `bossPhaseIntensity`，奖励样本会断言每张卡有 `card-readout`、机会标签、风险等级、稀有度阶级、传说卡 rail/sigil 且没有内部裁切，结果页样本会断言摘要未裁切、底部按钮可见、崩盘诱因包含具体高伤害命中，受击来源样本会断言 Boss 连射占比和走位建议，时间线样本会断言存在路线影响、具体高伤害命中来源、战斗事件和崩盘节点
 - `scripts/visual-regression.mjs` 已建立 PNG 解码后的像素回归：角色选择等稳定界面使用严格 RGBA 哈希，菜单和动画界面使用亮度、RGB 均值、暗/亮/饱和像素比例容差；基线在 `tests/visual-regression-baseline.json`，包含桌面/移动端奖励页读板、活跃 Boss 战截图、高波桌面样本、桌面/移动端结算复盘、桌面/移动端受击来源区域和桌面/移动端时间线区域
 - `scripts/generate-art-assets.mjs` 默认保留现有角色 spritesheet，避免误运行后覆盖 AI 人物资源；同时会重生成参考图风格竞技场背景、敌人 / Boss spritesheet 和主菜单封面图
 - `web/src/main.mjs` 会按背景图原始比例居中裁切绘制竞技场 PNG，因此后续直接替换 `web/assets/arena-ember-fortress.png` 不会被拉伸；它也会优先使用敌人 spritesheet，加载失败时仍回退到 SVG 符号和圆形占位
-- `web/sw.js` 已预缓存 `main.mjs` 的静态模块依赖和核心美术资源；当前 `CACHE = ember-v26`；替换同名 PNG 或修改核心脚本后必须继续提升 `CACHE` 版本，避免 PWA/Android WebView 继续命中旧缓存；预缓存必须逐资源容错，不能使用 `cache.addAll()`，否则 Android WebView 可能因单个 Cache 内部错误产生启动期 fatal log；fetch handler 只拦截同源 GET，离线 cache miss 会返回明确 Response，避免 WebView console 噪声
+- `web/sw.js` 已预缓存 `main.mjs` 的静态模块依赖和核心美术资源；当前 `CACHE = ember-v27`；替换同名 PNG 或修改核心脚本后必须继续提升 `CACHE` 版本，避免 PWA/Android WebView 继续命中旧缓存；预缓存必须逐资源容错，不能使用 `cache.addAll()`，否则 Android WebView 可能因单个 Cache 内部错误产生启动期 fatal log；fetch handler 只拦截同源 GET，离线 cache miss 会返回明确 Response，避免 WebView console 噪声
 - `web/index.html` 不再依赖 Google Fonts 外链，Android / PWA 离线环境不会因为外部字体请求污染 logcat 或首屏加载
 - Android `assembleDebug` 已在本机成功跑通过一次
 - `scripts/build-android-debug.ps1` 已建立，负责选择可用 JDK 21、同步资源、构建 APK，并校验 APK 内关键 Web 资源和代码标记
@@ -299,7 +303,7 @@ npm run serve
   - 桌面菜单、角色选择、局内 canvas、奖励选择页、Boss 前营火、第 5 波 Boss 进入、桌面/移动端活跃 Boss 读招画面、固定第 20 波高波 Boss 桌面场景、桌面/移动端结算复盘、受击来源区域，以及桌面/移动端时间线区域渲染通过
   - 菜单样本会断言 `ember-menu-tableau.png` 已作为 hero/menu 背景加载，且 hero 面板全幅铺满当前视口
   - 固定第 20 波高波样本会断言 debug snapshot 中存在 `bossPatternLabel`、`bossCharge`、`bossPhaseLabel`、`bossPhaseIndex`、`bossPhaseTotal` 和 `bossPhaseIntensity`
-  - 奖励页样本会断言每张奖励卡存在 `card-readout`、机会标签、风险等级，且 `scrollHeight <= clientHeight`，避免卡面内容被内部裁切
+  - 奖励页样本会断言每张奖励卡存在 `card-readout`、机会标签、风险等级、稀有度阶级、rail/sigil，并要求至少一张高稀有度卡和至少一张传说卡；同时保留 `scrollHeight <= clientHeight`，避免卡面内容被内部裁切
   - 结算页样本会断言摘要标题和说明未被裁切、底部 `再来一把 / 返回菜单` 按钮在视口内、无水平溢出
   - 结果页样本会断言 `崩盘诱因 · 高伤害命中` 存在，并包含具体“被瞄准连射命中 / 恶魔领主·混沌造成”文本
   - 受击来源样本会断言“受击来源”、累计伤害、至少两条来源、`瞄准连射` 和首领弹幕/横向走位/冲刺建议存在；额外输出 `result-damage-desktop.png` 和 `result-damage-mobile.png`
@@ -311,7 +315,7 @@ npm run serve
   - 已输出截图到 `output/visual-smoke/`
 - `npm run test:visual-regression`：
   - 会先执行视觉 smoke 生成截图，再读取 PNG 像素与 `tests/visual-regression-baseline.json` 对比
-  - 当前结果通过；稳定界面用严格像素哈希，动态界面用像素指标容差以避免动画帧误报；基线已包含 `result-desktop.png`、`result-mobile.png`、`result-damage-desktop.png`、`result-damage-mobile.png`、`result-timeline-desktop.png` 和 `result-timeline-mobile.png`
+  - 当前结果通过；稳定界面用严格像素哈希，动态界面用像素指标容差以避免动画帧误报；基线已覆盖奖励高稀有度反馈，并包含 `result-desktop.png`、`result-mobile.png`、`result-damage-desktop.png`、`result-damage-mobile.png`、`result-timeline-desktop.png` 和 `result-timeline-mobile.png`
 - `npm run assets:generate`：
   - 默认保留 `web/assets/ember-characters-spritesheet.png`
   - 生成 `web/assets/ember-enemies-spritesheet.png`
@@ -460,7 +464,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify-android-debug
 
 ### 中优先级
 
-1. 在奖励页读板已覆盖的基础上，继续提高稀有卡、协同触发和高风险高回报选择的动效反馈
+1. 在奖励页读板和高稀有度首轮反馈已覆盖的基础上，继续提高协同触发、高风险高回报选择和更强卡牌诱惑感的动效反馈
 2. 继续把结算页从“结果复盘”推进到“死亡时间线”，解释关键选择与战斗处理如何导致路线崩盘
 3. 扩更多非 Boss 岔路，而不是继续补基础框架
 4. 让图鉴从数据列表升级为内容页

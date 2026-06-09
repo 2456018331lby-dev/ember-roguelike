@@ -167,14 +167,37 @@ async function terminateProcessTree(child) {
   if (!child || !child.pid) return;
   if (child.exitCode !== null || child.signalCode !== null) return;
 
+  const detachChild = () => {
+    child.stdin?.destroy();
+    child.stdout?.destroy();
+    child.stderr?.destroy();
+    child.unref?.();
+  };
+
   if (process.platform === 'win32') {
     await new Promise(resolveTerminate => {
       const killer = spawn('taskkill', ['/PID', String(child.pid), '/T', '/F'], {
         stdio: 'ignore',
       });
-      killer.once('error', resolveTerminate);
-      killer.once('exit', resolveTerminate);
+      const finish = () => {
+        clearTimeout(timer);
+        resolveTerminate();
+      };
+      const timer = setTimeout(() => {
+        killer.kill('SIGKILL');
+        finish();
+      }, 2500);
+      killer.once('error', finish);
+      killer.once('exit', finish);
     });
+    if (child.exitCode === null && child.signalCode === null) {
+      child.kill('SIGKILL');
+      await Promise.race([
+        new Promise(resolveExit => child.once('exit', resolveExit)),
+        sleep(1500),
+      ]);
+    }
+    detachChild();
     return;
   }
 
@@ -183,6 +206,30 @@ async function terminateProcessTree(child) {
     new Promise(resolveExit => child.once('exit', resolveExit)),
     sleep(1500).then(() => child.kill('SIGKILL')),
   ]);
+  detachChild();
+}
+
+async function removeTemporaryDirectory(directory) {
+  const retryableCodes = new Set(['EBUSY', 'ENOTEMPTY', 'EPERM']);
+  let lastError = null;
+
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    try {
+      await rm(directory, {
+        recursive: true,
+        force: true,
+        maxRetries: 3,
+        retryDelay: 150,
+      });
+      return;
+    } catch (error) {
+      lastError = error;
+      if (!retryableCodes.has(error?.code)) throw error;
+      await sleep(250 * (attempt + 1));
+    }
+  }
+
+  console.warn(`Visual smoke temp cleanup skipped because Windows still holds a file lock: ${directory} (${lastError?.code || 'unknown'})`);
 }
 
 function menuCheckExpression({ mobile = false } = {}) {
@@ -303,6 +350,8 @@ const rewardCheckExpression = `(() => {
   const decisions = cards.map(card => card.querySelector('.card-decision')?.textContent.trim() || '');
   const opportunities = cards.map(card => card.dataset.opportunity || card.querySelector('.card-readout-title')?.textContent.trim() || '');
   const riskLevels = cards.map(card => Number(card.dataset.riskLevel));
+  const rarityTiers = cards.map(card => Number(card.dataset.rarityTier));
+  const highRarityCards = cards.filter(card => Number(card.dataset.rarityTier) >= 3);
   const plan = document.querySelector('#decisionPlan');
   const planText = plan?.textContent.replace(/\\s+/g, ' ').trim() || '';
   const planChips = [...(plan?.querySelectorAll('.decision-plan-chips span') || [])].map(chip => chip.textContent.trim());
@@ -318,6 +367,8 @@ const rewardCheckExpression = `(() => {
     const fitRatio = Number(getComputedStyle(card).getPropertyValue('--fit-ratio'));
     return card.querySelector('.card-aura') &&
       card.querySelector('.card-glint') &&
+      card.querySelector('.card-rarity-rail i') &&
+      card.querySelector('.card-rarity-sigil b') &&
       card.querySelector('.card-signal-row') &&
       card.querySelector('.card-fit-meter span') &&
       card.querySelectorAll('.card-risk-meter span').length === 3 &&
@@ -342,6 +393,9 @@ const rewardCheckExpression = `(() => {
       decisions[0] && /首选|豪赌/.test(decisions[0]) &&
       opportunities.every(label => /协同|修复|核心|高危|成长|路线/.test(label)) &&
       riskLevels.every(level => Number.isFinite(level) && level >= 0 && level <= 3) &&
+      rarityTiers.every(tier => Number.isFinite(tier) && tier >= 1 && tier <= 4) &&
+      highRarityCards.length >= 1 &&
+      highRarityCards.some(card => card.classList.contains('legendary')) &&
       plan && !plan.classList.contains('hidden') &&
       /作战计划/.test(planText) &&
       /安全网|首领输出|清场|续航硬度|压力目标/.test(planText) &&
@@ -352,6 +406,7 @@ const rewardCheckExpression = `(() => {
     decisions,
     opportunities,
     riskLevels,
+    rarityTiers,
     noCardClipping,
     visualSignals,
     planText,
@@ -758,8 +813,8 @@ async function runVisualSmoke() {
     if (cdp) cdp.close();
     await terminateProcessTree(chrome);
     await terminateProcessTree(server);
-    await sleep(200);
-    await rm(userDataDir, { recursive: true, force: true });
+    await sleep(800);
+    await removeTemporaryDirectory(userDataDir);
   }
 }
 

@@ -724,23 +724,32 @@ function showReward() {
     const isTopChoice = Boolean(readout?.isTop ?? (index === 0 && score !== null));
     const fitRatio = score === null ? 0.08 : Math.max(0.08, Math.min(1, score / 20));
     const opportunityTitle = readout?.opportunityTitle || '路线补强';
+    const tier = rarityTier(card.rarity);
+    const rarityLabel = readout?.rarityLabel || rarityName(card.rarity);
     const riskTicks = [0, 1, 2]
       .map(tick => `<span class="${tick < decision.risk ? 'is-on' : ''}"></span>`)
       .join('');
-    el.className = `card reward-choice-card ${card.rarity || 'common'} ${isTopChoice ? 'card-recommended' : ''} risk-${decision.risk} opportunity-${opportunityTone}`;
+    el.className = `card reward-choice-card ${card.rarity || 'common'} rarity-tier-${tier} ${isTopChoice ? 'card-recommended' : ''} risk-${decision.risk} opportunity-${opportunityTone}`;
     el.style.setProperty('--card-index', String(index));
     el.style.setProperty('--fit-ratio', fitRatio.toFixed(3));
     el.dataset.fitScore = scoreText;
     el.dataset.decision = decision.label;
     el.dataset.riskLevel = String(decision.risk);
     el.dataset.opportunity = opportunityTitle;
+    el.dataset.rarityTier = String(tier);
+    el.dataset.rarityLabel = rarityLabel;
     el.innerHTML = `
       <span class="card-aura" aria-hidden="true"></span>
       <span class="card-glint" aria-hidden="true"></span>
+      <span class="card-rarity-rail" aria-hidden="true">${Array.from({ length: tier }, () => '<i></i>').join('')}</span>
+      <span class="card-rarity-sigil" aria-label="${escapeHtml(rarityLabel)}">
+        <b>${escapeHtml(raritySigil(card.rarity))}</b>
+        <em>${escapeHtml(rarityLabel)}</em>
+      </span>
       <div class="card-shell">
         <div class="card-decision-row">
           <span class="card-decision tone-${decision.tone}">${escapeHtml(decision.label)}</span>
-          <span class="card-rarity">${escapeHtml(readout?.rarityLabel || rarityName(card.rarity))}</span>
+          <span class="card-rarity">${escapeHtml(rarityLabel)}</span>
         </div>
         <div class="card-topline">
           <div class="type">${typeIcon(card.type)} ${escapeHtml(typeName(card.type))}</div>
@@ -2729,6 +2738,8 @@ function drawSymbol(id, x, y, w, h, alpha = 1) {
 function typeIcon(t) { return { attack: '攻', defense: '御', passive: '仪', joker: '变', curse: '咒' }[t] || '·'; }
 function typeName(t) { return { attack: '攻击', defense: '防御', passive: '被动', joker: '小丑', curse: '诅咒' }[t] || t; }
 function rarityName(r) { return { common: '普通', rare: '精良', epic: '史诗', legendary: '传说' }[r] || r; }
+function rarityTier(r) { return { common: 1, rare: 2, epic: 3, legendary: 4 }[r] || 1; }
+function raritySigil(r) { return { common: 'I', rare: 'II', epic: 'III', legendary: 'IV' }[r] || 'I'; }
 function costText(s) {
   if (!s) return '无';
   const names = { speed: '移速', attack: '攻击', health: '生命', attack_speed: '攻速' };
@@ -2793,7 +2804,7 @@ function enableDebugHooks() {
       };
       run.rewardContext = { choiceCount: 3, rarityBonus: 2, targetTag: 'survival' };
       const pool = new Map(getCardPool().map(card => [card.id, card]));
-      const rawChoices = ['heal_aura', 'shadow_blade', 'doom']
+      const rawChoices = ['phoenix_ember', 'shadow_blade', 'doom']
         .map(id => pool.get(id))
         .filter(Boolean);
       run.rewardChoices = enrichRewardChoices(run, rawChoices, run.nextWavePreview);
