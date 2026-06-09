@@ -133,6 +133,69 @@ function showMenu() {
   menuEl.classList.remove('hidden');
 }
 
+function getCharacterDossierStats(ch) {
+  const attackRate = ch.baseAttackCooldown > 0 ? 1 / ch.baseAttackCooldown : 0;
+  return [
+    { label: '生命承压', text: `${ch.baseHp}`, fill: clamp(ch.baseHp / 130, 0.08, 1) },
+    { label: '位移速度', text: `${ch.baseSpeed}`, fill: clamp(ch.baseSpeed / 320, 0.08, 1) },
+    { label: '单击火力', text: `${ch.baseAttack}`, fill: clamp(ch.baseAttack / 22, 0.08, 1) },
+    { label: '出手频率', text: `${attackRate.toFixed(1)}/秒`, fill: clamp(attackRate / 2.6, 0.08, 1) },
+  ];
+}
+
+function renderCharacterDossierStat(stat) {
+  const fill = Math.round(stat.fill * 100);
+  return `
+    <div class="char-dossier-stat" style="--stat-fill:${fill}%">
+      <span>${escapeHtml(stat.label)}</span>
+      <strong>${escapeHtml(stat.text)}</strong>
+      <i></i>
+    </div>`;
+}
+
+function renderCharacterDossier(ch, difficulty) {
+  const spriteCol = ch.sprite?.col ?? 0;
+  const stats = getCharacterDossierStats(ch);
+  const loadout = (ch.startCards || []).slice(0, 3);
+  const routeTags = [
+    ch.role || '战术身份',
+    ch.attackProfile?.label || '自动攻击',
+    ch.weapon || '默认武器',
+  ];
+  return `
+    <div class="char-dossier" data-character="${escapeHtml(ch.id)}" style="--char-color:${ch.color};--char-accent:${ch.accentColor || ch.color}">
+      <div class="char-dossier-portrait" style="--sprite-col:${spriteCol};--char-color:${ch.color}"></div>
+      <div class="char-dossier-copy">
+        <div class="char-dossier-kicker">当前出征者</div>
+        <div class="char-dossier-title">
+          <h3>${escapeHtml(ch.name)}</h3>
+          <span>${escapeHtml(ch.subtitle)}</span>
+        </div>
+        <p>${escapeHtml(ch.combatNote || ch.desc || '')}</p>
+        <div class="char-dossier-tags">
+          ${routeTags.map(tag => `<span>${escapeHtml(tag)}</span>`).join('')}
+        </div>
+      </div>
+      <div class="char-dossier-command">
+        <span>本次档位</span>
+        <strong>${escapeHtml(difficulty?.name || '标准')}</strong>
+        <small>${escapeHtml(difficulty?.desc || '标准压力，推荐初次体验。')}</small>
+      </div>
+      <div class="char-dossier-loadout">
+        <div class="char-dossier-label">起手铭牌</div>
+        ${loadout.map(card => `
+          <div class="char-dossier-card">
+            <strong>${escapeHtml(card.name)}</strong>
+            <span>${escapeHtml(typeName(card.type))} · ${escapeHtml(rarityName(card.rarity))}</span>
+          </div>
+        `).join('')}
+      </div>
+      <div class="char-dossier-stats">
+        ${stats.map(renderCharacterDossierStat).join('')}
+      </div>
+    </div>`;
+}
+
 function showCharacterSelect() {
   hideOverlays();
   state = 'char';
@@ -141,6 +204,14 @@ function showCharacterSelect() {
   selectedDifficultyId = save.selectedDifficulty || selectedDifficultyId;
   const chars = getAllCharacters();
   const difficulties = Object.values(getDifficultyPresets());
+  const unlockedIds = new Set(save.unlockedCharacters);
+  if (!unlockedIds.has(selectedCharId)) {
+    selectedCharId = chars.find(ch => unlockedIds.has(ch.id))?.id || 'warrior';
+  }
+  const selectedCharacter = chars.find(ch => ch.id === selectedCharId) || chars[0];
+  const selectedDifficulty = difficulties.find(diff => diff.id === selectedDifficultyId) || difficulties[0];
+  if (selectedCharacter) selectedCharId = selectedCharacter.id;
+  if (selectedDifficulty) selectedDifficultyId = selectedDifficulty.id;
   charSelectEl.innerHTML = `
     <div class="panel char-panel">
       <div class="panel-heading">
@@ -148,9 +219,13 @@ function showCharacterSelect() {
         <h2>选择角色</h2>
         <p>不同起手意味着不同的献祭路线。</p>
       </div>
-      <div class="char-grid">
+      <div class="char-select-layout">
+        <div id="charDossier">
+          ${renderCharacterDossier(selectedCharacter, selectedDifficulty)}
+        </div>
+        <div class="char-grid">
         ${chars.map(ch => {
-          const unlocked = save.unlockedCharacters.includes(ch.id);
+          const unlocked = unlockedIds.has(ch.id);
           const selected = ch.id === selectedCharId;
           const badges = [
             ch.role || (ch.baseHp >= 100 ? '高血量' : '脆皮高压'),
@@ -188,6 +263,7 @@ function showCharacterSelect() {
               </div>
             </div>`;
         }).join('')}
+        </div>
       </div>
       <div class="difficulty-panel">
         <div class="difficulty-head">
@@ -209,12 +285,19 @@ function showCharacterSelect() {
       </div>
     </div>`;
   charSelectEl.classList.remove('hidden');
+  const updateDossier = () => {
+    const ch = chars.find(item => item.id === selectedCharId) || chars[0];
+    const diff = difficulties.find(item => item.id === selectedDifficultyId) || difficulties[0];
+    const target = charSelectEl.querySelector('#charDossier');
+    if (target) target.innerHTML = renderCharacterDossier(ch, diff);
+  };
   charSelectEl.querySelectorAll('.char-card:not(.char-locked)').forEach(card => {
     card.addEventListener('click', () => {
       selectedCharId = card.dataset.id;
       saveSelectChar(selectedCharId);
       charSelectEl.querySelectorAll('.char-card').forEach(c => c.classList.remove('char-selected'));
       card.classList.add('char-selected');
+      updateDossier();
     });
   });
   charSelectEl.querySelectorAll('.difficulty-option').forEach(btn => {
@@ -226,6 +309,7 @@ function showCharacterSelect() {
       const current = difficulties.find(d => d.id === selectedDifficultyId);
       const startBtn = charSelectEl.querySelector('#charStartBtn');
       if (startBtn && current) startBtn.textContent = `开始战斗 · ${current.name}`;
+      updateDossier();
     });
   });
   const currentDifficulty = difficulties.find(d => d.id === selectedDifficultyId);

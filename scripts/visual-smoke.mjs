@@ -222,15 +222,29 @@ const characterCheckExpression = `(() => {
   const cards = [...document.querySelectorAll('.char-card')];
   const difficulties = [...document.querySelectorAll('.difficulty-option')];
   const selectedDifficulty = document.querySelector('.difficulty-selected');
+  const dossier = document.querySelector('.char-dossier');
+  const dossierStats = [...document.querySelectorAll('.char-dossier-stat')];
+  const dossierCards = [...document.querySelectorAll('.char-dossier-card')];
+  const dossierCommand = document.querySelector('.char-dossier-command');
   const start = document.querySelector('#charStartBtn');
   const noHorizontalOverflow = document.documentElement.scrollWidth <= window.innerWidth + 2;
+  const dossierRect = dossier?.getBoundingClientRect();
+  const startRect = start?.getBoundingClientRect();
   return {
     ok: Boolean(panel && !panel.classList.contains('hidden') &&
       cards.length >= 4 && difficulties.length === 3 && selectedDifficulty && start &&
+      dossier && dossier.dataset.character && dossierStats.length === 4 && dossierCards.length >= 3 &&
+      dossierCommand && dossierCommand.textContent.includes('本次档位') &&
+      dossierRect && dossierRect.width <= window.innerWidth + 2 &&
+      startRect && startRect.bottom <= window.innerHeight + 2 && startRect.top >= -2 &&
       start.textContent.includes('开始战斗') && noHorizontalOverflow),
     cards: cards.length,
+    dossierCharacter: dossier?.dataset.character || '',
+    dossierStats: dossierStats.map(item => item.textContent.trim()),
+    dossierCards: dossierCards.map(item => item.textContent.trim()),
     difficulties: difficulties.map(button => button.textContent.trim()),
     selectedDifficulty: selectedDifficulty?.textContent.trim() || '',
+    startRect: startRect ? { top: Math.round(startRect.top), bottom: Math.round(startRect.bottom) } : null,
     scrollWidth: document.documentElement.scrollWidth,
     width: window.innerWidth
   };

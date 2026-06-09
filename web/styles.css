@@ -2546,6 +2546,11 @@ body::after {
 
 .char-actions {
   margin-top: 14px;
+  position: sticky;
+  bottom: 0;
+  z-index: 8;
+  padding: 10px 0 0;
+  background: linear-gradient(180deg, rgba(10,14,20,0), rgba(10,14,20,.92) 30%, rgba(10,14,20,.98));
 }
 
 .difficulty-head span {
@@ -4051,8 +4056,287 @@ body::after {
   max-width: 1180px;
 }
 
+.char-select-layout {
+  display: grid;
+  grid-template-columns: minmax(350px, .88fr) minmax(0, 1.32fr);
+  gap: 18px;
+  align-items: stretch;
+  margin-top: 2px;
+}
+
+.char-dossier {
+  position: relative;
+  display: grid;
+  grid-template-columns: 150px minmax(220px, 1.05fr) minmax(170px, .78fr) minmax(210px, .9fr) minmax(150px, .62fr);
+  gap: 16px;
+  align-items: stretch;
+  margin: 2px 0 20px;
+  padding: 18px;
+  overflow: hidden;
+  border: 1px solid rgba(248,215,138,.18);
+  border-radius: 22px;
+  background:
+    linear-gradient(135deg, rgba(248,215,138,.08), transparent 26%),
+    radial-gradient(circle at 12% 22%, var(--char-color), transparent 34%),
+    linear-gradient(180deg, rgba(9,13,19,.94), rgba(9,13,19,.74));
+  box-shadow: 0 22px 44px rgba(0,0,0,.28);
+}
+
+.char-select-layout .char-dossier {
+  height: 100%;
+  margin: 0;
+  grid-template-columns: 116px minmax(0, 1fr);
+  align-content: start;
+  gap: 12px;
+  padding: 14px;
+}
+
+.char-select-layout .char-dossier-portrait {
+  min-height: 116px;
+}
+
+.char-select-layout .char-dossier-portrait::before {
+  background-size: 464px 232px;
+  background-position: calc(var(--sprite-col) * -116px) 0;
+}
+
+.char-select-layout .char-dossier-loadout,
+.char-select-layout .char-dossier-stats,
+.char-select-layout .char-dossier-command {
+  grid-column: 1 / -1;
+}
+
+.char-select-layout .char-dossier-loadout {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.char-select-layout .char-dossier-stats {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.char-select-layout .char-dossier-stat {
+  min-height: 46px;
+  padding: 8px;
+}
+
+.char-select-layout .char-dossier-stat span {
+  font-size: 9px;
+}
+
+.char-select-layout .char-dossier-stat strong {
+  font-size: 13px;
+}
+
+.char-select-layout .char-dossier-label {
+  grid-column: 1 / -1;
+}
+
+.char-select-layout .char-dossier-card {
+  padding: 6px 7px;
+  border-top: 0;
+  border-left: 2px solid rgba(248,215,138,.22);
+  border-radius: 10px;
+  background: rgba(255,255,255,.035);
+}
+
+.char-dossier::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, transparent 0 47%, rgba(248,215,138,.12) 47% 48%, transparent 48%),
+    repeating-linear-gradient(135deg, rgba(255,255,255,.045) 0 1px, transparent 1px 28px);
+  opacity: .34;
+}
+
+.char-dossier-portrait,
+.char-dossier-copy,
+.char-dossier-loadout,
+.char-dossier-stats,
+.char-dossier-command {
+  position: relative;
+  z-index: 1;
+}
+
+.char-dossier-portrait {
+  min-height: 150px;
+  border-radius: 20px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.08);
+  background:
+    radial-gradient(circle at 50% 38%, var(--char-color), transparent 56%),
+    radial-gradient(circle at 50% 76%, rgba(0,0,0,.48), transparent 48%),
+    linear-gradient(180deg, rgba(6,10,16,.88), rgba(6,10,16,.52));
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.04), 0 18px 32px rgba(0,0,0,.24);
+}
+
+.char-dossier-portrait::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("./assets/ember-characters-spritesheet.png");
+  background-size: 600px 300px;
+  background-position: calc(var(--sprite-col) * -150px) 0;
+  background-repeat: no-repeat;
+  filter: drop-shadow(0 18px 18px rgba(0,0,0,.38));
+}
+
+.char-dossier-portrait::after {
+  content: "";
+  position: absolute;
+  inset: 12px;
+  border: 1px solid rgba(248,215,138,.14);
+  border-radius: 15px;
+}
+
+.char-dossier-copy {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+}
+
+.char-dossier-kicker,
+.char-dossier-label,
+.char-dossier-command span {
+  color: #f8d78a;
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.char-dossier-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px;
+  margin: 5px 0 8px;
+}
+
+.char-dossier-title h3 {
+  margin: 0;
+  color: #f8fafc;
+  font-size: 30px;
+  line-height: 1;
+}
+
+.char-dossier-title span {
+  color: #cbd5e1;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.char-dossier-copy p {
+  margin: 0;
+  color: #cbd5e1;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.char-dossier-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 9px;
+}
+
+.char-dossier-tags span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 0 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.07);
+  background: rgba(255,255,255,.045);
+  color: #f8fafc;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.char-dossier-loadout,
+.char-dossier-command {
+  display: grid;
+  align-content: center;
+  gap: 7px;
+  padding: 10px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.06);
+  background: rgba(4,8,13,.46);
+}
+
+.char-dossier-card {
+  display: grid;
+  gap: 2px;
+  padding: 7px 0;
+  border-top: 1px solid rgba(255,255,255,.06);
+}
+
+.char-dossier-card strong,
+.char-dossier-command strong {
+  color: #f8fafc;
+  font-size: 13px;
+}
+
+.char-dossier-card span,
+.char-dossier-command small {
+  color: #94a3b8;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.char-dossier-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.char-dossier-stat {
+  display: grid;
+  align-content: center;
+  gap: 5px;
+  min-height: 52px;
+  padding: 9px;
+  border-radius: 15px;
+  border: 1px solid rgba(255,255,255,.06);
+  background: rgba(255,255,255,.04);
+}
+
+.char-dossier-stat span {
+  color: #94a3b8;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.char-dossier-stat strong {
+  color: #f8fafc;
+  font-size: 15px;
+}
+
+.char-dossier-stat i {
+  display: block;
+  height: 5px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(148,163,184,.18);
+}
+
+.char-dossier-stat i::before {
+  content: "";
+  display: block;
+  width: var(--stat-fill);
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--char-accent), #f8d78a);
+}
+
 .char-grid {
   gap: 18px;
+}
+
+.char-select-layout .char-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
 }
 
 .char-card {
@@ -4066,6 +4350,54 @@ body::after {
     linear-gradient(180deg, rgba(9,13,19,.95), rgba(9,13,19,.84)),
     linear-gradient(135deg, rgba(255,255,255,.03), transparent 36%);
   box-shadow: 0 18px 34px rgba(0,0,0,.2);
+}
+
+.char-select-layout .char-card {
+  min-height: 146px;
+  padding: 14px;
+  gap: 10px;
+}
+
+.char-select-layout .char-portrait {
+  flex-basis: 74px;
+  width: 74px;
+  height: 74px;
+  border-radius: 16px;
+}
+
+.char-select-layout .char-portrait::before {
+  background-size: 296px 148px;
+  background-position: calc(var(--sprite-col) * -74px) 0;
+}
+
+.char-select-layout .char-info {
+  gap: 6px;
+}
+
+.char-select-layout .char-name {
+  font-size: 21px;
+}
+
+.char-select-layout .char-sub {
+  font-size: 11px;
+}
+
+.char-select-layout .char-desc {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.char-select-layout .char-combat-note,
+.char-select-layout .char-badges,
+.char-select-layout .char-stats-grid,
+.char-select-layout .char-loadout {
+  display: none;
+}
+
+.char-select-layout .char-unlock {
+  font-size: 11px;
 }
 
 .char-card::before {
@@ -4259,8 +4591,8 @@ body::after {
 }
 
 .difficulty-panel {
-  margin-top: 18px;
-  padding: 16px;
+  margin-top: 14px;
+  padding: 12px;
   border-radius: 18px;
   border-color: rgba(245,158,11,.18);
   background:
@@ -4269,7 +4601,7 @@ body::after {
 }
 
 .difficulty-option {
-  min-height: 88px;
+  min-height: 68px;
   border-radius: 14px;
   background: rgba(255,255,255,.03);
 }
@@ -4281,6 +4613,32 @@ body::after {
 }
 
 @media (max-width: 1100px) {
+  .char-select-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .char-select-layout .char-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .char-dossier {
+    grid-template-columns: 132px minmax(0, 1fr) minmax(220px, .8fr);
+  }
+
+  .char-dossier-portrait {
+    min-height: 132px;
+  }
+
+  .char-dossier-portrait::before {
+    background-size: 528px 264px;
+    background-position: calc(var(--sprite-col) * -132px) 0;
+  }
+
+  .char-dossier-stats,
+  .char-dossier-command {
+    grid-column: span 1;
+  }
+
   .char-stats-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -4306,6 +4664,82 @@ body::after {
   .char-card {
     min-height: 0;
     padding: 16px;
+  }
+
+  .char-select-layout {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .char-select-layout .char-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .char-dossier {
+    grid-template-columns: 96px minmax(0, 1fr);
+    gap: 12px;
+    padding: 14px;
+    margin-bottom: 14px;
+  }
+
+  .char-dossier-portrait {
+    min-height: 96px;
+    border-radius: 17px;
+  }
+
+  .char-dossier-portrait::before {
+    background-size: 384px 192px;
+    background-position: calc(var(--sprite-col) * -96px) 0;
+  }
+
+  .char-dossier-title h3 {
+    font-size: 25px;
+  }
+
+  .char-dossier-copy p {
+    font-size: 12px;
+  }
+
+  .char-dossier-tags {
+    gap: 6px;
+    margin-top: 9px;
+  }
+
+  .char-dossier-tags span {
+    min-height: 24px;
+    padding: 0 8px;
+    font-size: 10px;
+  }
+
+  .char-dossier-loadout,
+  .char-dossier-stats,
+  .char-dossier-command {
+    grid-column: 1 / -1;
+  }
+
+  .char-dossier-loadout {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .char-dossier-label {
+    grid-column: 1 / -1;
+  }
+
+  .char-dossier-card {
+    padding: 7px 8px;
+    border-top: 0;
+    border-left: 2px solid rgba(248,215,138,.22);
+    background: rgba(255,255,255,.035);
+    border-radius: 10px;
+  }
+
+  .char-dossier-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .char-dossier-stat {
+    min-height: 58px;
+    padding: 9px;
   }
 
   .char-portrait {
