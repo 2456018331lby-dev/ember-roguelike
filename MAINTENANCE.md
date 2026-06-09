@@ -6,6 +6,8 @@
 
 追加更新：本轮继续补结算页解释力，`game_core.mjs` 会累计本局真实受击来源（Boss 弹幕、普通弹幕、近身、自伤等），`deathSummary` 携带前 4 个来源；`presentation.mjs` 输出 `resultDamageSources/resultPositioningHint`，结果页新增“受击来源”条形占比和走位建议。`scripts/visual-smoke.mjs` 现在会分别截取桌面/移动端 `result-damage-*.png`，并断言 Boss 连射、累计伤害和走位建议存在；`scripts/visual-regression.mjs` 基线已纳入这两张截图。Android smoke 脚本也新增截图最低体积阈值，避免把 Capacitor 启动画面或纯黑截图当成角色选择/局内成功。
 
+清理更新：删除了被误跟踪的旧 `.claude/worktrees/determined-ishizaka-3887eb/` 工作树副本（122 个重复源码/Android/docs 文件），并清理未跟踪的本地输出和缓存：`output/`、`.omx/`、`.playwright-*`、`.gradle-home/`、`.tools/`、Android build/cache/assets 派生产物和 `ember-*-art-check.png`。保留 `node_modules/` 与 `android/local.properties`，因为后续测试和 Android 构建仍会直接使用；回归测试源码和视觉基线也保留，作为后续维护的防回归资产。
+
 本文件给下一个继续维护的人或 AI，用来快速判断三件事：
 
 - 这个项目当前已经稳定到什么程度

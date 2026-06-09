@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Skill(planning-with-files)",
-      "Skill(planning-with-files:*)"
-    ]
-  }
-}
